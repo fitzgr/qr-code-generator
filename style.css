@@ -70,6 +70,34 @@ textarea:focus {
     border-color: #667eea;
 }
 
+.quick-templates {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.template-btn {
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.template-btn:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+    transform: translateY(-1px);
+}
+
+.template-btn:active {
+    transform: translateY(0);
+}
+
 .logo-controls {
     display: flex;
     gap: 10px;
@@ -300,6 +328,26 @@ input[type="range"]::-moz-range-thumb {
 .info-section strong {
     color: #333;
     font-weight: 600;
+}
+
+/* Footer */
+.footer {
+    background: #333;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.footer a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer a:hover {
+    color: #764ba2;
+    text-decoration: underline;
 }
 
 /* Responsive Design */

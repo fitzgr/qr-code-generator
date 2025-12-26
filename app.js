@@ -24,6 +24,44 @@ const sizeValue = document.getElementById('sizeValue');
 const borderValue = document.getElementById('borderValue');
 const logoSizeValue = document.getElementById('logoSizeValue');
 
+// Quick template buttons
+const templateBtns = document.querySelectorAll('.template-btn');
+
+templateBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const template = btn.dataset.template;
+        let templateText = '';
+        
+        switch(template) {
+            case 'url':
+                templateText = 'https://';
+                break;
+            case 'email':
+                templateText = 'mailto:your@email.com';
+                break;
+            case 'phone':
+                templateText = 'tel:+1234567890';
+                break;
+            case 'sms':
+                templateText = 'sms:+1234567890?body=Your message here';
+                break;
+            case 'wifi':
+                templateText = 'WIFI:T:WPA;S:NetworkName;P:Password;;';
+                break;
+        }
+        
+        textInput.value = templateText;
+        textInput.focus();
+        
+        // Select the template text for easy editing
+        if (template === 'url') {
+            textInput.setSelectionRange(8, 8); // Place cursor after https://
+        } else {
+            textInput.select();
+        }
+    });
+});
+
 // Update range value displays
 sizeRange.addEventListener('input', (e) => {
     sizeValue.textContent = e.target.value;
