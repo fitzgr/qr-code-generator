@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator with Logo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel - Controls -->
+        <div class="left-panel">
+            <h1>QR Code Generator</h1>
+            
+            <div class="section">
+                <label for="textInput">Enter text or URL:</label>
+                <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
+            </div>
+
+            <div class="section">
+                <h3>Logo</h3>
+                <div class="logo-controls">
+                    <input type="file" id="logoInput" accept="image/*" style="display: none;">
+                    <button id="selectLogoBtn" class="btn btn-secondary">Select Logo</button>
+                    <button id="clearLogoBtn" class="btn btn-secondary">Clear Logo</button>
+                </div>
+                <p id="logoStatus" class="status-text">No logo selected</p>
+            </div>
+
+            <div class="section">
+                <h3>Options</h3>
+                
+                <div class="option-group">
+                    <label for="sizeRange">QR Code Size: <span id="sizeValue">10</span></label>
+                    <input type="range" id="sizeRange" min="5" max="20" value="10">
+                </div>
+
+                <div class="option-group">
+                    <label for="borderRange">Border: <span id="borderValue">2</span></label>
+                    <input type="range" id="borderRange" min="1" max="10" value="2">
+                </div>
+
+                <div class="option-group">
+                    <label for="logoSizeRange">Logo Size %: <span id="logoSizeValue">25</span></label>
+                    <input type="range" id="logoSizeRange" min="10" max="40" value="25">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="generateBtn" class="btn btn-primary">Generate QR Code</button>
+                <button id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+
+            <div class="download-section">
+                <h3>Download QR Code</h3>
+                <div class="download-buttons">
+                    <button id="downloadPngBtn" class="btn btn-download">PNG</button>
+                    <button id="downloadSvgBtn" class="btn btn-download">SVG</button>
+                    <button id="downloadJpgBtn" class="btn btn-download">JPG</button>
+                </div>
+            </div>
+
+            <!-- PayPal Donation Button -->
+            <div class="donation-section">
+                <p class="donation-text">Like this tool? Support development!</p>
+                <div id="paypal-button-container">
+                    <a href="https://www.paypal.com/ncp/payment/45KHXJLH9QYLG" id="paypal-link" class="btn btn-donate" target="_blank">
+                        ☕ Donate via PayPal
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - QR Code Display -->
+        <div class="right-panel">
+            <div class="preview-container">
+                <h3>QR Code Preview</h3>
+                <div id="qrPreview">
+                    <canvas id="qrCanvas"></canvas>
+                    <p id="previewPlaceholder" class="placeholder-text">
+                        QR code will appear here<br><br>
+                        Generate a QR code to see it
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
