@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ESSRNC6XGC"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-ESSRNC6XGC');
+    </script>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Free QR Code Generator with Logo | No Sign Up Required</title>
@@ -191,7 +200,7 @@
             <div class="donation-section">
                 <p class="donation-text">Like this tool? Support development!</p>
                 <div id="paypal-button-container">
-                    <a href="https://www.paypal.com/ncp/payment/45KHXJLH9QYLG" id="paypal-link" class="btn btn-donate" target="_blank">
+                    <a href="https://www.paypal.com/ncp/payment/45KHXJLH9QYLG" id="paypal-link" class="btn btn-donate" target="_blank" onclick="gtag('event', 'donation_click', {'method': 'PayPal'});">
                         ☕ Donate via PayPal
                     </a>
                 </div>

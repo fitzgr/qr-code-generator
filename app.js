@@ -89,6 +89,9 @@ colorPresets.forEach(btn => {
         // Update active state
         colorPresets.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
+        // Track color preset selection
+        if (typeof gtag !== 'undefined') {\n            gtag('event', 'color_preset_selected', {\n                'dark_color': darkColor,\n                'light_color': lightColor\n            });\n        }
     });
 });
 
@@ -134,6 +137,13 @@ styleBtns.forEach(btn => {
         currentQRStyle = btn.dataset.style;
         styleBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
+        // Track style selection
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'style_selected', {
+                'style': currentQRStyle
+            });
+        }
     });
 });
 
@@ -332,6 +342,16 @@ function drawQRWithLogo(qrImage, qrSize) {
     // Update analytics
     updateAnalytics(qrSize);
     
+    // Track event in Google Analytics
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'qr_generated', {
+            'qr_style': currentQRStyle,
+            'has_logo': selectedLogo ? 'yes' : 'no',
+            'logo_size': selectedLogo ? logoSizeRange.value : 0,
+            'qr_size': size
+        });
+    }
+    
     // Show success message
     showNotification('QR Code generated successfully!');
 }
@@ -386,8 +406,7 @@ function updateAnalytics(qrSize) {
     contrastEl.className = 'analytics-value';
     if (contrastCheck.ratio >= 7) contrastEl.classList.add('good');
     else if (contrastCheck.ratio >= 4.5) contrastEl.classList.add('warning');
-    else contrastEl.classList.add('error');
-    
+    else contrastEl.classList.add('error');    
     // Calculate and display quality score
     calculateQualityScore(contrastCheck.ratio, usedPercent, qrSize);
 }
@@ -743,6 +762,13 @@ downloadPngBtn.addEventListener('click', () => {
     link.href = currentQRDataURL;
     link.click();
     
+    // Track download
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'download', {
+            'format': 'PNG'
+        });
+    }
+    
     showNotification('QR Code downloaded as PNG!');
 });
 
@@ -764,6 +790,14 @@ downloadSvgBtn.addEventListener('click', () => {
     link.click();
     
     URL.revokeObjectURL(url);
+    
+    // Track download
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'download', {
+            'format': 'SVG'
+        });
+    }
+    
     showNotification('QR Code downloaded as SVG!');
 });
 
@@ -791,6 +825,13 @@ downloadJpgBtn.addEventListener('click', () => {
         link.download = 'qr-code.jpg';
         link.href = canvas.toDataURL('image/jpeg', 0.95);
         link.click();
+        
+        // Track download
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'download', {
+                'format': 'JPG'
+            });
+        }
         
         showNotification('QR Code downloaded as JPG!');
     };
