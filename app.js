@@ -4,7 +4,6 @@ let currentQRDataURL = null;
 let currentQRStyle = 'squares';
 let currentDarkColor = '#000000';
 let currentLightColor = '#ffffff';
-let lastDebugInfo = '';
 
 // DOM Elements
 const textInput = document.getElementById('textInput');
@@ -17,7 +16,6 @@ const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
 const clearBtn = document.getElementById('clearBtn');
-const debugBtn = document.getElementById('debugBtn');
 const qrCanvas = document.getElementById('qrCanvas');
 const previewPlaceholder = document.getElementById('previewPlaceholder');
 
@@ -244,11 +242,6 @@ clearLogoBtn.addEventListener('click', () => {
 // Generate QR Code
 generateBtn.addEventListener('click', generateQRCode);
 
-// Debug button
-debugBtn.addEventListener('click', () => {
-    alert(lastDebugInfo || 'No QR code generated yet. Generate one first!');
-});
-
 function generateQRCode() {
     const text = textInput.value.trim();
     
@@ -290,25 +283,17 @@ function generateQRCode() {
         
         // Wait for QR code to be generated
         setTimeout(() => {
-            // Try to get the canvas element first (more reliable)
             const qrCanvas = tempDiv.querySelector('canvas');
             const qrImage = tempDiv.querySelector('img');
             
-            console.log('QR Canvas found:', qrCanvas);
-            console.log('QR Image found:', qrImage);
-            
             if (qrCanvas) {
-                // Use canvas directly for more control
-                console.log('Using canvas:', qrCanvas.width + 'x' + qrCanvas.height);
                 drawQRWithLogoFromCanvas(qrCanvas, qrSize);
                 document.body.removeChild(tempDiv);
             } else if (qrImage && qrImage.complete) {
-                console.log('Using image:', qrImage.width + 'x' + qrImage.height);
                 drawQRWithLogo(qrImage, qrSize);
                 document.body.removeChild(tempDiv);
             } else if (qrImage) {
                 qrImage.onload = () => {
-                    console.log('QR Image loaded:', qrImage.width + 'x' + qrImage.height);
                     drawQRWithLogo(qrImage, qrSize);
                     document.body.removeChild(tempDiv);
                 };
@@ -368,33 +353,6 @@ function drawQRWithLogo(qrImage, qrSize) {
         ctx.putImageData(fullImageData, 0, 0);
     }
     
-    // Debug: Check what we actually drew
-    const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
-    const data = imageData.data;
-    let darkPixels = 0;
-    let lightPixels = 0;
-    for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (brightness < 128) darkPixels++;
-        else lightPixels++;
-    }
-    console.log('Canvas pixel analysis (50x50 sample):');
-    console.log('Dark pixels:', darkPixels, 'Light pixels:', lightPixels);
-    console.log('QR Image src (first 100 chars):', qrImage.src.substring(0, 100));
-    
-    // Skip style effects entirely - they can cause rendering issues
-    // Just use the original QR code from the library
-    // if (currentQRStyle !== 'squares' && qrSize >= 200) {
-    //     try {
-    //         applyQRStyle(ctx, qrSize);
-    //     } catch (error) {
-    //         console.warn('Style application failed, using default squares:', error);
-    //         // Redraw original if style fails
-    //         ctx.clearRect(0, 0, qrSize, qrSize);
-    //         ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
-    //     }
-    // }
-    
     // Add logo if selected
     if (selectedLogo) {
         const logoSizePercent = parseInt(logoSizeRange.value) / 100;
@@ -421,11 +379,6 @@ function drawQRWithLogo(qrImage, qrSize) {
     
     // Store the data URL for download
     currentQRDataURL = qrCanvas.toDataURL('image/png');
-    
-    // Debug info for mobile
-    const debugInfo = `QR Generated!\nSize: ${qrSize}x${qrSize}\nColors: ${currentDarkColor} / ${currentLightColor}\nDark pixels: ${darkPixels}\nLight pixels: ${lightPixels}`;
-    console.log(debugInfo);
-    lastDebugInfo = debugInfo;
     
     // Update analytics
     updateAnalytics(qrSize);
@@ -470,8 +423,6 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     const darkRGB = hexToRgb(currentDarkColor);
     const lightRGB = hexToRgb(currentLightColor);
     
-    console.log('Recoloring with:', darkRGB, lightRGB);
-    
     // Create new image data for our canvas
     const newData = ctx.createImageData(qrSize, qrSize);
     const newPixels = newData.data;
@@ -507,19 +458,6 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     
     ctx.putImageData(newData, 0, 0);
     
-    // Debug: Check what we actually drew
-    const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
-    const data = imageData.data;
-    let darkPixels = 0;
-    let lightPixels = 0;
-    for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (brightness < 128) darkPixels++;
-        else lightPixels++;
-    }
-    console.log('Canvas pixel analysis (50x50 sample):');
-    console.log('Dark pixels:', darkPixels, 'Light pixels:', lightPixels);
-    
     // Add logo if selected
     if (selectedLogo) {
         const logoSizePercent = parseInt(logoSizeRange.value) / 100;
@@ -546,11 +484,6 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     
     // Store the data URL for download
     currentQRDataURL = qrCanvas.toDataURL('image/png');
-    
-    // Debug info
-    const debugInfo = `QR Generated!\nSize: ${qrSize}x${qrSize}\nColors: ${currentDarkColor} / ${currentLightColor}\nDark pixels: ${darkPixels}\nLight pixels: ${lightPixels}`;
-    console.log(debugInfo);
-    lastDebugInfo = debugInfo;
     
     // Update analytics
     updateAnalytics(qrSize);
