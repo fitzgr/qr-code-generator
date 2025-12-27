@@ -91,7 +91,12 @@ colorPresets.forEach(btn => {
         btn.classList.add('active');
         
         // Track color preset selection
-        if (typeof gtag !== 'undefined') {\n            gtag('event', 'color_preset_selected', {\n                'dark_color': darkColor,\n                'light_color': lightColor\n            });\n        }
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'color_preset_selected', {
+                'dark_color': darkColor,
+                'light_color': lightColor
+            });
+        }
     });
 });
 
