@@ -285,14 +285,22 @@ function generateQRCode() {
         setTimeout(() => {
             const qrImage = tempDiv.querySelector('img');
             
+            console.log('QR Image found:', qrImage);
+            console.log('QR Image dimensions:', qrImage ? qrImage.width + 'x' + qrImage.height : 'none');
+            console.log('QR Image src length:', qrImage ? qrImage.src.length : 0);
+            
             if (qrImage && qrImage.complete) {
                 drawQRWithLogo(qrImage, qrSize);
                 document.body.removeChild(tempDiv);
             } else if (qrImage) {
                 qrImage.onload = () => {
+                    console.log('QR Image loaded:', qrImage.width + 'x' + qrImage.height);
                     drawQRWithLogo(qrImage, qrSize);
                     document.body.removeChild(tempDiv);
                 };
+            } else {
+                console.error('No QR image generated!');
+                document.body.removeChild(tempDiv);
             }
         }, 100);
         
@@ -309,20 +317,27 @@ function drawQRWithLogo(qrImage, qrSize) {
     qrCanvas.width = qrSize;
     qrCanvas.height = qrSize;
     
+    // Disable image smoothing for crisp pixels (important for QR codes)
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+    
     // Draw QR code
     ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
     
-    // Apply style effects (rounded corners or dots) - but skip on very small sizes to avoid issues
-    if (currentQRStyle !== 'squares' && qrSize >= 200) {
-        try {
-            applyQRStyle(ctx, qrSize);
-        } catch (error) {
-            console.warn('Style application failed, using default squares:', error);
-            // Redraw original if style fails
-            ctx.clearRect(0, 0, qrSize, qrSize);
-            ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
-        }
-    }
+    // Skip style effects entirely - they can cause rendering issues
+    // Just use the original QR code from the library
+    // if (currentQRStyle !== 'squares' && qrSize >= 200) {
+    //     try {
+    //         applyQRStyle(ctx, qrSize);
+    //     } catch (error) {
+    //         console.warn('Style application failed, using default squares:', error);
+    //         // Redraw original if style fails
+    //         ctx.clearRect(0, 0, qrSize, qrSize);
+    //         ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
+    //     }
+    // }
     
     // Add logo if selected
     if (selectedLogo) {
