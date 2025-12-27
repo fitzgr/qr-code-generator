@@ -391,7 +391,6 @@ function drawQRWithLogo(qrImage, qrSize) {
     const debugInfo = `QR Generated!\nSize: ${qrSize}x${qrSize}\nColors: ${currentDarkColor} / ${currentLightColor}\nDark pixels: ${darkPixels}\nLight pixels: ${lightPixels}`;
     console.log(debugInfo);
     lastDebugInfo = debugInfo;
-    debugBtn.style.display = 'inline-block'; // Show debug button
     
     // Update analytics
     updateAnalytics(qrSize);
