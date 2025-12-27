@@ -119,6 +119,126 @@ textarea:focus {
     align-items: center;
 }
 
+.color-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.color-preset {
+    padding: 0;
+    border: 3px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    overflow: hidden;
+    height: 50px;
+    display: flex;
+}
+
+.color-preset:hover {
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+.color-preset.active {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px #667eea33;
+}
+
+.color-preset .preset-dark,
+.color-preset .preset-light {
+    flex: 1;
+    height: 100%;
+}
+
+.color-preset .preset-dark {
+    border-right: 1px solid #ddd;
+}
+
+.color-pickers {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.color-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-input-group label {
+    flex: 1;
+    font-size: 14px;
+}
+
+.color-input-group input[type="color"] {
+    width: 50px;
+    height: 35px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.color-input-group input[type="text"] {
+    width: 80px;
+    padding: 6px 8px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: monospace;
+    text-transform: uppercase;
+}
+
+.color-input-group input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.style-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.style-btn {
+    padding: 12px 8px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+}
+
+.style-btn:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.style-btn.active {
+    border-color: #667eea;
+    background: #f0f3ff;
+    color: #667eea;
+}
+
+.style-btn svg {
+    width: 30px;
+    height: 30px;
+}
+
 input[type="range"] {
     width: 100%;
     margin-top: 8px;
@@ -247,6 +367,201 @@ input[type="range"]::-moz-range-thumb {
 .preview-container h3 {
     text-align: center;
     margin-bottom: 20px;
+}
+
+.analytics-section {
+    background: #f8f9fa;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.analytics-section h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #555;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.analytics-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.analytics-label {
+    color: #666;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.info-icon {
+    font-size: 12px;
+    cursor: help;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.info-icon:hover {
+    opacity: 1;
+}
+
+.analytics-value {
+    color: #333;
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.analytics-value.good {
+    color: #4CAF50;
+}
+
+.analytics-value.warning {
+    color: #ff9800;
+}
+
+.analytics-value.error {
+    color: #f44336;
+}
+
+.quality-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e8eaf6 100%);
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.quality-section h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: #667eea;
+    font-weight: 700;
+}
+
+.score-display {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.score-bar-container {
+    width: 100%;
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.score-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 12px;
+    transition: all 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-weight: 700;
+    color: white;
+    font-size: 13px;
+}
+
+.score-bar.perfect { background: linear-gradient(90deg, #4CAF50 0%, #66BB6A 100%); }
+.score-bar.excellent { background: linear-gradient(90deg, #8BC34A 0%, #9CCC65 100%); }
+.score-bar.good { background: linear-gradient(90deg, #FFC107 0%, #FFD54F 100%); }
+.score-bar.fair { background: linear-gradient(90deg, #FF9800 0%, #FFB74D 100%); }
+.score-bar.poor { background: linear-gradient(90deg, #F44336 0%, #E57373 100%); }
+
+.score-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.score-max {
+    font-size: 18px;
+    color: #888;
+}
+
+.score-rating {
+    font-size: 20px;
+    margin-bottom: 5px;
+}
+
+.recommendations {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.recommendation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.recommendation-item:last-child {
+    margin-bottom: 0;
+}
+
+.recommendation-item.warning {
+    background: #fff3e0;
+    border-left: 3px solid #ff9800;
+}
+
+.recommendation-item.info {
+    background: #e3f2fd;
+    border-left: 3px solid #2196F3;
+}
+
+.recommendation-item.success {
+    background: #e8f5e9;
+    border-left: 3px solid #4CAF50;
+}
+
+.recommendation-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.recommendation-text {
+    flex: 1;
+    color: #333;
+}
+
+.recommendation-action {
+    color: #667eea;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.recommendation-action:hover {
+    color: #764ba2;
 }
 
 #qrPreview {

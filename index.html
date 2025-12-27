@@ -71,7 +71,91 @@
             </div>
 
             <div class="section">
-                <h3>Options</h3>
+                <h3>Colors</h3>
+                
+                <div class="option-group">
+                    <label>Color Presets:</label>
+                    <div class="color-presets">
+                        <button class="color-preset" data-dark="#000000" data-light="#ffffff" title="Classic Black">
+                            <span class="preset-dark" style="background: #000000;"></span>
+                            <span class="preset-light" style="background: #ffffff;"></span>
+                        </button>
+                        <button class="color-preset" data-dark="#001f3f" data-light="#ffffff" title="Navy Blue">
+                            <span class="preset-dark" style="background: #001f3f;"></span>
+                            <span class="preset-light" style="background: #ffffff;"></span>
+                        </button>
+                        <button class="color-preset" data-dark="#764ba2" data-light="#ffffff" title="Purple">
+                            <span class="preset-dark" style="background: #764ba2;"></span>
+                            <span class="preset-light" style="background: #ffffff;"></span>
+                        </button>
+                        <button class="color-preset" data-dark="#2d5016" data-light="#f5f5dc" title="Forest Green">
+                            <span class="preset-dark" style="background: #2d5016;"></span>
+                            <span class="preset-light" style="background: #f5f5dc;"></span>
+                        </button>
+                        <button class="color-preset" data-dark="#8b0000" data-light="#ffffff" title="Dark Red">
+                            <span class="preset-dark" style="background: #8b0000;"></span>
+                            <span class="preset-light" style="background: #ffffff;"></span>
+                        </button>
+                        <button class="color-preset" data-dark="#ffffff" data-light="#000000" title="Inverted">
+                            <span class="preset-dark" style="background: #ffffff;"></span>
+                            <span class="preset-light" style="background: #000000;"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="color-pickers">
+                    <div class="color-input-group">
+                        <label for="darkColorPicker">QR Code Color:</label>
+                        <input type="color" id="darkColorPicker" value="#000000">
+                        <input type="text" id="darkColorText" value="#000000" maxlength="7">
+                    </div>
+                    <div class="color-input-group">
+                        <label for="lightColorPicker">Background Color:</label>
+                        <input type="color" id="lightColorPicker" value="#ffffff">
+                        <input type="text" id="lightColorText" value="#ffffff" maxlength="7">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Style</h3>
+                
+                <div class="option-group">
+                    <label>QR Code Pattern:</label>
+                    <div class="style-options">
+                        <button class="style-btn active" data-style="squares" title="Square dots (classic)">
+                            <svg width="30" height="30" viewBox="0 0 30 30">
+                                <rect x="2" y="2" width="5" height="5" fill="currentColor"/>
+                                <rect x="9" y="2" width="5" height="5" fill="currentColor"/>
+                                <rect x="16" y="2" width="5" height="5" fill="currentColor"/>
+                                <rect x="23" y="2" width="5" height="5" fill="currentColor"/>
+                            </svg>
+                            <span>Squares</span>
+                        </button>
+                        <button class="style-btn" data-style="dots" title="Round dots">
+                            <svg width="30" height="30" viewBox="0 0 30 30">
+                                <circle cx="4.5" cy="4.5" r="2.5" fill="currentColor"/>
+                                <circle cx="11.5" cy="4.5" r="2.5" fill="currentColor"/>
+                                <circle cx="18.5" cy="4.5" r="2.5" fill="currentColor"/>
+                                <circle cx="25.5" cy="4.5" r="2.5" fill="currentColor"/>
+                            </svg>
+                            <span>Dots</span>
+                        </button>
+                        <button class="style-btn" data-style="rounded" title="Rounded squares">
+                            <svg width="30" height="30" viewBox="0 0 30 30">
+                                <rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+                                <rect x="9" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+                                <rect x="16" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+                                <rect x="23" y="2" width="5" height="5" rx="1" fill="currentColor"/>
+                            </svg>
+                            <span>Rounded</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Size Options</h3>
                 
                 <div class="option-group">
                     <label for="sizeRange">QR Code Size: <span id="sizeValue">10</span></label>
@@ -117,6 +201,71 @@
         <!-- Right Panel - QR Code Display -->
         <div class="right-panel">
             <div class="preview-container">
+                <!-- Analytics Preview -->
+                <div id="analyticsPreview" class="analytics-section">
+                    <h3>QR Code Info</h3>
+                    <div class="analytics-grid">
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Version:
+                                <span class="info-icon" title="QR code complexity level (1-40). Higher versions hold more data but are larger and more detailed.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrVersion">-</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Modules:
+                                <span class="info-icon" title="Total number of squares (dots) in the QR code. More modules = more data capacity.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrModules">-</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Error Correction:
+                                <span class="info-icon" title="Up to 30% of the code can be damaged or covered (by your logo) and still scan perfectly.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrErrorLevel">High (30%)</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Min Print Size:
+                                <span class="info-icon" title="Minimum recommended print size for reliable scanning. Smaller prints may be hard to scan.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrMinSize">-</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Data Capacity:
+                                <span class="info-icon" title="How much of the QR code's storage is being used. Lower is better - leaves room for logos and damage.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrDataCapacity">-</span>
+                        </div>
+                        <div class="analytics-item">
+                            <span class="analytics-label">
+                                Contrast Ratio:
+                                <span class="info-icon" title="Color contrast between QR code and background. Higher is better. 3.0:1 minimum for scanning.">ℹ️</span>
+                            </span>
+                            <span class="analytics-value" id="qrContrast">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quality Score Section -->
+                <div id="qualityScore" class="quality-section" style="display: none;">
+                    <h3>Quality Score</h3>
+                    <div class="score-display">
+                        <div class="score-bar-container">
+                            <div class="score-bar" id="scoreBar"></div>
+                        </div>
+                        <div class="score-text">
+                            <span class="score-value" id="scoreValue">0</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <div class="score-rating" id="scoreRating"></div>
+                    </div>
+                    <div class="recommendations" id="recommendations"></div>
+                </div>
+
                 <h3>QR Code Preview</h3>
                 <div id="qrPreview">
                     <canvas id="qrCanvas"></canvas>
