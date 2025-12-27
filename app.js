@@ -457,38 +457,55 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     ctx.webkitImageSmoothingEnabled = false;
     ctx.msImageSmoothingEnabled = false;
     
-    // Draw QR code from source canvas
-    ctx.drawImage(sourceCanvas, 0, 0, qrSize, qrSize);
+    // WORKAROUND: Fill entire canvas with light color first
+    ctx.fillStyle = currentLightColor;
+    ctx.fillRect(0, 0, qrSize, qrSize);
     
-    // Recolor QR code if custom colors are used
-    if (currentDarkColor !== '#000000' || currentLightColor !== '#ffffff') {
-        const fullImageData = ctx.getImageData(0, 0, qrSize, qrSize);
-        const pixels = fullImageData.data;
-        
-        // Parse custom colors
-        const darkRGB = hexToRgb(currentDarkColor);
-        const lightRGB = hexToRgb(currentLightColor);
-        
-        console.log('Recoloring with:', darkRGB, lightRGB);
-        
-        // Recolor: black -> dark color, white -> light color
-        for (let i = 0; i < pixels.length; i += 4) {
-            const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+    // Get source image data
+    const sourceCtx = sourceCanvas.getContext('2d');
+    const sourceData = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+    const sourcePixels = sourceData.data;
+    
+    // Parse custom colors
+    const darkRGB = hexToRgb(currentDarkColor);
+    const lightRGB = hexToRgb(currentLightColor);
+    
+    console.log('Recoloring with:', darkRGB, lightRGB);
+    
+    // Create new image data for our canvas
+    const newData = ctx.createImageData(qrSize, qrSize);
+    const newPixels = newData.data;
+    
+    // Copy and recolor pixels
+    const scaleX = sourceCanvas.width / qrSize;
+    const scaleY = sourceCanvas.height / qrSize;
+    
+    for (let y = 0; y < qrSize; y++) {
+        for (let x = 0; x < qrSize; x++) {
+            const sourceX = Math.floor(x * scaleX);
+            const sourceY = Math.floor(y * scaleY);
+            const sourceIndex = (sourceY * sourceCanvas.width + sourceX) * 4;
+            const targetIndex = (y * qrSize + x) * 4;
+            
+            const brightness = (sourcePixels[sourceIndex] + sourcePixels[sourceIndex + 1] + sourcePixels[sourceIndex + 2]) / 3;
+            
             if (brightness < 128) {
-                // Dark pixel - replace with custom dark color
-                pixels[i] = darkRGB.r;
-                pixels[i + 1] = darkRGB.g;
-                pixels[i + 2] = darkRGB.b;
+                // Dark pixel
+                newPixels[targetIndex] = darkRGB.r;
+                newPixels[targetIndex + 1] = darkRGB.g;
+                newPixels[targetIndex + 2] = darkRGB.b;
+                newPixels[targetIndex + 3] = 255;
             } else {
-                // Light pixel - replace with custom light color
-                pixels[i] = lightRGB.r;
-                pixels[i + 1] = lightRGB.g;
-                pixels[i + 2] = lightRGB.b;
+                // Light pixel
+                newPixels[targetIndex] = lightRGB.r;
+                newPixels[targetIndex + 1] = lightRGB.g;
+                newPixels[targetIndex + 2] = lightRGB.b;
+                newPixels[targetIndex + 3] = 255;
             }
         }
-        
-        ctx.putImageData(fullImageData, 0, 0);
     }
+    
+    ctx.putImageData(newData, 0, 0);
     
     // Debug: Check what we actually drew
     const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
