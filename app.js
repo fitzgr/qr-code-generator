@@ -154,18 +154,18 @@ styleBtns.forEach(btn => {
     });
 });
 
+// Convert hex color to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
 // Contrast validation function
 function validateContrast(darkColor, lightColor) {
-    // Convert hex to RGB
-    const hexToRgb = (hex) => {
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
-    };
-    
     // Calculate relative luminance
     const getLuminance = (rgb) => {
         const rsRGB = rgb.r / 255;
@@ -278,13 +278,13 @@ function generateQRCode() {
         tempDiv.style.display = 'none';
         document.body.appendChild(tempDiv);
         
-        // Generate QR code
+        // Generate QR code - ALWAYS use black/white for generation, we'll recolor later
         const qr = new QRCode(tempDiv, {
             text: text,
             width: qrSize,
             height: qrSize,
-            colorDark: currentDarkColor,
-            colorLight: currentLightColor,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
         
@@ -332,6 +332,34 @@ function drawQRWithLogo(qrImage, qrSize) {
     
     // Draw QR code
     ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
+    
+    // Recolor QR code if custom colors are used
+    if (currentDarkColor !== '#000000' || currentLightColor !== '#ffffff') {
+        const fullImageData = ctx.getImageData(0, 0, qrSize, qrSize);
+        const pixels = fullImageData.data;
+        
+        // Parse custom colors
+        const darkRGB = hexToRgb(currentDarkColor);
+        const lightRGB = hexToRgb(currentLightColor);
+        
+        // Recolor: black -> dark color, white -> light color
+        for (let i = 0; i < pixels.length; i += 4) {
+            const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+            if (brightness < 128) {
+                // Dark pixel - replace with custom dark color
+                pixels[i] = darkRGB.r;
+                pixels[i + 1] = darkRGB.g;
+                pixels[i + 2] = darkRGB.b;
+            } else {
+                // Light pixel - replace with custom light color
+                pixels[i] = lightRGB.r;
+                pixels[i + 1] = lightRGB.g;
+                pixels[i + 2] = lightRGB.b;
+            }
+        }
+        
+        ctx.putImageData(fullImageData, 0, 0);
+    }
     
     // Debug: Check what we actually drew
     const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
