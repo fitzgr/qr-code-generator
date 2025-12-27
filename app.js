@@ -4,6 +4,7 @@ let currentQRDataURL = null;
 let currentQRStyle = 'squares';
 let currentDarkColor = '#000000';
 let currentLightColor = '#ffffff';
+let lastDebugInfo = '';
 
 // DOM Elements
 const textInput = document.getElementById('textInput');
@@ -16,6 +17,7 @@ const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
 const clearBtn = document.getElementById('clearBtn');
+const debugBtn = document.getElementById('debugBtn');
 const qrCanvas = document.getElementById('qrCanvas');
 const previewPlaceholder = document.getElementById('previewPlaceholder');
 
@@ -242,6 +244,11 @@ clearLogoBtn.addEventListener('click', () => {
 // Generate QR Code
 generateBtn.addEventListener('click', generateQRCode);
 
+// Debug button
+debugBtn.addEventListener('click', () => {
+    alert(lastDebugInfo || 'No QR code generated yet. Generate one first!');
+});
+
 function generateQRCode() {
     const text = textInput.value.trim();
     
@@ -326,6 +333,20 @@ function drawQRWithLogo(qrImage, qrSize) {
     // Draw QR code
     ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
     
+    // Debug: Check what we actually drew
+    const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
+    const data = imageData.data;
+    let darkPixels = 0;
+    let lightPixels = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (brightness < 128) darkPixels++;
+        else lightPixels++;
+    }
+    console.log('Canvas pixel analysis (50x50 sample):');
+    console.log('Dark pixels:', darkPixels, 'Light pixels:', lightPixels);
+    console.log('QR Image src (first 100 chars):', qrImage.src.substring(0, 100));
+    
     // Skip style effects entirely - they can cause rendering issues
     // Just use the original QR code from the library
     // if (currentQRStyle !== 'squares' && qrSize >= 200) {
@@ -365,6 +386,12 @@ function drawQRWithLogo(qrImage, qrSize) {
     
     // Store the data URL for download
     currentQRDataURL = qrCanvas.toDataURL('image/png');
+    
+    // Debug info for mobile
+    const debugInfo = `QR Generated!\nSize: ${qrSize}x${qrSize}\nColors: ${currentDarkColor} / ${currentLightColor}\nDark pixels: ${darkPixels}\nLight pixels: ${lightPixels}`;
+    console.log(debugInfo);
+    lastDebugInfo = debugInfo;
+    debugBtn.style.display = 'inline-block'; // Show debug button
     
     // Update analytics
     updateAnalytics(qrSize);
