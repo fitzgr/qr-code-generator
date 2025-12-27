@@ -138,6 +138,9 @@ darkColorPicker.addEventListener('input', (e) => {
     darkColorText.value = color;
     currentDarkColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
 });
 
 lightColorPicker.addEventListener('input', (e) => {
@@ -145,6 +148,9 @@ lightColorPicker.addEventListener('input', (e) => {
     lightColorText.value = color;
     currentLightColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
 });
 
 darkColorText.addEventListener('input', (e) => {
@@ -153,6 +159,9 @@ darkColorText.addEventListener('input', (e) => {
         darkColorPicker.value = color;
         currentDarkColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
+        if (currentQRDataURL) {
+            generateQRCode();
+        }
     }
 });
 
@@ -162,6 +171,9 @@ lightColorText.addEventListener('input', (e) => {
         lightColorPicker.value = color;
         currentLightColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
+        if (currentQRDataURL) {
+            generateQRCode();
+        }
     }
 });
 
