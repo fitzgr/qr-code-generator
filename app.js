@@ -290,13 +290,20 @@ function generateQRCode() {
         
         // Wait for QR code to be generated
         setTimeout(() => {
+            // Try to get the canvas element first (more reliable)
+            const qrCanvas = tempDiv.querySelector('canvas');
             const qrImage = tempDiv.querySelector('img');
             
+            console.log('QR Canvas found:', qrCanvas);
             console.log('QR Image found:', qrImage);
-            console.log('QR Image dimensions:', qrImage ? qrImage.width + 'x' + qrImage.height : 'none');
-            console.log('QR Image src length:', qrImage ? qrImage.src.length : 0);
             
-            if (qrImage && qrImage.complete) {
+            if (qrCanvas) {
+                // Use canvas directly for more control
+                console.log('Using canvas:', qrCanvas.width + 'x' + qrCanvas.height);
+                drawQRWithLogoFromCanvas(qrCanvas, qrSize);
+                document.body.removeChild(tempDiv);
+            } else if (qrImage && qrImage.complete) {
+                console.log('Using image:', qrImage.width + 'x' + qrImage.height);
                 drawQRWithLogo(qrImage, qrSize);
                 document.body.removeChild(tempDiv);
             } else if (qrImage) {
@@ -306,7 +313,7 @@ function generateQRCode() {
                     document.body.removeChild(tempDiv);
                 };
             } else {
-                console.error('No QR image generated!');
+                console.error('No QR canvas or image generated!');
                 document.body.removeChild(tempDiv);
             }
         }, 100);
@@ -430,6 +437,114 @@ function drawQRWithLogo(qrImage, qrSize) {
             'has_logo': selectedLogo ? 'yes' : 'no',
             'logo_size': selectedLogo ? logoSizeRange.value : 0,
             'qr_size': size
+        });
+    }
+    
+    // Show success message
+    showNotification('QR Code generated successfully!');
+}
+
+function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
+    const ctx = qrCanvas.getContext('2d');
+    
+    // Set canvas size
+    qrCanvas.width = qrSize;
+    qrCanvas.height = qrSize;
+    
+    // Disable image smoothing for crisp pixels
+    ctx.imageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+    
+    // Draw QR code from source canvas
+    ctx.drawImage(sourceCanvas, 0, 0, qrSize, qrSize);
+    
+    // Recolor QR code if custom colors are used
+    if (currentDarkColor !== '#000000' || currentLightColor !== '#ffffff') {
+        const fullImageData = ctx.getImageData(0, 0, qrSize, qrSize);
+        const pixels = fullImageData.data;
+        
+        // Parse custom colors
+        const darkRGB = hexToRgb(currentDarkColor);
+        const lightRGB = hexToRgb(currentLightColor);
+        
+        console.log('Recoloring with:', darkRGB, lightRGB);
+        
+        // Recolor: black -> dark color, white -> light color
+        for (let i = 0; i < pixels.length; i += 4) {
+            const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+            if (brightness < 128) {
+                // Dark pixel - replace with custom dark color
+                pixels[i] = darkRGB.r;
+                pixels[i + 1] = darkRGB.g;
+                pixels[i + 2] = darkRGB.b;
+            } else {
+                // Light pixel - replace with custom light color
+                pixels[i] = lightRGB.r;
+                pixels[i + 1] = lightRGB.g;
+                pixels[i + 2] = lightRGB.b;
+            }
+        }
+        
+        ctx.putImageData(fullImageData, 0, 0);
+    }
+    
+    // Debug: Check what we actually drew
+    const imageData = ctx.getImageData(0, 0, Math.min(qrSize, 50), Math.min(qrSize, 50));
+    const data = imageData.data;
+    let darkPixels = 0;
+    let lightPixels = 0;
+    for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (brightness < 128) darkPixels++;
+        else lightPixels++;
+    }
+    console.log('Canvas pixel analysis (50x50 sample):');
+    console.log('Dark pixels:', darkPixels, 'Light pixels:', lightPixels);
+    
+    // Add logo if selected
+    if (selectedLogo) {
+        const logoSizePercent = parseInt(logoSizeRange.value) / 100;
+        const logoSize = Math.floor(qrSize * logoSizePercent);
+        const logoPos = (qrSize - logoSize) / 2;
+        
+        // Draw background for logo (use light color)
+        const padding = 10;
+        ctx.fillStyle = currentLightColor;
+        ctx.fillRect(
+            logoPos - padding,
+            logoPos - padding,
+            logoSize + padding * 2,
+            logoSize + padding * 2
+        );
+        
+        // Draw logo
+        ctx.drawImage(selectedLogo, logoPos, logoPos, logoSize, logoSize);
+    }
+    
+    // Show canvas and hide placeholder
+    qrCanvas.classList.add('visible');
+    previewPlaceholder.classList.add('hidden');
+    
+    // Store the data URL for download
+    currentQRDataURL = qrCanvas.toDataURL('image/png');
+    
+    // Debug info
+    const debugInfo = `QR Generated!\nSize: ${qrSize}x${qrSize}\nColors: ${currentDarkColor} / ${currentLightColor}\nDark pixels: ${darkPixels}\nLight pixels: ${lightPixels}`;
+    console.log(debugInfo);
+    lastDebugInfo = debugInfo;
+    
+    // Update analytics
+    updateAnalytics(qrSize);
+    
+    // Track event in Google Analytics
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'qr_generated', {
+            'qr_style': currentQRStyle,
+            'has_logo': selectedLogo ? 'yes' : 'no',
+            'logo_size': selectedLogo ? logoSizeRange.value : 0,
+            'qr_size': parseInt(sizeRange.value)
         });
     }
     
