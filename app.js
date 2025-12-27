@@ -312,9 +312,16 @@ function drawQRWithLogo(qrImage, qrSize) {
     // Draw QR code
     ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
     
-    // Apply style effects (rounded corners or dots)
-    if (currentQRStyle !== 'squares') {
-        applyQRStyle(ctx, qrSize);
+    // Apply style effects (rounded corners or dots) - but skip on very small sizes to avoid issues
+    if (currentQRStyle !== 'squares' && qrSize >= 200) {
+        try {
+            applyQRStyle(ctx, qrSize);
+        } catch (error) {
+            console.warn('Style application failed, using default squares:', error);
+            // Redraw original if style fails
+            ctx.clearRect(0, 0, qrSize, qrSize);
+            ctx.drawImage(qrImage, 0, 0, qrSize, qrSize);
+        }
     }
     
     // Add logo if selected
@@ -697,17 +704,32 @@ function applyQRStyle(ctx, qrSize) {
     tempCtx.fillStyle = currentLightColor;
     tempCtx.fillRect(0, 0, qrSize, qrSize);
     
-    // Detect module size (size of each QR code square)
-    let moduleSize = 1;
-    for (let size = 1; size <= 20; size++) {
-        if (qrSize % size === 0) {
-            const modules = qrSize / size;
-            if (modules >= 21 && modules <= 177) { // QR code versions range
-                moduleSize = size;
-                break;
-            }
+    // Detect module size more accurately
+    // QR codes are always odd-sized (21, 25, 29, 33, etc.)
+    let moduleSize = Math.round(qrSize / 33); // Default estimate
+    
+    // Better detection: scan for transitions from light to dark
+    let transitionCount = 0;
+    for (let x = 0; x < qrSize - 1; x++) {
+        const i1 = (0 * qrSize + x) * 4;
+        const i2 = (0 * qrSize + x + 1) * 4;
+        const bright1 = (data[i1] + data[i1 + 1] + data[i1 + 2]) / 3;
+        const bright2 = (data[i2] + data[i2 + 1] + data[i2 + 2]) / 3;
+        if (Math.abs(bright1 - bright2) > 100) {
+            transitionCount++;
         }
     }
+    
+    // Estimate module size from transitions (QR codes typically have 21-177 modules)
+    if (transitionCount > 0) {
+        const estimatedModules = transitionCount * 2; // Approximate
+        if (estimatedModules >= 21 && estimatedModules <= 177) {
+            moduleSize = Math.round(qrSize / estimatedModules);
+        }
+    }
+    
+    // Ensure module size is at least 1 and makes sense
+    moduleSize = Math.max(1, Math.min(moduleSize, Math.floor(qrSize / 21)));
     
     tempCtx.fillStyle = currentDarkColor;
     
