@@ -98,6 +98,50 @@ textarea:focus {
     transform: translateY(0);
 }
 
+.label-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.label-controls input[type="text"] {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+.label-controls input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-icon {
+    padding: 12px 16px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.btn-icon:hover {
+    background: #fee;
+    border-color: #f88;
+    color: #c33;
+}
+
+.btn-icon:active {
+    transform: scale(0.95);
+}
+
 .logo-controls {
     display: flex;
     gap: 10px;
@@ -307,6 +351,39 @@ input[type="range"]::-moz-range-thumb {
     background: #d0d0d0;
 }
 
+.btn-bucket {
+    background: #FF9800;
+    color: white;
+}
+
+.btn-bucket:hover {
+    background: #F57C00;
+}
+
+.btn-bucket:disabled {
+    background: #ccc;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.btn-icon-small {
+    padding: 6px 12px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+    font-weight: bold;
+}
+
+.btn-icon-small:hover {
+    background: #fee;
+    border-color: #f88;
+    color: #c33;
+}
+
 .btn-donate {
     background: #ffc439;
     color: #333;
@@ -324,7 +401,7 @@ input[type="range"]::-moz-range-thumb {
 
 .download-buttons {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
 
@@ -341,6 +418,24 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
 }
 
+#downloadPdfBtn {
+    background: #DC1F26;
+}
+
+#downloadPdfBtn:hover {
+    background: #C41A20;
+    box-shadow: 0 5px 15px rgba(220, 31, 38, 0.4);
+}
+
+#downloadBucketPdfBtn {
+    background: #DC1F26;
+}
+
+#downloadBucketPdfBtn:hover {
+    background: #C41A20;
+    box-shadow: 0 5px 15px rgba(220, 31, 38, 0.4);
+}
+
 .donation-section {
     border-top: 2px solid #ddd;
     padding-top: 20px;
@@ -350,6 +445,102 @@ input[type="range"]::-moz-range-thumb {
     color: #666;
     margin-bottom: 10px;
     text-align: center;
+}
+
+.bucket-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff8e1;
+    border-radius: 12px;
+    border: 2px solid #FFB300;
+}
+
+.bucket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.bucket-header h3 {
+    margin: 0;
+    color: #F57C00;
+}
+
+.bucket-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.bucket-item {
+    position: relative;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.bucket-item img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+.bucket-item-info {
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+    word-wrap: break-word;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bucket-item-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: #f44336;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.bucket-item-remove:hover {
+    background: #d32f2f;
+    transform: scale(1.1);
+}
+
+.bucket-download {
+    border-top: 2px solid #FFB300;
+    padding-top: 15px;
+}
+
+.bucket-info {
+    font-size: 12px;
+    color: #F57C00;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 600;
 }
 
 .right-panel {

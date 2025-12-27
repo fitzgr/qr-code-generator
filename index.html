@@ -65,8 +65,18 @@
                     <button class="template-btn" data-template="phone">📞 Phone</button>
                     <button class="template-btn" data-template="sms">💬 SMS</button>
                     <button class="template-btn" data-template="wifi">📶 WiFi</button>
+                    <button class="template-btn" data-template="vcard">👤 Contact</button>
+                    <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
                 <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
+            </div>
+
+            <div class="section">
+                <label for="labelInput">QR Code Label (optional):</label>
+                <div class="label-controls">
+                    <input type="text" id="labelInput" placeholder="e.g., Visit our website, Scan for menu, Contact info...">
+                    <button id="clearLabelBtn" class="btn-icon" title="Clear label">✕</button>
+                </div>
             </div>
 
             <div class="section">
@@ -184,7 +194,24 @@
 
             <div class="button-group">
                 <button id="generateBtn" class="btn btn-primary">Generate QR Code</button>
+                <button id="addToBucketBtn" class="btn btn-bucket" disabled>Add to Bucket <span id="bucketCount">(0/8)</span></button>
                 <button id="clearBtn" class="btn btn-secondary">Clear</button>
+            </div>
+
+            <div id="bucketSection" class="bucket-section" style="display: none;">
+                <div class="bucket-header">
+                    <h3>QR Code Collection</h3>
+                    <button id="clearBucketBtn" class="btn btn-icon-small">✕ Clear All</button>
+                </div>
+                <div id="bucketPreview" class="bucket-preview"></div>
+                <div class="bucket-download">
+                    <p class="bucket-info">PDF: Up to 8 codes (2×4 grid) | Other formats: Up to 10 codes for download</p>
+                    <div class="download-buttons">
+                        <button id="downloadBucketPngBtn" class="btn btn-download">PNG Zip</button>
+                        <button id="downloadBucketJpgBtn" class="btn btn-download">JPG Zip</button>
+                        <button id="downloadBucketPdfBtn" class="btn btn-download">PDF Grid</button>
+                    </div>
+                </div>
             </div>
 
             <div class="download-section">
@@ -193,6 +220,7 @@
                     <button id="downloadPngBtn" class="btn btn-download">PNG</button>
                     <button id="downloadSvgBtn" class="btn btn-download">SVG</button>
                     <button id="downloadJpgBtn" class="btn btn-download">JPG</button>
+                    <button id="downloadPdfBtn" class="btn btn-download">PDF</button>
                 </div>
             </div>
 
@@ -329,6 +357,7 @@
                     <li><strong>PNG:</strong> Best for digital use on websites, social media, and email signatures. Supports transparency.</li>
                     <li><strong>SVG:</strong> Vector format that scales infinitely without losing quality. Perfect for large prints, banners, and professional printing.</li>
                     <li><strong>JPG:</strong> Smaller file size, ideal for email attachments and quick sharing. Works everywhere.</li>
+                    <li><strong>PDF:</strong> Ready to print format, perfect for documents, flyers, and professional presentations. Includes optional label.</li>
                 </ul>
             </section>
 
@@ -350,6 +379,10 @@
 
     <!-- Include QRCode.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Include jsPDF library for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Include JSZip library for creating zip files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
