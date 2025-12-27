@@ -4,6 +4,7 @@ let currentQRDataURL = null;
 let currentQRStyle = 'squares';
 let currentDarkColor = '#000000';
 let currentLightColor = '#ffffff';
+let currentLabelColor = '#000000';
 
 // QR Code Bucket for batch processing
 let qrBucket = [];
@@ -41,15 +42,19 @@ const downloadBucketPdfBtn = document.getElementById('downloadBucketPdfBtn');
 const sizeRange = document.getElementById('sizeRange');
 const borderRange = document.getElementById('borderRange');
 const logoSizeRange = document.getElementById('logoSizeRange');
+const labelSizeRange = document.getElementById('labelSizeRange');
 const sizeValue = document.getElementById('sizeValue');
 const borderValue = document.getElementById('borderValue');
 const logoSizeValue = document.getElementById('logoSizeValue');
+const labelSizeValue = document.getElementById('labelSizeValue');
 
 // Color inputs
 const darkColorPicker = document.getElementById('darkColorPicker');
 const lightColorPicker = document.getElementById('lightColorPicker');
 const darkColorText = document.getElementById('darkColorText');
 const lightColorText = document.getElementById('lightColorText');
+const labelColorPicker = document.getElementById('labelColorPicker');
+const labelColorText = document.getElementById('labelColorText');
 const colorPresets = document.querySelectorAll('.color-preset');
 const styleBtns = document.querySelectorAll('.style-btn');
 
@@ -160,6 +165,26 @@ lightColorText.addEventListener('input', (e) => {
     }
 });
 
+labelColorPicker.addEventListener('input', (e) => {
+    const color = e.target.value;
+    labelColorText.value = color;
+    currentLabelColor = color;
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+labelColorText.addEventListener('input', (e) => {
+    let color = e.target.value;
+    if (/^#[0-9A-F]{6}$/i.test(color)) {
+        labelColorPicker.value = color;
+        currentLabelColor = color;
+        if (currentQRDataURL) {
+            generateQRCode();
+        }
+    }
+});
+
 // Style buttons
 styleBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -232,6 +257,35 @@ borderRange.addEventListener('input', (e) => {
 
 logoSizeRange.addEventListener('input', (e) => {
     logoSizeValue.textContent = e.target.value;
+});
+
+labelSizeRange.addEventListener('input', (e) => {
+    labelSizeValue.textContent = e.target.value;
+});
+
+// Regenerate QR code when sliders are released
+sizeRange.addEventListener('change', (e) => {
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+borderRange.addEventListener('change', (e) => {
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+logoSizeRange.addEventListener('change', (e) => {
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+labelSizeRange.addEventListener('change', (e) => {
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
 });
 
 // Logo selection
@@ -430,8 +484,28 @@ function generateQRCode() {
 
 function drawQRWithLogo(qrImage, qrSize) {
     const label = labelInput.value.trim();
-    const padding = 20;
-    const labelHeight = label ? 60 : 0;
+    const border = parseInt(borderRange.value);
+    const quietZone = border * 4; // Convert border value to pixels (1-10 -> 4-40px)
+    const padding = 20 + quietZone; // Base padding + quiet zone
+    
+    // Calculate dynamic label height based on font size
+    let labelHeight = 0;
+    if (label) {
+        const labelSizePercent = parseInt(labelSizeRange.value) / 100;
+        const baseFontSize = 20;
+        const fontSize = Math.floor(baseFontSize * labelSizePercent);
+        const lineHeight = fontSize * 1.2;
+        // Gap scales with both font size and QR size for consistent visual separation
+        const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
+        
+        // Estimate number of lines (rough calculation)
+        const maxWidth = qrSize;
+        const avgCharWidth = fontSize * 0.5;
+        const estimatedCharsPerLine = Math.floor(maxWidth / avgCharWidth);
+        const estimatedLines = Math.ceil(label.length / estimatedCharsPerLine);
+        
+        labelHeight = labelGap + (lineHeight * estimatedLines) + 20; // Add some bottom padding
+    }
     
     // Set canvas size to include label space
     qrCanvas.width = qrSize + (padding * 2);
@@ -480,6 +554,11 @@ function drawQRWithLogo(qrImage, qrSize) {
         ctx.putImageData(fullImageData, padding, padding);
     }
     
+    // Apply QR code style (dots or rounded)
+    if (currentQRStyle !== 'squares') {
+        applyQRStyle(ctx, qrSize, padding, padding);
+    }
+    
     // Add logo if selected
     if (selectedLogo) {
         const logoSizePercent = parseInt(logoSizeRange.value) / 100;
@@ -502,16 +581,22 @@ function drawQRWithLogo(qrImage, qrSize) {
     
     // Draw label if present
     if (label) {
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 20px Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        const labelSizePercent = parseInt(labelSizeRange.value) / 100;
+        const baseFontSize = 20;
+        const fontSize = Math.floor(baseFontSize * labelSizePercent);
+        // Gap scales with both font size and QR size for consistent visual separation
+        const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
         
-        // Wrap text if too long
+        ctx.fillStyle = currentLabelColor;
+        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top'; // Changed to 'top' for better positioning
+        
+        // Wrap text if too long (max width is QR code width)
         const maxWidth = qrSize;
         const words = label.split(' ');
         let line = '';
-        let y = qrSize + padding + 30;
+        let y = qrSize + padding + labelGap; // Start after QR code + gap
         
         for (let i = 0; i < words.length; i++) {
             const testLine = line + words[i] + ' ';
@@ -520,7 +605,7 @@ function drawQRWithLogo(qrImage, qrSize) {
             if (metrics.width > maxWidth && i > 0) {
                 ctx.fillText(line, qrCanvas.width / 2, y);
                 line = words[i] + ' ';
-                y += 25;
+                y += fontSize * 1.2;
             } else {
                 line = testLine;
             }
@@ -557,8 +642,28 @@ function drawQRWithLogo(qrImage, qrSize) {
 
 function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     const label = labelInput.value.trim();
-    const padding = 20;
-    const labelHeight = label ? 60 : 0;
+    const border = parseInt(borderRange.value);
+    const quietZone = border * 4; // Convert border value to pixels (1-10 -> 4-40px)
+    const padding = 20 + quietZone; // Base padding + quiet zone
+    
+    // Calculate dynamic label height based on font size
+    let labelHeight = 0;
+    if (label) {
+        const labelSizePercent = parseInt(labelSizeRange.value) / 100;
+        const baseFontSize = 20;
+        const fontSize = Math.floor(baseFontSize * labelSizePercent);
+        const lineHeight = fontSize * 1.2;
+        // Gap scales with both font size and QR size for consistent visual separation
+        const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
+        
+        // Estimate number of lines (rough calculation)
+        const maxWidth = qrSize;
+        const avgCharWidth = fontSize * 0.5;
+        const estimatedCharsPerLine = Math.floor(maxWidth / avgCharWidth);
+        const estimatedLines = Math.ceil(label.length / estimatedCharsPerLine);
+        
+        labelHeight = labelGap + (lineHeight * estimatedLines) + 20; // Add some bottom padding
+    }
     
     // Set canvas size to include label space
     qrCanvas.width = qrSize + (padding * 2);
@@ -620,6 +725,11 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     
     ctx.putImageData(newData, padding, padding);
     
+    // Apply QR code style (dots or rounded)
+    if (currentQRStyle !== 'squares') {
+        applyQRStyle(ctx, qrSize, padding, padding);
+    }
+    
     // Add logo if selected
     if (selectedLogo) {
         const logoSizePercent = parseInt(logoSizeRange.value) / 100;
@@ -642,16 +752,22 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     
     // Draw label if present
     if (label) {
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 20px Arial, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        const labelSizePercent = parseInt(labelSizeRange.value) / 100;
+        const baseFontSize = 20;
+        const fontSize = Math.floor(baseFontSize * labelSizePercent);
+        // Gap scales with both font size and QR size for consistent visual separation
+        const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
         
-        // Wrap text if too long
+        ctx.fillStyle = currentLabelColor;
+        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top'; // Changed to 'top' for better positioning
+        
+        // Wrap text if too long (max width is QR code width)
         const maxWidth = qrSize;
         const words = label.split(' ');
         let line = '';
-        let y = qrSize + padding + 30;
+        let y = qrSize + padding + labelGap; // Start after QR code + gap
         
         for (let i = 0; i < words.length; i++) {
             const testLine = line + words[i] + ' ';
@@ -660,7 +776,7 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
             if (metrics.width > maxWidth && i > 0) {
                 ctx.fillText(line, qrCanvas.width / 2, y);
                 line = words[i] + ' ';
-                y += 25;
+                y += fontSize * 1.2;
             } else {
                 line = testLine;
             }
@@ -1017,19 +1133,10 @@ function applyColorPreset(dark, light) {
 }
 
 // Apply QR code style (dots or rounded)
-function applyQRStyle(ctx, qrSize) {
-    const imageData = ctx.getImageData(0, 0, qrSize, qrSize);
+function applyQRStyle(ctx, qrSize, offsetX = 0, offsetY = 0) {
+    // Get the QR code area
+    const imageData = ctx.getImageData(offsetX, offsetY, qrSize, qrSize);
     const data = imageData.data;
-    
-    // Create a new canvas for the styled QR code
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = qrSize;
-    tempCanvas.height = qrSize;
-    const tempCtx = tempCanvas.getContext('2d');
-    
-    // Fill with background color
-    tempCtx.fillStyle = currentLightColor;
-    tempCtx.fillRect(0, 0, qrSize, qrSize);
     
     // Detect module size more accurately
     // QR codes are always odd-sized (21, 25, 29, 33, etc.)
@@ -1058,50 +1165,73 @@ function applyQRStyle(ctx, qrSize) {
     // Ensure module size is at least 1 and makes sense
     moduleSize = Math.max(1, Math.min(moduleSize, Math.floor(qrSize / 21)));
     
-    tempCtx.fillStyle = currentDarkColor;
+    // Calculate number of modules to ensure we cover the entire QR code
+    const moduleCount = Math.ceil(qrSize / moduleSize);
     
-    // Draw styled modules
-    for (let y = 0; y < qrSize; y += moduleSize) {
-        for (let x = 0; x < qrSize; x += moduleSize) {
-            const i = (y * qrSize + x) * 4;
-            const r = data[i];
-            const g = data[i + 1];
-            const b = data[i + 2];
+    // Clear the QR area and fill with background
+    ctx.fillStyle = currentLightColor;
+    ctx.fillRect(offsetX, offsetY, qrSize, qrSize);
+    
+    // Enable anti-aliasing for smooth shapes
+    ctx.imageSmoothingEnabled = true;
+    
+    ctx.fillStyle = currentDarkColor;
+    
+    // Draw styled modules - iterate through all module positions
+    for (let row = 0; row < moduleCount; row++) {
+        for (let col = 0; col < moduleCount; col++) {
+            const y = row * moduleSize;
+            const x = col * moduleSize;
             
-            // Check if this pixel is dark (part of QR code)
-            const isDark = (r + g + b) / 3 < 128;
+            // Make sure we don't go out of bounds
+            if (y >= qrSize || x >= qrSize) continue;
+            
+            // Check multiple pixels in this module to determine if it's dark
+            let darkPixels = 0;
+            let totalPixels = 0;
+            const sampleSize = Math.min(moduleSize, 3); // Sample up to 3x3 pixels per module
+            for (let dy = 0; dy < sampleSize && (y + dy) < qrSize; dy++) {
+                for (let dx = 0; dx < sampleSize && (x + dx) < qrSize; dx++) {
+                    const i = ((y + dy) * qrSize + (x + dx)) * 4;
+                    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                    if (brightness < 128) darkPixels++;
+                    totalPixels++;
+                }
+            }
+            
+            // Consider module dark if majority of sampled pixels are dark
+            const isDark = darkPixels > totalPixels / 2;
             
             if (isDark) {
                 if (currentQRStyle === 'dots') {
                     // Draw circle
-                    tempCtx.beginPath();
-                    tempCtx.arc(
-                        x + moduleSize / 2,
-                        y + moduleSize / 2,
-                        moduleSize / 2.2,
+                    ctx.beginPath();
+                    ctx.arc(
+                        offsetX + x + moduleSize / 2,
+                        offsetY + y + moduleSize / 2,
+                        moduleSize / 2.0,
                         0,
                         Math.PI * 2
                     );
-                    tempCtx.fill();
+                    ctx.fill();
                 } else if (currentQRStyle === 'rounded') {
                     // Draw rounded rectangle (with fallback for older browsers)
                     const radius = moduleSize / 4;
-                    if (typeof tempCtx.roundRect === 'function') {
-                        tempCtx.beginPath();
-                        tempCtx.roundRect(x, y, moduleSize, moduleSize, radius);
-                        tempCtx.fill();
+                    if (typeof ctx.roundRect === 'function') {
+                        ctx.beginPath();
+                        ctx.roundRect(offsetX + x, offsetY + y, moduleSize, moduleSize, radius);
+                        ctx.fill();
                     } else {
                         // Fallback: draw regular rectangle
-                        tempCtx.fillRect(x, y, moduleSize, moduleSize);
+                        ctx.fillRect(offsetX + x, offsetY + y, moduleSize, moduleSize);
                     }
                 }
             }
         }
     }
     
-    // Draw the styled version back to the main canvas
-    ctx.clearRect(0, 0, qrSize, qrSize);
-    ctx.drawImage(tempCanvas, 0, 0);
+    // Restore image smoothing setting
+    ctx.imageSmoothingEnabled = false;
 }
 
 // Download QR Code as PNG
@@ -1453,9 +1583,11 @@ clearBtn.addEventListener('click', () => {
     sizeRange.value = 10;
     borderRange.value = 2;
     logoSizeRange.value = 25;
+    labelSizeRange.value = 100;
     sizeValue.textContent = '10';
     borderValue.textContent = '2';
     logoSizeValue.textContent = '25';
+    labelSizeValue.textContent = '100';
     
     const ctx = qrCanvas.getContext('2d');
     ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);

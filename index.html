@@ -173,6 +173,10 @@
                 </div>
             </div>
 
+            <div class="button-group">
+                <button id="generateBtn" class="btn btn-primary">Generate QR Code</button>
+            </div>
+
             <div class="section">
                 <h3>Size Options</h3>
                 
@@ -190,10 +194,14 @@
                     <label for="logoSizeRange">Logo Size %: <span id="logoSizeValue">25</span></label>
                     <input type="range" id="logoSizeRange" min="10" max="40" value="25">
                 </div>
+
+                <div class="option-group">
+                    <label for="labelSizeRange">Label Size %: <span id="labelSizeValue">100</span></label>
+                    <input type="range" id="labelSizeRange" min="50" max="300" value="100">
+                </div>
             </div>
 
             <div class="button-group">
-                <button id="generateBtn" class="btn btn-primary">Generate QR Code</button>
                 <button id="addToBucketBtn" class="btn btn-bucket" disabled>Add to Bucket <span id="bucketCount">(0/8)</span></button>
                 <button id="clearBtn" class="btn btn-secondary">Clear</button>
             </div>
@@ -238,6 +246,35 @@
         <!-- Right Panel - QR Code Display -->
         <div class="right-panel">
             <div class="preview-container">
+                <!-- Use Case Helper -->
+                <div class="use-case-section">
+                    <h3>💡 QR Code Use Cases</h3>
+                    <div class="use-case-content">
+                        <div class="use-case-item">
+                            <strong>🔗 URL:</strong> Link to websites, online stores, social media, or video content
+                        </div>
+                        <div class="use-case-item">
+                            <strong>📧 Email:</strong> Quick contact on business cards, customer support, or newsletter signups
+                        </div>
+                        <div class="use-case-item">
+                            <strong>📞 Phone:</strong> One-tap calling for business cards, customer service, or reservations
+                        </div>
+                        <div class="use-case-item">
+                            <strong>💬 SMS:</strong> Pre-filled feedback messages, contest entries, or order placement
+                        </div>
+                        <div class="use-case-item">
+                            <strong>📶 WiFi:</strong> Guest network access for businesses, events, hotels, or restaurants
+                            <div class="security-warning">⚠️ Password is stored in plain text in QR code - use only for guest networks</div>
+                        </div>
+                        <div class="use-case-item">
+                            <strong>👤 Contact:</strong> Digital business cards, speaker info, or complete contact details
+                        </div>
+                        <div class="use-case-item">
+                            <strong>📍 Location:</strong> Event venues, store directions, property listings, or delivery spots
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Analytics Preview -->
                 <div id="analyticsPreview" class="analytics-section">
                     <h3>QR Code Info</h3>
@@ -310,6 +347,15 @@
                         QR code will appear here<br><br>
                         Generate a QR code to see it
                     </p>
+                </div>
+                
+                <!-- Label Color Control -->
+                <div class="label-color-control" style="margin-top: 20px;">
+                    <div class="color-input-group">
+                        <label for="labelColorPicker">Label Color:</label>
+                        <input type="color" id="labelColorPicker" value="#000000">
+                        <input type="text" id="labelColorText" value="#000000" maxlength="7">
+                    </div>
                 </div>
             </div>
         </div>
