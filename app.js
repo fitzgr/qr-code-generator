@@ -1123,6 +1123,9 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
     let score = 0;
     const recommendations = [];
     
+    // Check if artistic mode is active
+    const isArtisticMode = backgroundImage !== null;
+    
     // 1. Contrast Ratio (30 points)
     if (contrastRatio >= 21) {
         score += 30;
@@ -1270,6 +1273,84 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
                     document.querySelector('.style-btn[data-style=\"squares\"]').click();
                     generateQRCode();
                 }
+            });
+        }
+    }
+    
+    // 6. Artistic QR Mode (affects score if active)
+    if (isArtisticMode) {
+        // Deduct points based on background settings that may affect scannability
+        let artisticPenalty = 0;
+        
+        // Background opacity penalty
+        if (currentBgOpacity > 70) {
+            artisticPenalty += 15;
+            recommendations.push({
+                type: 'warning',
+                icon: '🎨',
+                text: `Background opacity at ${currentBgOpacity}%. `,
+                actionText: 'Reduce to 40-50% for better scanning',
+                action: () => {
+                    bgOpacityRange.value = 45;
+                    bgOpacityValue.textContent = '45';
+                    currentBgOpacity = 45;
+                    generateQRCode();
+                }
+            });
+        } else if (currentBgOpacity > 50) {
+            artisticPenalty += 8;
+        }
+        
+        // QR strength bonus/penalty
+        if (currentQrStrength >= 85) {
+            // Good QR strength, minimal penalty
+            artisticPenalty -= 5; // Actually reduce the penalty
+        } else if (currentQrStrength < 70) {
+            artisticPenalty += 12;
+            recommendations.push({
+                type: 'warning',
+                icon: '🎨',
+                text: `QR strength at ${currentQrStrength}%. `,
+                actionText: 'Increase to 85% for reliability',
+                action: () => {
+                    qrStrengthRange.value = 85;
+                    qrStrengthValue.textContent = '85';
+                    currentQrStrength = 85;
+                    generateQRCode();
+                }
+            });
+        }
+        
+        // Blend mode considerations
+        if (currentBlendMode === 'overlay') {
+            // Best blend mode, no penalty
+        } else if (currentBlendMode === 'normal') {
+            artisticPenalty += 3;
+        } else {
+            artisticPenalty += 5;
+            recommendations.push({
+                type: 'info',
+                icon: '🎨',
+                text: `Blend mode: ${currentBlendMode}. `,
+                actionText: 'Try "Overlay" for better results',
+                action: () => {
+                    blendModeSelect.value = 'overlay';
+                    currentBlendMode = 'overlay';
+                    generateQRCode();
+                }
+            });
+        }
+        
+        // Apply penalty (max 25 points)
+        score -= Math.min(artisticPenalty, 25);
+        
+        // Add general artistic mode note
+        if (artisticPenalty < 10) {
+            recommendations.push({
+                type: 'success',
+                icon: '🎨',
+                text: 'Artistic mode active with good settings! Always test with a real phone camera.',
+                action: null
             });
         }
     }
