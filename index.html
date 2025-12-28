@@ -53,6 +53,7 @@
     </script>
     
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -90,6 +91,73 @@
                     <button id="clearLogoBtn" class="btn btn-secondary">Clear Logo</button>
                 </div>
                 <p id="logoStatus" class="status-text">No logo selected</p>
+            </div>
+
+            <div class="section artistic-qr-section">
+                <h3>🎨 Artistic QR Code</h3>
+                
+                <div class="option-group">
+                    <label>Background Source:</label>
+                    <div class="background-source-btns">
+                        <button id="uploadBgBtn" class="btn btn-secondary source-btn active">📁 Upload Image</button>
+                        <button id="aiBgBtn" class="btn btn-secondary source-btn">🤖 AI Generate</button>
+                        <button id="clearBgBtn" class="btn btn-secondary">✕ Clear</button>
+                    </div>
+                </div>
+
+                <!-- Upload Background -->
+                <div id="uploadBgSection" class="bg-subsection">
+                    <input type="file" id="bgImageInput" accept="image/*" style="display: none;">
+                    <button id="selectBgImageBtn" class="btn btn-secondary">Select Background Image</button>
+                    <p id="bgImageStatus" class="status-text">No background selected</p>
+                </div>
+
+                <!-- AI Generate Background -->
+                <div id="aiBgSection" class="bg-subsection" style="display: none;">
+                    <label for="aiPromptInput">Describe the image:</label>
+                    <textarea id="aiPromptInput" rows="3" placeholder="e.g., A serene forest with sunlight filtering through trees, digital art style"></textarea>
+                    <button id="generateAiImageBtn" class="btn btn-primary">Generate Image</button>
+                    <p id="aiImageStatus" class="status-text">Enter a prompt to generate</p>
+                </div>
+
+                <!-- Background Preview -->
+                <div id="bgPreviewSection" style="display: none;">
+                    <label>Background Preview:</label>
+                    <img id="bgPreviewImage" alt="Background preview" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
+                </div>
+
+                <!-- Blend Controls -->
+                <div id="blendControlsSection" style="display: none;">
+                    <div class="option-group">
+                        <label for="blendModeSelect">Blend Mode:</label>
+                        <select id="blendModeSelect" class="blend-mode-select">
+                            <option value="overlay">Overlay</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="screen">Screen</option>
+                            <option value="normal">Normal</option>
+                            <option value="darken">Darken</option>
+                            <option value="lighten">Lighten</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label for="bgOpacityRange">Background Opacity: <span id="bgOpacityValue">50</span>%</label>
+                        <input type="range" id="bgOpacityRange" min="10" max="100" value="50" class="slider">
+                    </div>
+
+                    <div class="option-group">
+                        <label for="qrStrengthRange">QR Code Strength: <span id="qrStrengthValue">80</span>%</label>
+                        <input type="range" id="qrStrengthRange" min="40" max="100" value="80" class="slider">
+                    </div>
+
+                    <!-- Scan Validation -->
+                    <div class="validation-status" id="validationStatus">
+                        <div class="validation-indicator" id="validationIndicator">
+                            <span class="indicator-icon">⏳</span>
+                            <span class="indicator-text">Click "Generate QR Code" to test</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="section">

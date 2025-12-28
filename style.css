@@ -943,3 +943,151 @@ input[type="range"]::-moz-range-thumb {
         width: 100%;
     }
 }
+/* ============================================
+   ARTISTIC QR CODE STYLES
+   ============================================ */
+
+.artistic-qr-section {
+    background: linear-gradient(135deg, #f8f9ff 0%, #fff5f8 100%);
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.artistic-qr-section h3 {
+    color: #764ba2;
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.background-source-btns {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.source-btn {
+    flex: 1;
+    padding: 10px 15px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.source-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #667eea;
+}
+
+.source-btn:hover:not(.active) {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.bg-subsection {
+    margin: 15px 0;
+}
+
+.blend-mode-select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.blend-mode-select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.validation-status {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+}
+
+.validation-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.indicator-icon {
+    font-size: 20px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.indicator-text {
+    flex: 1;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.validation-indicator.testing {
+    border-left: 4px solid #2196F3;
+    padding-left: 12px;
+}
+
+.validation-indicator.testing .indicator-text {
+    color: #2196F3;
+}
+
+.validation-indicator.valid {
+    border-left: 4px solid #4CAF50;
+    padding-left: 12px;
+}
+
+.validation-indicator.valid .indicator-text {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.validation-indicator.invalid {
+    border-left: 4px solid #f44336;
+    padding-left: 12px;
+}
+
+.validation-indicator.invalid .indicator-text {
+    color: #f44336;
+    font-weight: 500;
+}
+
+#bgPreviewSection {
+    margin: 15px 0;
+}
+
+#bgPreviewImage {
+    border: 2px solid #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+#aiPromptInput {
+    margin-bottom: 12px;
+    min-height: 80px;
+}
+
+#generateAiImageBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.status-text {
+    font-size: 13px;
+    margin-top: 8px;
+    font-style: italic;
+}

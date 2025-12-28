@@ -6,6 +6,13 @@ let currentDarkColor = '#000000';
 let currentLightColor = '#ffffff';
 let currentLabelColor = '#000000';
 
+// Artistic QR Code variables
+let backgroundImage = null;
+let currentBlendMode = 'overlay';
+let currentBgOpacity = 50;
+let currentQrStrength = 80;
+let isGeneratingAI = false;
+
 // QR Code Bucket for batch processing
 let qrBucket = [];
 const MAX_BUCKET_SIZE_PDF = 8;  // 2 columns × 4 rows
@@ -47,6 +54,29 @@ const sizeValue = document.getElementById('sizeValue');
 const borderValue = document.getElementById('borderValue');
 const logoSizeValue = document.getElementById('logoSizeValue');
 const labelSizeValue = document.getElementById('labelSizeValue');
+
+// Artistic QR Code elements
+const uploadBgBtn = document.getElementById('uploadBgBtn');
+const aiBgBtn = document.getElementById('aiBgBtn');
+const clearBgBtn = document.getElementById('clearBgBtn');
+const uploadBgSection = document.getElementById('uploadBgSection');
+const aiBgSection = document.getElementById('aiBgSection');
+const bgImageInput = document.getElementById('bgImageInput');
+const selectBgImageBtn = document.getElementById('selectBgImageBtn');
+const bgImageStatus = document.getElementById('bgImageStatus');
+const aiPromptInput = document.getElementById('aiPromptInput');
+const generateAiImageBtn = document.getElementById('generateAiImageBtn');
+const aiImageStatus = document.getElementById('aiImageStatus');
+const bgPreviewSection = document.getElementById('bgPreviewSection');
+const bgPreviewImage = document.getElementById('bgPreviewImage');
+const blendControlsSection = document.getElementById('blendControlsSection');
+const blendModeSelect = document.getElementById('blendModeSelect');
+const bgOpacityRange = document.getElementById('bgOpacityRange');
+const qrStrengthRange = document.getElementById('qrStrengthRange');
+const bgOpacityValue = document.getElementById('bgOpacityValue');
+const qrStrengthValue = document.getElementById('qrStrengthValue');
+const validationStatus = document.getElementById('validationStatus');
+const validationIndicator = document.getElementById('validationIndicator');
 
 // Color inputs
 const darkColorPicker = document.getElementById('darkColorPicker');
@@ -299,6 +329,196 @@ labelSizeRange.addEventListener('change', (e) => {
         generateQRCode();
     }
 });
+
+// ============================================
+// ARTISTIC QR CODE EVENT LISTENERS
+// ============================================
+
+// Background source toggle buttons
+uploadBgBtn.addEventListener('click', () => {
+    uploadBgBtn.classList.add('active');
+    aiBgBtn.classList.remove('active');
+    uploadBgSection.style.display = 'block';
+    aiBgSection.style.display = 'none';
+});
+
+aiBgBtn.addEventListener('click', () => {
+    aiBgBtn.classList.add('active');
+    uploadBgBtn.classList.remove('active');
+    uploadBgSection.style.display = 'none';
+    aiBgSection.style.display = 'block';
+});
+
+// Clear background
+clearBgBtn.addEventListener('click', () => {
+    backgroundImage = null;
+    bgPreviewSection.style.display = 'none';
+    blendControlsSection.style.display = 'none';
+    bgImageStatus.textContent = 'No background selected';
+    bgImageStatus.style.color = '#666';
+    aiImageStatus.textContent = 'Enter a prompt to generate';
+    aiImageStatus.style.color = '#666';
+    bgImageInput.value = '';
+    aiPromptInput.value = '';
+    updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+// Background image upload
+selectBgImageBtn.addEventListener('click', () => {
+    bgImageInput.click();
+});
+
+bgImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                backgroundImage = img;
+                bgImageStatus.textContent = `Background: ${file.name}`;
+                bgImageStatus.style.color = '#4CAF50';
+                bgPreviewImage.src = event.target.result;
+                bgPreviewSection.style.display = 'block';
+                blendControlsSection.style.display = 'block';
+                updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+                if (currentQRDataURL) {
+                    generateQRCode();
+                }
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// AI image generation
+generateAiImageBtn.addEventListener('click', async () => {
+    const prompt = aiPromptInput.value.trim();
+    if (!prompt) {
+        aiImageStatus.textContent = 'Please enter a description';
+        aiImageStatus.style.color = '#f44336';
+        return;
+    }
+
+    if (isGeneratingAI) {
+        return;
+    }
+
+    isGeneratingAI = true;
+    generateAiImageBtn.disabled = true;
+    generateAiImageBtn.textContent = 'Generating...';
+    aiImageStatus.textContent = 'Generating image with AI...';
+    aiImageStatus.style.color = '#2196F3';
+
+    try {
+        // Use Pollinations.ai free API (no key required!)
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+        
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        img.onload = () => {
+            backgroundImage = img;
+            aiImageStatus.textContent = 'AI image generated successfully!';
+            aiImageStatus.style.color = '#4CAF50';
+            bgPreviewImage.src = imageUrl;
+            bgPreviewSection.style.display = 'block';
+            blendControlsSection.style.display = 'block';
+            updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+            isGeneratingAI = false;
+            generateAiImageBtn.disabled = false;
+            generateAiImageBtn.textContent = 'Generate Image';
+            
+            if (currentQRDataURL) {
+                generateQRCode();
+            }
+        };
+        
+        img.onerror = () => {
+            aiImageStatus.textContent = 'Failed to generate image. Try again.';
+            aiImageStatus.style.color = '#f44336';
+            isGeneratingAI = false;
+            generateAiImageBtn.disabled = false;
+            generateAiImageBtn.textContent = 'Generate Image';
+        };
+        
+        img.src = imageUrl;
+        
+    } catch (error) {
+        console.error('Error generating AI image:', error);
+        aiImageStatus.textContent = 'Error generating image';
+        aiImageStatus.style.color = '#f44336';
+        isGeneratingAI = false;
+        generateAiImageBtn.disabled = false;
+        generateAiImageBtn.textContent = 'Generate Image';
+    }
+});
+
+// Blend controls
+blendModeSelect.addEventListener('change', (e) => {
+    currentBlendMode = e.target.value;
+    if (currentQRDataURL && backgroundImage) {
+        generateQRCode();
+    }
+});
+
+bgOpacityRange.addEventListener('input', (e) => {
+    bgOpacityValue.textContent = e.target.value;
+});
+
+bgOpacityRange.addEventListener('change', (e) => {
+    currentBgOpacity = parseInt(e.target.value);
+    if (currentQRDataURL && backgroundImage) {
+        generateQRCode();
+    }
+});
+
+qrStrengthRange.addEventListener('input', (e) => {
+    qrStrengthValue.textContent = e.target.value;
+});
+
+qrStrengthRange.addEventListener('change', (e) => {
+    currentQrStrength = parseInt(e.target.value);
+    if (currentQRDataURL && backgroundImage) {
+        generateQRCode();
+    }
+});
+
+// Validation status update function
+function updateValidationStatus(status, message) {
+    const indicator = validationIndicator;
+    const icon = indicator.querySelector('.indicator-icon');
+    const text = indicator.querySelector('.indicator-text');
+    
+    indicator.className = 'validation-indicator';
+    
+    switch(status) {
+        case 'testing':
+            indicator.classList.add('testing');
+            icon.textContent = '⏳';
+            text.textContent = 'Testing scannability...';
+            break;
+        case 'valid':
+            indicator.classList.add('valid');
+            icon.textContent = '✓';
+            text.textContent = message || 'QR code is scannable!';
+            break;
+        case 'invalid':
+            indicator.classList.add('invalid');
+            icon.textContent = '✗';
+            text.textContent = message || 'QR code may not scan properly';
+            break;
+        case 'idle':
+        default:
+            icon.textContent = '⏳';
+            text.textContent = message || 'Click "Generate QR Code" to test';
+            break;
+    }
+}
 
 // Logo selection
 selectLogoBtn.addEventListener('click', () => {
@@ -629,8 +849,18 @@ function drawQRWithLogo(qrImage, qrSize) {
     qrCanvas.classList.add('visible');
     previewPlaceholder.classList.add('hidden');
     
+    // Apply artistic background blending if available
+    if (backgroundImage) {
+        applyArtisticBlending(ctx, qrCanvas.width, qrCanvas.height, padding, qrSize);
+    }
+    
     // Store the data URL for download
     currentQRDataURL = qrCanvas.toDataURL('image/png');
+    
+    // Validate QR code scannability if artistic mode is active
+    if (backgroundImage) {
+        validateQRScannability();
+    }
     
     // Enable "Add to Bucket" button
     addToBucketBtn.disabled = false;
@@ -800,8 +1030,18 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     qrCanvas.classList.add('visible');
     previewPlaceholder.classList.add('hidden');
     
+    // Apply artistic background blending if available
+    if (backgroundImage) {
+        applyArtisticBlending(ctx, qrCanvas.width, qrCanvas.height, padding, qrSize);
+    }
+    
     // Store the data URL for download
     currentQRDataURL = qrCanvas.toDataURL('image/png');
+    
+    // Validate QR code scannability if artistic mode is active
+    if (backgroundImage) {
+        validateQRScannability();
+    }
     
     // Enable "Add to Bucket" button
     addToBucketBtn.disabled = false;
@@ -1662,3 +1902,114 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+// ============================================
+// ARTISTIC QR CODE FUNCTIONS
+// ============================================
+
+function applyArtisticBlending(ctx, canvasWidth, canvasHeight, padding, qrSize) {
+    // Save the current QR code before blending
+    const qrImageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+    
+    // Create a temporary canvas for the background
+    const bgCanvas = document.createElement('canvas');
+    bgCanvas.width = canvasWidth;
+    bgCanvas.height = canvasHeight;
+    const bgCtx = bgCanvas.getContext('2d');
+    
+    // Fill background with white
+    bgCtx.fillStyle = '#ffffff';
+    bgCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    // Draw background image to fit the canvas
+    bgCtx.drawImage(backgroundImage, 0, 0, canvasWidth, canvasHeight);
+    
+    // Get background image data
+    const bgImageData = bgCtx.getImageData(0, 0, canvasWidth, canvasHeight);
+    
+    // Apply blending
+    const qrPixels = qrImageData.data;
+    const bgPixels = bgImageData.data;
+    
+    const bgOpacity = currentBgOpacity / 100;
+    const qrOpacity = currentQrStrength / 100;
+    
+    for (let i = 0; i < qrPixels.length; i += 4) {
+        const qrBrightness = (qrPixels[i] + qrPixels[i + 1] + qrPixels[i + 2]) / 3;
+        const isQrLight = qrBrightness > 128;
+        
+        // Blend background with QR code
+        let r, g, b;
+        
+        if (currentBlendMode === 'overlay') {
+            // Enhanced overlay for better QR visibility
+            if (isQrLight) {
+                r = bgPixels[i] * bgOpacity + qrPixels[i] * (1 - bgOpacity);
+                g = bgPixels[i + 1] * bgOpacity + qrPixels[i + 1] * (1 - bgOpacity);
+                b = bgPixels[i + 2] * bgOpacity + qrPixels[i + 2] * (1 - bgOpacity);
+            } else {
+                // Keep QR dark areas strong
+                r = qrPixels[i] * qrOpacity + bgPixels[i] * (1 - qrOpacity) * 0.5;
+                g = qrPixels[i + 1] * qrOpacity + bgPixels[i + 1] * (1 - qrOpacity) * 0.5;
+                b = qrPixels[i + 2] * qrOpacity + bgPixels[i + 2] * (1 - qrOpacity) * 0.5;
+            }
+        } else if (currentBlendMode === 'multiply') {
+            r = (qrPixels[i] / 255) * (bgPixels[i] / 255) * 255;
+            g = (qrPixels[i + 1] / 255) * (bgPixels[i + 1] / 255) * 255;
+            b = (qrPixels[i + 2] / 255) * (bgPixels[i + 2] / 255) * 255;
+        } else if (currentBlendMode === 'screen') {
+            r = 255 - ((255 - qrPixels[i]) * (255 - bgPixels[i])) / 255;
+            g = 255 - ((255 - qrPixels[i + 1]) * (255 - bgPixels[i + 1])) / 255;
+            b = 255 - ((255 - qrPixels[i + 2]) * (255 - bgPixels[i + 2])) / 255;
+        } else if (currentBlendMode === 'darken') {
+            r = Math.min(qrPixels[i], bgPixels[i]);
+            g = Math.min(qrPixels[i + 1], bgPixels[i + 1]);
+            b = Math.min(qrPixels[i + 2], bgPixels[i + 2]);
+        } else if (currentBlendMode === 'lighten') {
+            r = Math.max(qrPixels[i], bgPixels[i]);
+            g = Math.max(qrPixels[i + 1], bgPixels[i + 1]);
+            b = Math.max(qrPixels[i + 2], bgPixels[i + 2]);
+        } else { // normal
+            r = bgPixels[i] * bgOpacity + qrPixels[i] * (1 - bgOpacity);
+            g = bgPixels[i + 1] * bgOpacity + qrPixels[i + 1] * (1 - bgOpacity);
+            b = bgPixels[i + 2] * bgOpacity + qrPixels[i + 2] * (1 - bgOpacity);
+        }
+        
+        qrPixels[i] = Math.round(r);
+        qrPixels[i + 1] = Math.round(g);
+        qrPixels[i + 2] = Math.round(b);
+    }
+    
+    // Put the blended image back
+    ctx.putImageData(qrImageData, 0, 0);
+}
+
+function validateQRScannability() {
+    updateValidationStatus('testing', 'Testing scannability...');
+    
+    // Use setTimeout to allow UI to update
+    setTimeout(() => {
+        try {
+            const ctx = qrCanvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+            
+            // Use jsQR library to test if QR code can be read
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+            
+            if (code) {
+                const originalText = textInput.value.trim();
+                if (code.data === originalText) {
+                    updateValidationStatus('valid', 'QR code is scannable! ✓');
+                } else {
+                    updateValidationStatus('invalid', 'QR data mismatch. Try adjusting settings.');
+                }
+            } else {
+                updateValidationStatus('invalid', 'QR may not scan. Try: • Increase QR Strength • Decrease Background Opacity • Change Blend Mode');
+            }
+        } catch (error) {
+            console.error('Validation error:', error);
+            updateValidationStatus('invalid', 'Validation failed. Adjust blend settings.');
+        }
+    }, 100);
+}
