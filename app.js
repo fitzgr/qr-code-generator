@@ -78,6 +78,14 @@ const qrStrengthValue = document.getElementById('qrStrengthValue');
 const validationStatus = document.getElementById('validationStatus');
 const validationIndicator = document.getElementById('validationIndicator');
 
+// Prompt Helper elements
+const togglePromptHelperBtn = document.getElementById('togglePromptHelperBtn');
+const promptHelperContent = document.getElementById('promptHelperContent');
+const contextInput = document.getElementById('contextInput');
+const generatePromptBtn = document.getElementById('generatePromptBtn');
+const retryPromptBtn = document.getElementById('retryPromptBtn');
+const promptSuggestions = document.getElementById('promptSuggestions');
+
 // Color inputs
 const darkColorPicker = document.getElementById('darkColorPicker');
 const lightColorPicker = document.getElementById('lightColorPicker');
@@ -487,6 +495,154 @@ qrStrengthRange.addEventListener('change', (e) => {
         generateQRCode();
     }
 });
+
+// ============================================
+// PROMPT HELPER FUNCTIONALITY
+// ============================================
+
+// Toggle prompt helper visibility
+togglePromptHelperBtn.addEventListener('click', () => {
+    const isHidden = promptHelperContent.style.display === 'none';
+    promptHelperContent.style.display = isHidden ? 'block' : 'none';
+    const icon = togglePromptHelperBtn.querySelector('.toggle-icon');
+    if (isHidden) {
+        icon.classList.add('rotated');
+    } else {
+        icon.classList.remove('rotated');
+    }
+});
+
+// Generate prompt suggestions
+generatePromptBtn.addEventListener('click', () => {
+    generatePromptSuggestions();
+});
+
+retryPromptBtn.addEventListener('click', () => {
+    generatePromptSuggestions();
+});
+
+function generatePromptSuggestions() {
+    const context = contextInput.value.trim().toLowerCase();
+    
+    if (!context) {
+        alert('Please enter what your QR code is for (e.g., "coffee shop business card")');
+        contextInput.focus();
+        return;
+    }
+    
+    // Generate 3 prompt suggestions based on context
+    const suggestions = createPromptSuggestions(context);
+    
+    // Display suggestions
+    promptSuggestions.innerHTML = '';
+    promptSuggestions.style.display = 'flex';
+    retryPromptBtn.style.display = 'block';
+    
+    suggestions.forEach((suggestion, index) => {
+        const card = document.createElement('div');
+        card.className = 'prompt-suggestion-card';
+        card.innerHTML = `
+            <div class="suggestion-title">${suggestion.title}</div>
+            <div class="suggestion-text">${suggestion.prompt}</div>
+            <div class="use-icon">→</div>
+        `;
+        
+        card.addEventListener('click', () => {
+            aiPromptInput.value = suggestion.prompt;
+            aiPromptInput.focus();
+            
+            // Highlight briefly
+            card.style.background = '#e8f5e9';
+            card.style.borderColor = '#4CAF50';
+            setTimeout(() => {
+                card.style.background = 'white';
+                card.style.borderColor = '#e0e0e0';
+            }, 500);
+        });
+        
+        promptSuggestions.appendChild(card);
+    });
+}
+
+function createPromptSuggestions(context) {
+    // Smart template-based generation with keyword matching
+    const keywords = {
+        business: ['business', 'company', 'corporate', 'professional', 'office', 'startup'],
+        food: ['restaurant', 'cafe', 'coffee', 'food', 'dining', 'menu', 'bakery', 'bar'],
+        tech: ['tech', 'software', 'app', 'digital', 'web', 'coding', 'ai', 'data'],
+        creative: ['art', 'design', 'creative', 'studio', 'photography', 'music'],
+        event: ['wedding', 'event', 'party', 'conference', 'concert', 'festival'],
+        health: ['health', 'fitness', 'gym', 'medical', 'wellness', 'yoga'],
+        education: ['school', 'education', 'learning', 'course', 'university'],
+        nature: ['nature', 'eco', 'green', 'organic', 'natural', 'sustainable'],
+        luxury: ['luxury', 'premium', 'elegant', 'boutique', 'exclusive']
+    };
+    
+    // Detect category
+    let category = 'general';
+    for (const [key, words] of Object.entries(keywords)) {
+        if (words.some(word => context.includes(word))) {
+            category = key;
+            break;
+        }
+    }
+    
+    // Template library organized by category
+    const templates = {
+        business: [
+            { title: 'Modern Professional', prompt: 'Clean geometric patterns in navy blue and gold, modern minimalist style, corporate elegance' },
+            { title: 'Corporate Gradient', prompt: 'Smooth gradient from dark blue to light blue, subtle abstract shapes, professional business aesthetic' },
+            { title: 'Tech Forward', prompt: 'Digital circuit board pattern in blue and silver, futuristic tech aesthetic, clean lines' }
+        ],
+        food: [
+            { title: 'Warm & Inviting', prompt: 'Warm coffee tones with steam wisps, cozy cafe atmosphere, soft lighting, watercolor style' },
+            { title: 'Fresh & Natural', prompt: 'Fresh herbs and ingredients, rustic wooden texture, natural earth tones, organic feel' },
+            { title: 'Elegant Dining', prompt: 'Elegant table setting with soft candlelight, muted gold and cream colors, sophisticated ambiance' }
+        ],
+        tech: [
+            { title: 'Cyberpunk Vibes', prompt: 'Neon circuit patterns in electric blue and purple, futuristic digital interface, glowing lines' },
+            { title: 'Minimal Tech', prompt: 'Clean white space with geometric blue accents, modern tech aesthetic, minimalist digital art' },
+            { title: 'Data Flow', prompt: 'Abstract data visualization, flowing particles in blue and green, high-tech sci-fi style' }
+        ],
+        creative: [
+            { title: 'Artistic Splash', prompt: 'Vibrant watercolor splashes in rainbow colors, creative abstract art, fluid organic shapes' },
+            { title: 'Bold Brushstrokes', prompt: 'Bold acrylic brush strokes in bright colors, artistic energy, modern art style' },
+            { title: 'Dreamy Pastels', prompt: 'Soft pastel clouds in pink and purple, dreamy artistic atmosphere, ethereal aesthetic' }
+        ],
+        event: [
+            { title: 'Elegant Celebration', prompt: 'Soft rose gold with delicate floral patterns, elegant celebration theme, romantic atmosphere' },
+            { title: 'Festive Energy', prompt: 'Colorful confetti and light bokeh effects, joyful celebration mood, vibrant party vibes' },
+            { title: 'Timeless Classic', prompt: 'Ivory and gold ornamental patterns, classic elegance, vintage luxury feel' }
+        ],
+        health: [
+            { title: 'Fresh & Energetic', prompt: 'Bright lime green with water droplets, fresh energetic vibe, healthy lifestyle aesthetic' },
+            { title: 'Zen Calm', prompt: 'Peaceful bamboo forest with soft light, calming zen atmosphere, natural tranquility' },
+            { title: 'Vitality Burst', prompt: 'Orange and yellow sunrise gradients, energetic vitality, dynamic health theme' }
+        ],
+        nature: [
+            { title: 'Forest Serenity', prompt: 'Peaceful forest with sunlight through trees, natural green tones, serene woodland atmosphere' },
+            { title: 'Ocean Calm', prompt: 'Turquoise ocean waves with soft foam, peaceful seaside, calming blue water tones' },
+            { title: 'Mountain Majesty', prompt: 'Majestic mountain peaks with purple sunset, natural grandeur, inspiring landscape' }
+        ],
+        luxury: [
+            { title: 'Gold Elegance', prompt: 'Luxurious gold marble texture with black veins, premium sophisticated aesthetic' },
+            { title: 'Velvet Night', prompt: 'Deep burgundy velvet texture with gold accents, luxury elegance, rich opulent feel' },
+            { title: 'Crystal Shimmer', prompt: 'Crystalline patterns with champagne gold shimmer, exclusive luxury, refined elegance' }
+        ],
+        general: [
+            { title: 'Abstract Modern', prompt: 'Smooth color gradient in purple and blue, modern abstract style, clean aesthetic' },
+            { title: 'Geometric Clean', prompt: 'Simple geometric shapes in soft colors, minimalist clean design, contemporary feel' },
+            { title: 'Soft Gradient', prompt: 'Gentle gradient from pink to purple, soft dreamy atmosphere, pastel aesthetic' }
+        ]
+    };
+    
+    // Get templates for the detected category
+    let categoryTemplates = templates[category] || templates.general;
+    
+    // Shuffle and return 3
+    const shuffled = [...categoryTemplates].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+}
 
 // Validation status update function
 function updateValidationStatus(status, message, suggestions = null) {

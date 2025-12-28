@@ -114,6 +114,22 @@
 
                 <!-- AI Generate Background -->
                 <div id="aiBgSection" class="bg-subsection" style="display: none;">
+                    <!-- Prompt Helper -->
+                    <div class="prompt-helper-section">
+                        <button id="togglePromptHelperBtn" class="btn-link" type="button">
+                            💡 Need help creating a prompt? <span class="toggle-icon">▼</span>
+                        </button>
+                        <div id="promptHelperContent" class="prompt-helper-content" style="display: none;">
+                            <label for="contextInput">What's your QR code for?</label>
+                            <input type="text" id="contextInput" placeholder="e.g., Coffee shop business card, Tech startup website, Wedding invitation">
+                            <div class="helper-buttons">
+                                <button id="generatePromptBtn" class="btn btn-secondary">Generate Prompt Ideas</button>
+                                <button id="retryPromptBtn" class="btn btn-secondary" style="display: none;">🔄 Try Different Ideas</button>
+                            </div>
+                            <div id="promptSuggestions" class="prompt-suggestions" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
                     <label for="aiPromptInput">Describe the image:</label>
                     <textarea id="aiPromptInput" rows="3" placeholder="e.g., A serene forest with sunlight filtering through trees, digital art style"></textarea>
                     <button id="generateAiImageBtn" class="btn btn-primary">Generate Image</button>

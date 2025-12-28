@@ -1091,3 +1091,118 @@ input[type="range"]::-moz-range-thumb {
     margin-top: 8px;
     font-style: italic;
 }
+/* Prompt Helper Styles */
+.prompt-helper-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9ff;
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+.btn-link:hover {
+    color: #764ba2;
+}
+
+.toggle-icon {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.toggle-icon.rotated {
+    transform: rotate(-180deg);
+}
+
+.prompt-helper-content {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.prompt-helper-content input[type='text'] {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    transition: border-color 0.3s;
+}
+
+.prompt-helper-content input[type='text']:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.helper-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.helper-buttons button {
+    flex: 1;
+}
+
+.prompt-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.prompt-suggestion-card {
+    padding: 12px;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.prompt-suggestion-card:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.prompt-suggestion-card .suggestion-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+
+.prompt-suggestion-card .suggestion-text {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.prompt-suggestion-card .use-icon {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 18px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.prompt-suggestion-card:hover .use-icon {
+    opacity: 1;
+}
