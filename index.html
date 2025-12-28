@@ -100,7 +100,7 @@
                     <label>Background Source:</label>
                     <div class="background-source-btns">
                         <button id="uploadBgBtn" class="btn btn-secondary source-btn active">📁 Upload Image</button>
-                        <button id="aiBgBtn" class="btn btn-secondary source-btn">🤖 AI Generate</button>
+                        <button id="aiBgBtn" class="btn btn-secondary source-btn">✨ Create Image</button>
                         <button id="clearBgBtn" class="btn btn-secondary">✕ Clear</button>
                     </div>
                 </div>
@@ -112,28 +112,36 @@
                     <p id="bgImageStatus" class="status-text">No background selected</p>
                 </div>
 
-                <!-- AI Generate Background -->
+                <!-- Vision Renderer Background -->
                 <div id="aiBgSection" class="bg-subsection" style="display: none;">
                     <!-- Prompt Helper -->
                     <div class="prompt-helper-section">
                         <button id="togglePromptHelperBtn" class="btn-link" type="button">
-                            💡 Need help creating a prompt? <span class="toggle-icon">▼</span>
+                            💡 Need help with a description? <span class="toggle-icon">▼</span>
                         </button>
                         <div id="promptHelperContent" class="prompt-helper-content" style="display: none;">
                             <label for="contextInput">What's your QR code for?</label>
                             <input type="text" id="contextInput" placeholder="e.g., Coffee shop business card, Tech startup website, Wedding invitation">
                             <div class="helper-buttons">
-                                <button id="generatePromptBtn" class="btn btn-secondary">Generate Prompt Ideas</button>
+                                <button id="generatePromptBtn" class="btn btn-secondary">Generate Description Ideas</button>
                                 <button id="retryPromptBtn" class="btn btn-secondary" style="display: none;">🔄 Try Different Ideas</button>
                             </div>
                             <div id="promptSuggestions" class="prompt-suggestions" style="display: none;"></div>
                         </div>
                     </div>
                     
-                    <label for="aiPromptInput">Describe the image:</label>
+                    <label for="aiPromptInput">Describe the image to render:</label>
                     <textarea id="aiPromptInput" rows="3" placeholder="e.g., A serene forest with sunlight filtering through trees, digital art style"></textarea>
-                    <button id="generateAiImageBtn" class="btn btn-primary">Generate Image</button>
-                    <p id="aiImageStatus" class="status-text">Enter a prompt to generate</p>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="generateAiImageBtn" class="btn btn-primary">Render Image</button>
+                        <button id="cancelAiImageBtn" class="btn" style="display: none; background: #757575; color: white;">Cancel</button>
+                    </div>
+                    <p id="aiImageStatus" class="status-text">Describe the context to generate an image</p>
+                    <div id="aiProgressContainer" style="display: none; margin-top: 10px;">
+                        <div style="background: #e0e0e0; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                            <div id="aiProgressBar" style="background: linear-gradient(90deg, #1565C0, #42A5F5); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; border-radius: 10px;"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Background Preview -->
@@ -516,6 +524,29 @@
                     add your logo, customize colors and labels, batch process multiple codes, and download in any format - all without creating an account or paying a single cent. 
                     No watermarks, no subscriptions, no catch.
                 </p>
+            </section>
+
+            <section class="info-section">
+                <h2>✨ Artistic QR Codes</h2>
+                <p>
+                    Transform your QR codes into eye-catching visual experiences with our artistic QR code features. 
+                    Blend custom backgrounds seamlessly with your QR codes while maintaining scannability.
+                </p>
+                <div style="margin-top: 20px;">
+                    <h3 style="color: #1976D2; font-size: 1.1em; margin-bottom: 10px;">🎨 What You Can Do:</h3>
+                    <ul style="line-height: 1.8; color: #555;">
+                        <li><strong>Upload Your Own Images:</strong> Use any photo, illustration, or graphic as your QR code background</li>
+                        <li><strong>Create Custom Images:</strong> Generate unique backgrounds by describing what you want to see</li>
+                        <li><strong>Professional Blending:</strong> Choose from 6 blend modes (overlay, multiply, screen, normal, darken, lighten) to perfectly merge your QR code with the background</li>
+                        <li><strong>Fine-Tune Appearance:</strong> Adjust background opacity (10-100%) and QR strength (40-100%) for the perfect balance</li>
+                        <li><strong>Real-Time Validation:</strong> Instantly test if your artistic QR code is scannable with automatic quality scoring</li>
+                        <li><strong>Smart Suggestions:</strong> Get helpful recommendations to improve scannability when needed</li>
+                    </ul>
+                    <p style="margin-top: 15px; padding: 15px; background: #E3F2FD; border-left: 4px solid #1976D2; border-radius: 4px;">
+                        <strong>💡 Pro Tip:</strong> Start with high opacity and QR strength, then gradually adjust for your desired artistic effect. 
+                        Use the validation feature to ensure your QR code remains scannable before finalizing your design.
+                    </p>
+                </div>
             </section>
         </div>
     </div>

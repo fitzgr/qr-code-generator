@@ -66,6 +66,7 @@ const selectBgImageBtn = document.getElementById('selectBgImageBtn');
 const bgImageStatus = document.getElementById('bgImageStatus');
 const aiPromptInput = document.getElementById('aiPromptInput');
 const generateAiImageBtn = document.getElementById('generateAiImageBtn');
+const cancelAiImageBtn = document.getElementById('cancelAiImageBtn');
 const aiImageStatus = document.getElementById('aiImageStatus');
 const bgPreviewSection = document.getElementById('bgPreviewSection');
 const bgPreviewImage = document.getElementById('bgPreviewImage');
@@ -416,55 +417,389 @@ generateAiImageBtn.addEventListener('click', async () => {
         return;
     }
 
+    generateAIImageWithRetry(prompt, 1);
+});
+
+// Cancel AI generation
+cancelAiImageBtn.addEventListener('click', () => {
+    if (isGeneratingAI) {
+        cancelAIGeneration = true;
+        isGeneratingAI = false;
+        generateAiImageBtn.disabled = false;
+        generateAiImageBtn.textContent = 'Render Image';
+        cancelAiImageBtn.style.display = 'none';
+        
+        // Hide progress bar
+        const progressContainer = document.getElementById('aiProgressContainer');
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+            const progressBar = document.getElementById('aiProgressBar');
+            if (progressBar) {
+                progressBar.style.width = '0%';
+            }
+        }
+        
+        aiImageStatus.innerHTML = 'Generation cancelled. <strong>Next steps:</strong> Upload an image or try again later.';
+        aiImageStatus.style.color = '#757575';
+        console.log('🚫 User cancelled AI generation');
+    }
+});
+
+// Play notification sound when rendering completes
+function playNotificationSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800; // 800 Hz tone
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+        console.log('🔔 Notification sound played');
+    } catch (e) {
+        console.log('🔇 Could not play notification sound:', e.message);
+    }
+}
+
+async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
     isGeneratingAI = true;
+    cancelAIGeneration = false;
     generateAiImageBtn.disabled = true;
-    generateAiImageBtn.textContent = 'Generating...';
-    aiImageStatus.textContent = 'Generating image with AI...';
-    aiImageStatus.style.color = '#2196F3';
+    cancelAiImageBtn.style.display = 'inline-block';
+    generateAiImageBtn.textContent = attempt > 1 ? `Retrying... (${attempt}/${maxAttempts})` : 'Generating...';
+    aiImageStatus.textContent = attempt > 1 ? `Attempt ${attempt}/${maxAttempts} - Rendering your vision...` : 'Rendering your vision...';
+    aiImageStatus.style.color = '#1565C0';
+    
+    // Hide progress bar at start
+    const progressContainer = document.getElementById('aiProgressContainer');
+    if (progressContainer && attempt === 1) {
+        progressContainer.style.display = 'none';
+        const progressBar = document.getElementById('aiProgressBar');
+        if (progressBar) {
+            progressBar.style.width = '0%';
+        }
+    }
 
     try {
         // Use Pollinations.ai free API (no key required!)
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+        // Add cache-busting parameter to avoid stale results
+        const cacheBuster = Date.now();
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${cacheBuster}`;
         
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
+        console.log('🎨 Attempting AI image generation...');
+        console.log('📝 Prompt:', prompt);
+        console.log('🔗 URL:', imageUrl);
+        console.log('🔄 Attempt:', attempt, 'of', maxAttempts);
         
-        img.onload = () => {
-            backgroundImage = img;
-            aiImageStatus.textContent = 'AI image generated successfully!';
-            aiImageStatus.style.color = '#4CAF50';
-            bgPreviewImage.src = imageUrl;
-            bgPreviewSection.style.display = 'block';
-            blendControlsSection.style.display = 'block';
-            updateValidationStatus('idle', 'Click "Generate QR Code" to test');
-            isGeneratingAI = false;
-            generateAiImageBtn.disabled = false;
-            generateAiImageBtn.textContent = 'Generate Image';
-            
-            if (currentQRDataURL) {
-                generateQRCode();
-            }
+        // Set a timeout for the image load
+        const loadImageWithTimeout = (url, timeoutMs = 60000) => {
+            return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                const timeoutId = setTimeout(() => {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.error('⏱️ Timeout after', elapsed, 'seconds');
+                    reject(new Error('Image generation timed out after 60 seconds'));
+                }, timeoutMs);
+                
+                img.onload = () => {
+                    clearTimeout(timeoutId);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.log('✅ Image loaded successfully in', elapsed, 'seconds');
+                    console.log('📐 Image dimensions:', img.width, 'x', img.height);
+                    resolve(img);
+                };
+                
+                img.onerror = (error) => {
+                    clearTimeout(timeoutId);
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                    console.error('❌ Image load failed after', elapsed, 'seconds');
+                    console.error('❌ Error event:', error);
+                    console.error('🔍 Check Network tab for details (F12 → Network)');
+                    console.error('🔍 Common issues:');
+                    console.error('   - Browser extension blocking (disable ad blockers)');
+                    console.error('   - CORS policy error');
+                    console.error('   - Firewall/antivirus blocking');
+                    console.error('   - DNS/network issue');
+                    reject(new Error('Failed to load generated image'));
+                };
+                
+                console.log('⏳ Loading image...');
+                img.src = url;
+            });
         };
         
-        img.onerror = () => {
-            aiImageStatus.textContent = 'Failed to generate image. Try again.';
-            aiImageStatus.style.color = '#f44336';
-            isGeneratingAI = false;
-            generateAiImageBtn.disabled = false;
-            generateAiImageBtn.textContent = 'Generate Image';
-        };
+        const img = await loadImageWithTimeout(imageUrl);
         
-        img.src = imageUrl;
+        // Success!
+        backgroundImage = img;
+        aiImageStatus.textContent = 'Vision rendered successfully! ✨';
+        aiImageStatus.style.color = '#4CAF50';
+        
+        // Play notification sound
+        playNotificationSound();
+        
+        bgPreviewImage.src = imageUrl;
+        bgPreviewSection.style.display = 'block';
+        blendControlsSection.style.display = 'block';
+        updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+        isGeneratingAI = false;
+        cancelAIGeneration = false;
+        generateAiImageBtn.disabled = false;
+        generateAiImageBtn.textContent = 'Render Image';
+        cancelAiImageBtn.style.display = 'none';
+        
+        if (currentQRDataURL) {
+            generateQRCode();
+        }
         
     } catch (error) {
-        console.error('Error generating AI image:', error);
-        aiImageStatus.textContent = 'Error generating image';
-        aiImageStatus.style.color = '#f44336';
-        isGeneratingAI = false;
-        generateAiImageBtn.disabled = false;
-        generateAiImageBtn.textContent = 'Generate Image';
+        console.error('AI image generation error (attempt ' + attempt + '):', error);
+        
+        // Check if cancelled
+        if (cancelAIGeneration) {
+            console.log('🚫 Generation cancelled by user');
+            return;
+        }
+        
+        // Retry logic
+        if (attempt < maxAttempts) {
+            aiImageStatus.textContent = `Attempt ${attempt} failed. Retrying with different seed...`;
+            aiImageStatus.style.color = '#1565C0';
+            
+            // Wait a bit before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1500 * attempt));
+            
+            // Retry
+            return generateAIImageWithRetry(prompt, attempt + 1, maxAttempts);
+        } else {
+            // All Pollinations attempts failed - try Stable Horde as fallback
+            console.error('🚫 All Pollinations.ai attempts failed. Trying Stable Horde (community backup)...');
+            console.log('🔄 Switching to Stable Horde API (community-powered, slower but reliable)');
+            
+            aiImageStatus.textContent = 'Primary service unavailable. Trying backup renderer (may take 30-60 seconds)...';
+            aiImageStatus.style.color = '#1565C0';
+            
+            try {
+                const hordeImage = await generateWithStableHorde(prompt);
+                // Success with fallback!
+                backgroundImage = hordeImage;
+                aiImageStatus.textContent = 'Vision rendered successfully (via backup service)! ✨';
+                aiImageStatus.style.color = '#4CAF50';
+                
+                // Hide progress bar
+                const progressContainer = document.getElementById('aiProgressContainer');
+                if (progressContainer) {
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        const progressBar = document.getElementById('aiProgressBar');
+                        if (progressBar) {
+                            progressBar.style.width = '0%';
+                        }
+                    }, 2000); // Hide after 2 seconds
+                }
+                
+                bgPreviewImage.src = hordeImage.src;
+                bgPreviewSection.style.display = 'block';
+                blendControlsSection.style.display = 'block';
+                updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+                isGeneratingAI = false;
+                generateAiImageBtn.disabled = false;
+                generateAiImageBtn.textContent = 'Render Image';
+                cancelAiImageBtn.style.display = 'none';
+                
+                if (currentQRDataURL) {
+                    generateQRCode();
+                }
+            } catch (hordeError) {
+                console.error('❌ Stable Horde also failed:', hordeError);
+                console.error('💡 Both rendering services unavailable. Use "Upload Image" tab instead.');
+                
+                // Hide progress bar
+                const progressContainer = document.getElementById('aiProgressContainer');
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
+                
+                aiImageStatus.innerHTML = 'Both rendering services unavailable. Please use the "Upload Image" tab or try again later.';
+                aiImageStatus.style.color = '#f44336';
+                isGeneratingAI = false;
+                generateAiImageBtn.disabled = false;
+                generateAiImageBtn.textContent = 'Render Image';
+                cancelAiImageBtn.style.display = 'none';
+            }
+        }
     }
-});
+}
+
+// Stable Horde fallback API (community-powered Stable Diffusion)
+async function generateWithStableHorde(prompt) {
+    console.log('🎨 Starting Stable Horde generation...');
+    
+    // Step 1: Submit generation request
+    const submitUrl = 'https://stablehorde.net/api/v2/generate/async';
+    const requestBody = {
+        prompt: prompt + ", high quality, detailed",
+        params: {
+            width: 512,  // Smaller = faster on community GPUs
+            height: 512,
+            steps: 25,
+            cfg_scale: 7.5,
+            sampler_name: "k_lms",
+            seed_variation: 1
+        },
+        nsfw: false,
+        censor_nsfw: true,
+        trusted_workers: true,
+        r2: true  // Use R2 storage for faster image retrieval
+    };
+    
+    console.log('📤 Submitting request to Stable Horde...');
+    console.log('📋 Request body:', JSON.stringify(requestBody, null, 2));
+    
+    const submitResponse = await fetch(submitUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': '0000000000'  // Anonymous key for public access
+        },
+        body: JSON.stringify(requestBody)
+    });
+    
+    if (!submitResponse.ok) {
+        throw new Error('Failed to submit to Stable Horde: ' + submitResponse.status);
+    }
+    
+    const submitData = await submitResponse.json();
+    const requestId = submitData.id;
+    console.log('✅ Request submitted. ID:', requestId);
+    console.log('⏳ Waiting for community GPU (this may take 30-60 seconds)...');
+    
+    // Step 2: Poll for completion
+    const checkUrl = `https://stablehorde.net/api/v2/generate/check/${requestId}`;
+    let attempts = 0;
+    const maxPollAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    
+    while (attempts < maxPollAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
+        attempts++;
+        
+        // Check if cancelled
+        if (cancelAIGeneration) {
+            console.log('🚫 Stable Horde generation cancelled by user');
+            throw new Error('Generation cancelled by user');
+        }
+        
+        console.log(`🔍 Checking status (${attempts}/${maxPollAttempts})...`);
+        const elapsedSeconds = attempts * 2;
+        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+        const elapsedSecs = elapsedSeconds % 60;
+        const elapsedFormatted = `${elapsedMinutes}:${elapsedSecs.toString().padStart(2, '0')}`;
+        aiImageStatus.textContent = `Rendering with alternate (${elapsedFormatted} elapsed, in queue...)`;
+        aiImageStatus.style.color = '#1565C0';
+        
+        const checkResponse = await fetch(checkUrl);
+        const checkData = await checkResponse.json();
+        
+        // Format wait time as minutes:seconds
+        const waitSeconds = checkData.wait_time || 0;
+        const minutes = Math.floor(waitSeconds / 60);
+        const seconds = Math.round(waitSeconds % 60);
+        const waitTimeFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        console.log('📊 Queue position:', checkData.queue_position, '| Wait time:', waitTimeFormatted);
+        
+        if (checkData.done) {
+            console.log('✅ Generation complete! Fetching image...');
+            
+            // Set progress to 100%
+            const progressBar = document.getElementById('aiProgressBar');
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.textContent = '100%';
+            }
+            
+            // Play notification sound
+            playNotificationSound();
+            
+            // Step 3: Get the final status with image URL
+            const statusUrl = `https://stablehorde.net/api/v2/generate/status/${requestId}`;
+            const statusResponse = await fetch(statusUrl);
+            const statusData = await statusResponse.json();
+            
+            if (statusData.generations && statusData.generations.length > 0) {
+                const imageUrl = statusData.generations[0].img;
+                console.log('🖼️ Image URL:', imageUrl);
+                
+                // Load the image
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log('✅ Stable Horde image loaded successfully!');
+                        resolve(img);
+                    };
+                    
+                    img.onerror = () => {
+                        reject(new Error('Failed to load Stable Horde image'));
+                    };
+                    
+                    img.src = imageUrl;
+                });
+            } else {
+                throw new Error('No image generated by Stable Horde');
+            }
+        }
+        
+        if (checkData.faulted) {
+            throw new Error('Stable Horde generation faulted');
+        }
+        
+        // Update status with queue info
+        if (checkData.queue_position !== undefined) {
+            const waitSeconds = checkData.wait_time || 30;
+            const minutes = Math.floor(waitSeconds / 60);
+            const seconds = Math.round(waitSeconds % 60);
+            const waitTimeFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            const elapsedSeconds = attempts * 2;
+            const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+            const elapsedSecs = elapsedSeconds % 60;
+            const elapsedFormatted = `${elapsedMinutes}:${elapsedSecs.toString().padStart(2, '0')}`;
+            
+            aiImageStatus.textContent = `In queue: position ${checkData.queue_position} (${waitTimeFormatted} estimated) • ${elapsedFormatted} elapsed`;
+            aiImageStatus.style.color = '#1565C0';
+            
+            // Update progress bar
+            const progressContainer = document.getElementById('aiProgressContainer');
+            const progressBar = document.getElementById('aiProgressBar');
+            if (progressContainer && progressBar) {
+                progressContainer.style.display = 'block';
+                
+                // Calculate progress: 0% at start, 100% when done
+                // Use elapsed time vs estimated total time
+                const totalEstimated = elapsedSeconds + waitSeconds;
+                const progress = Math.min(95, Math.max(5, (elapsedSeconds / totalEstimated) * 100));
+                
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = Math.round(progress) + '%';
+            }
+        }
+    }
+    
+    throw new Error('Stable Horde generation timed out after 2 minutes');
+}
 
 // Blend controls
 blendModeSelect.addEventListener('change', (e) => {
