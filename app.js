@@ -489,12 +489,13 @@ qrStrengthRange.addEventListener('change', (e) => {
 });
 
 // Validation status update function
-function updateValidationStatus(status, message) {
+function updateValidationStatus(status, message, suggestions = null) {
     const indicator = validationIndicator;
     const icon = indicator.querySelector('.indicator-icon');
     const text = indicator.querySelector('.indicator-text');
     
     indicator.className = 'validation-indicator';
+    text.innerHTML = ''; // Clear previous content
     
     switch(status) {
         case 'testing':
@@ -510,7 +511,56 @@ function updateValidationStatus(status, message) {
         case 'invalid':
             indicator.classList.add('invalid');
             icon.textContent = '✗';
-            text.textContent = message || 'QR code may not scan properly';
+            
+            // Add message text
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message || 'QR code may not scan properly';
+            text.appendChild(messageSpan);
+            
+            // Add clickable suggestions if provided
+            if (suggestions && suggestions.length > 0) {
+                const suggestionContainer = document.createElement('div');
+                suggestionContainer.style.marginTop = '8px';
+                suggestionContainer.style.display = 'flex';
+                suggestionContainer.style.flexDirection = 'column';
+                suggestionContainer.style.gap = '6px';
+                
+                suggestions.forEach(suggestion => {
+                    const suggestionBtn = document.createElement('button');
+                    suggestionBtn.textContent = suggestion.text;
+                    suggestionBtn.className = 'suggestion-btn';
+                    suggestionBtn.style.cssText = `
+                        padding: 6px 12px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        font-weight: 500;
+                        transition: all 0.2s;
+                        text-align: left;
+                    `;
+                    
+                    suggestionBtn.addEventListener('mouseover', () => {
+                        suggestionBtn.style.transform = 'translateX(4px)';
+                        suggestionBtn.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.4)';
+                    });
+                    
+                    suggestionBtn.addEventListener('mouseout', () => {
+                        suggestionBtn.style.transform = 'translateX(0)';
+                        suggestionBtn.style.boxShadow = 'none';
+                    });
+                    
+                    suggestionBtn.addEventListener('click', () => {
+                        suggestion.action();
+                    });
+                    
+                    suggestionContainer.appendChild(suggestionBtn);
+                });
+                
+                text.appendChild(suggestionContainer);
+            }
             break;
         case 'idle':
         default:
@@ -2033,8 +2083,27 @@ function applyArtisticBlending(ctx, canvasWidth, canvasHeight, padding, qrSize) 
     bgCtx.fillStyle = '#ffffff';
     bgCtx.fillRect(0, 0, canvasWidth, canvasHeight);
     
-    // Draw background image to fit the canvas
-    bgCtx.drawImage(backgroundImage, 0, 0, canvasWidth, canvasHeight);
+    // Draw background image using cover/crop logic (maintain aspect ratio)
+    const imgAspect = backgroundImage.width / backgroundImage.height;
+    const canvasAspect = canvasWidth / canvasHeight;
+    
+    let drawWidth, drawHeight, offsetX, offsetY;
+    
+    if (imgAspect > canvasAspect) {
+        // Image is wider - fit height, crop width
+        drawHeight = canvasHeight;
+        drawWidth = canvasHeight * imgAspect;
+        offsetX = (canvasWidth - drawWidth) / 2;
+        offsetY = 0;
+    } else {
+        // Image is taller - fit width, crop height
+        drawWidth = canvasWidth;
+        drawHeight = canvasWidth / imgAspect;
+        offsetX = 0;
+        offsetY = (canvasHeight - drawHeight) / 2;
+    }
+    
+    bgCtx.drawImage(backgroundImage, offsetX, offsetY, drawWidth, drawHeight);
     
     // Get background image data
     const bgImageData = bgCtx.getImageData(0, 0, canvasWidth, canvasHeight);
@@ -2118,7 +2187,60 @@ function validateQRScannability() {
                     updateValidationStatus('invalid', 'QR data mismatch. Try adjusting settings.');
                 }
             } else {
-                updateValidationStatus('invalid', 'QR may not scan. Try: • Increase QR Strength • Decrease Background Opacity • Change Blend Mode');
+                // QR code not scannable - provide clickable suggestions
+                const suggestions = [];
+                
+                // Suggestion 1: Increase QR Strength
+                if (currentQrStrength < 90) {
+                    suggestions.push({
+                        text: '🔧 Increase QR Strength to ' + Math.min(currentQrStrength + 10, 95) + '%',
+                        action: () => {
+                            const newValue = Math.min(currentQrStrength + 10, 95);
+                            qrStrengthRange.value = newValue;
+                            qrStrengthValue.textContent = newValue;
+                            currentQrStrength = newValue;
+                            generateQRCode();
+                        }
+                    });
+                }
+                
+                // Suggestion 2: Decrease Background Opacity
+                if (currentBgOpacity > 30) {
+                    suggestions.push({
+                        text: '🔧 Decrease Background Opacity to ' + Math.max(currentBgOpacity - 10, 30) + '%',
+                        action: () => {
+                            const newValue = Math.max(currentBgOpacity - 10, 30);
+                            bgOpacityRange.value = newValue;
+                            bgOpacityValue.textContent = newValue;
+                            currentBgOpacity = newValue;
+                            generateQRCode();
+                        }
+                    });
+                }
+                
+                // Suggestion 3: Change to Overlay blend mode (if not already)
+                if (currentBlendMode !== 'overlay') {
+                    suggestions.push({
+                        text: '🔧 Switch to Overlay Blend Mode',
+                        action: () => {
+                            blendModeSelect.value = 'overlay';
+                            currentBlendMode = 'overlay';
+                            generateQRCode();
+                        }
+                    });
+                }
+                
+                // Suggestion 4: Try a simpler background
+                if (suggestions.length === 0) {
+                    suggestions.push({
+                        text: '💡 Try a simpler background image',
+                        action: () => {
+                            alert('Consider using:\n• Simpler patterns\n• Less detail\n• Softer gradients\n• More solid color areas');
+                        }
+                    });
+                }
+                
+                updateValidationStatus('invalid', 'QR may not scan properly. Try these fixes:', suggestions);
             }
         } catch (error) {
             console.error('Validation error:', error);
