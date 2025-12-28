@@ -811,7 +811,16 @@ function drawQRWithLogo(qrImage, qrSize) {
         ctx.drawImage(selectedLogo, logoPos, logoPos, logoSize, logoSize);
     }
     
-    // Draw label if present
+    // Show canvas and hide placeholder
+    qrCanvas.classList.add('visible');
+    previewPlaceholder.classList.add('hidden');
+    
+    // Apply artistic background blending if available (BEFORE label)
+    if (backgroundImage) {
+        applyArtisticBlending(ctx, qrCanvas.width, qrCanvas.height, padding, qrSize);
+    }
+    
+    // Draw label AFTER blending so it stays visible and unaffected
     if (label) {
         const labelSizePercent = parseInt(labelSizeRange.value) / 100;
         const baseFontSize = 20;
@@ -822,7 +831,7 @@ function drawQRWithLogo(qrImage, qrSize) {
         ctx.fillStyle = currentLabelColor;
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'top'; // Changed to 'top' for better positioning
+        ctx.textBaseline = 'top';
         
         // Wrap text if too long (max width is QR code width)
         const maxWidth = qrSize;
@@ -843,15 +852,6 @@ function drawQRWithLogo(qrImage, qrSize) {
             }
         }
         ctx.fillText(line, qrCanvas.width / 2, y);
-    }
-    
-    // Show canvas and hide placeholder
-    qrCanvas.classList.add('visible');
-    previewPlaceholder.classList.add('hidden');
-    
-    // Apply artistic background blending if available
-    if (backgroundImage) {
-        applyArtisticBlending(ctx, qrCanvas.width, qrCanvas.height, padding, qrSize);
     }
     
     // Store the data URL for download
@@ -1030,9 +1030,41 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
     qrCanvas.classList.add('visible');
     previewPlaceholder.classList.add('hidden');
     
-    // Apply artistic background blending if available
+    // Apply artistic background blending if available (BEFORE re-drawing label)
     if (backgroundImage) {
         applyArtisticBlending(ctx, qrCanvas.width, qrCanvas.height, padding, qrSize);
+        
+        // Re-draw label AFTER blending to keep it visible
+        if (label) {
+            const labelSizePercent = parseInt(labelSizeRange.value) / 100;
+            const baseFontSize = 20;
+            const fontSize = Math.floor(baseFontSize * labelSizePercent);
+            const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02);
+            
+            ctx.fillStyle = currentLabelColor;
+            ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            
+            const maxWidth = qrSize;
+            const words = label.split(' ');
+            let line = '';
+            let y = qrSize + padding + labelGap;
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + words[i] + ' ';
+                const metrics = ctx.measureText(testLine);
+                
+                if (metrics.width > maxWidth && i > 0) {
+                    ctx.fillText(line, qrCanvas.width / 2, y);
+                    line = words[i] + ' ';
+                    y += fontSize * 1.2;
+                } else {
+                    line = testLine;
+                }
+            }
+            ctx.fillText(line, qrCanvas.width / 2, y);
+        }
     }
     
     // Store the data URL for download
