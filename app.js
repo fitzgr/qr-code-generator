@@ -13,10 +13,13 @@ let currentBgOpacity = 50;
 let currentQrStrength = 80;
 let isGeneratingAI = false;
 
-// QR Code Bucket for batch processing
+// QR Code Bucket for batch processing with metadata
 let qrBucket = [];
 const MAX_BUCKET_SIZE_PDF = 8;  // 2 columns × 4 rows
 const MAX_BUCKET_SIZE_OTHER = 10;
+
+// Metadata tracking for each QR code
+let qrMetadataHistory = [];
 
 // DOM Elements
 const textInput = document.getElementById('textInput');
@@ -44,6 +47,13 @@ const clearBucketBtn = document.getElementById('clearBucketBtn');
 const downloadBucketPngBtn = document.getElementById('downloadBucketPngBtn');
 const downloadBucketJpgBtn = document.getElementById('downloadBucketJpgBtn');
 const downloadBucketPdfBtn = document.getElementById('downloadBucketPdfBtn');
+
+// New metadata PDF buttons
+const downloadMetadataPdfBtn = document.getElementById('downloadMetadataPdfBtn');
+const downloadPrintablePdfBtn = document.getElementById('downloadPrintablePdfBtn');
+
+// QR Notes input
+const qrNotesInput = document.getElementById('qrNotesInput');
 
 // Range inputs
 const sizeRange = document.getElementById('sizeRange');
@@ -1110,18 +1120,64 @@ function addQRToBucket() {
         return;
     }
     
-    // Store QR code data
+    // Capture complete metadata
+    const metadata = {
+        // Core data
+        text: textInput.value.trim(),
+        label: labelInput.value.trim(),
+        notes: qrNotesInput ? qrNotesInput.value.trim() : '',
+        timestamp: Date.now(),
+        
+        // Settings
+        settings: {
+            size: parseInt(sizeRange.value),
+            border: parseInt(borderRange.value),
+            logoSize: parseInt(logoSizeRange.value),
+            labelSize: parseInt(labelSizeRange.value)
+        },
+        
+        // Colors
+        colors: {
+            dark: currentDarkColor,
+            light: currentLightColor,
+            label: currentLabelColor
+        },
+        
+        // Style
+        style: currentQRStyle,
+        
+        // Logo
+        logo: {
+            hasLogo: selectedLogo !== null,
+            logoDataURL: selectedLogo ? selectedLogo.src : null
+        },
+        
+        // Artistic QR
+        artistic: {
+            hasBackground: backgroundImage !== null,
+            backgroundDataURL: backgroundImage ? bgPreviewImage.src : null,
+            blendMode: currentBlendMode,
+            bgOpacity: currentBgOpacity,
+            qrStrength: currentQrStrength
+        }
+    };
+    
+    // Store QR code data with metadata
     const qrData = {
         dataURL: currentQRDataURL,
         canvas: cloneCanvas(qrCanvas),
-        text: textInput.value.trim(),
-        label: labelInput.value.trim(),
-        timestamp: Date.now()
+        metadata: metadata
     };
     
     qrBucket.push(qrData);
+    qrMetadataHistory.push(metadata);
     updateBucketUI();
     showNotification(`Added to bucket! (${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`);
+    
+    // Clear notes input for next code
+    if (qrNotesInput) {
+        qrNotesInput.value = '';
+    }
 }
 
 function cloneCanvas(sourceCanvas) {
@@ -1151,7 +1207,11 @@ function updateBucketUI() {
             
             const info = document.createElement('div');
             info.className = 'bucket-item-info';
-            info.textContent = qr.label || `QR #${index + 1}`;
+            
+            // Show label or notes if available
+            const displayText = qr.metadata.label || qr.metadata.notes || `QR #${index + 1}`;
+            info.textContent = displayText.length > 30 ? displayText.substring(0, 27) + '...' : displayText;
+            info.title = displayText; // Show full text on hover
             
             const removeBtn = document.createElement('button');
             removeBtn.className = 'bucket-item-remove';
@@ -2444,6 +2504,301 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
     }
 });
 
+// Download Metadata PDF - Complete documentation with all settings
+if (downloadMetadataPdfBtn) {
+    downloadMetadataPdfBtn.addEventListener('click', () => {
+        if (qrBucket.length === 0) {
+            alert('Please add QR codes to the bucket first!');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 15;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        let yPos = margin;
+        
+        // Title page
+        pdf.setFontSize(24);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('QR Code Metadata Documentation', margin, yPos);
+        
+        yPos += 10;
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, yPos);
+        pdf.text(`Total QR Codes: ${qrBucket.length}`, margin, yPos + 6);
+        
+        yPos += 20;
+        
+        // Add each QR code with metadata
+        qrBucket.forEach((qr, index) => {
+            const meta = qr.metadata;
+            
+            // Check if we need a new page
+            if (yPos > pageHeight - 100) {
+                pdf.addPage();
+                yPos = margin;
+            }
+            
+            // Section header
+            pdf.setFontSize(16);
+            pdf.setFont(undefined, 'bold');
+            pdf.text(`QR Code #${index + 1}`, margin, yPos);
+            yPos += 8;
+            
+            // Add QR code image
+            const qrSize = 50;
+            pdf.addImage(qr.dataURL, 'PNG', margin, yPos, qrSize, qrSize);
+            
+            // Add metadata next to image
+            let metaX = margin + qrSize + 10;
+            let metaY = yPos;
+            
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Label:', metaX, metaY);
+            pdf.setFont(undefined, 'normal');
+            const labelText = meta.label || '(none)';
+            pdf.text(labelText.substring(0, 40), metaX + 15, metaY);
+            metaY += 5;
+            
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Notes:', metaX, metaY);
+            pdf.setFont(undefined, 'normal');
+            const notesText = meta.notes || '(none)';
+            const notesLines = pdf.splitTextToSize(notesText, contentWidth - qrSize - 25);
+            pdf.text(notesLines, metaX + 15, metaY);
+            metaY += (notesLines.length * 5);
+            
+            metaY += 3;
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Created:', metaX, metaY);
+            pdf.setFont(undefined, 'normal');
+            pdf.text(new Date(meta.timestamp).toLocaleString(), metaX + 20, metaY);
+            
+            yPos += qrSize + 5;
+            
+            // Content/Text data
+            pdf.setFontSize(9);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Content:', margin, yPos);
+            pdf.setFont(undefined, 'normal');
+            const contentLines = pdf.splitTextToSize(meta.text, contentWidth - 20);
+            pdf.text(contentLines.slice(0, 3), margin + 20, yPos);
+            yPos += Math.min(contentLines.length, 3) * 4;
+            
+            yPos += 5;
+            
+            // Settings in two columns
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Settings:', margin, yPos);
+            yPos += 5;
+            
+            pdf.setFontSize(8);
+            pdf.setFont(undefined, 'normal');
+            
+            const col1X = margin + 5;
+            const col2X = margin + contentWidth / 2;
+            let settingsY = yPos;
+            
+            // Column 1 - Basic Settings
+            pdf.text(`Size: ${meta.settings.size}`, col1X, settingsY);
+            settingsY += 4;
+            pdf.text(`Border: ${meta.settings.border}`, col1X, settingsY);
+            settingsY += 4;
+            pdf.text(`Logo Size: ${meta.settings.logoSize}%`, col1X, settingsY);
+            settingsY += 4;
+            pdf.text(`Label Size: ${meta.settings.labelSize}%`, col1X, settingsY);
+            settingsY += 4;
+            pdf.text(`Style: ${meta.style}`, col1X, settingsY);
+            
+            // Column 2 - Colors
+            settingsY = yPos;
+            pdf.text(`Dark Color: ${meta.colors.dark}`, col2X, settingsY);
+            settingsY += 4;
+            pdf.text(`Light Color: ${meta.colors.light}`, col2X, settingsY);
+            settingsY += 4;
+            pdf.text(`Label Color: ${meta.colors.label}`, col2X, settingsY);
+            settingsY += 4;
+            pdf.text(`Has Logo: ${meta.logo.hasLogo ? 'Yes' : 'No'}`, col2X, settingsY);
+            
+            yPos += 20;
+            
+            // Artistic settings if applicable
+            if (meta.artistic.hasBackground) {
+                pdf.setFontSize(9);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('Artistic QR Settings:', margin, yPos);
+                yPos += 5;
+                
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'normal');
+                pdf.text(`Blend Mode: ${meta.artistic.blendMode}`, col1X, yPos);
+                pdf.text(`BG Opacity: ${meta.artistic.bgOpacity}%`, col2X, yPos);
+                yPos += 4;
+                pdf.text(`QR Strength: ${meta.artistic.qrStrength}%`, col1X, yPos);
+                yPos += 5;
+                
+                // Add background image if available
+                if (meta.artistic.backgroundDataURL) {
+                    try {
+                        const bgSize = 40;
+                        pdf.text('Background Image:', margin, yPos);
+                        yPos += 5;
+                        pdf.addImage(meta.artistic.backgroundDataURL, 'PNG', margin, yPos, bgSize, bgSize);
+                        yPos += bgSize;
+                    } catch (e) {
+                        console.error('Error adding background image:', e);
+                    }
+                }
+                
+                yPos += 5;
+            }
+            
+            // Add separator line
+            yPos += 5;
+            pdf.setDrawColor(200, 200, 200);
+            pdf.line(margin, yPos, pageWidth - margin, yPos);
+            yPos += 10;
+        });
+        
+        pdf.save('qr-codes-metadata.pdf');
+        showNotification(`Metadata PDF with ${qrBucket.length} QR codes downloaded!`);
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'metadata_pdf_download', {
+                'count': qrBucket.length
+            });
+        }
+    });
+}
+
+// Download Printable PDF - Clean layout with QR codes and notes sections
+if (downloadPrintablePdfBtn) {
+    downloadPrintablePdfBtn.addEventListener('click', () => {
+        if (qrBucket.length === 0) {
+            alert('Please add QR codes to the bucket first!');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 15;
+        const contentWidth = pageWidth - (margin * 2);
+        
+        let yPos = margin;
+        
+        // Title
+        pdf.setFontSize(20);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('QR Codes Reference Sheet', pageWidth / 2, yPos, { align: 'center' });
+        
+        yPos += 15;
+        
+        // Add each QR code with notes section
+        qrBucket.forEach((qr, index) => {
+            const meta = qr.metadata;
+            
+            // Check if we need a new page
+            if (yPos > pageHeight - 80) {
+                pdf.addPage();
+                yPos = margin;
+            }
+            
+            // QR Code on the left (60% of width)
+            const qrWidth = contentWidth * 0.55;
+            const qrSize = Math.min(qrWidth, 60);
+            
+            // Notes section on the right (40% of width)
+            const notesX = margin + qrWidth + 5;
+            const notesWidth = contentWidth - qrWidth - 5;
+            
+            // Draw QR code
+            pdf.addImage(qr.dataURL, 'PNG', margin, yPos, qrSize, qrSize);
+            
+            // QR label below code
+            if (meta.label) {
+                pdf.setFontSize(10);
+                pdf.setFont(undefined, 'bold');
+                const labelLines = pdf.splitTextToSize(meta.label, qrWidth);
+                pdf.text(labelLines, margin, yPos + qrSize + 5);
+            }
+            
+            // Notes section box
+            pdf.setDrawColor(150, 150, 150);
+            pdf.setLineWidth(0.3);
+            
+            // Notes header
+            pdf.setFontSize(11);
+            pdf.setFont(undefined, 'bold');
+            pdf.text('Notes:', notesX, yPos + 5);
+            
+            // Notes content
+            pdf.setFontSize(9);
+            pdf.setFont(undefined, 'normal');
+            
+            if (meta.notes) {
+                const notesLines = pdf.splitTextToSize(meta.notes, notesWidth - 4);
+                pdf.text(notesLines, notesX, yPos + 11);
+                
+                // Draw box around notes
+                const notesHeight = Math.max(qrSize, (notesLines.length * 4) + 10);
+                pdf.rect(notesX - 2, yPos, notesWidth, notesHeight);
+            } else {
+                // Empty notes box for user to fill in
+                pdf.setTextColor(180, 180, 180);
+                pdf.text('(Write your notes here)', notesX, yPos + 11);
+                pdf.setTextColor(0, 0, 0);
+                
+                // Draw ruled lines for writing
+                const notesHeight = qrSize;
+                pdf.rect(notesX - 2, yPos, notesWidth, notesHeight);
+                
+                for (let i = 15; i < notesHeight; i += 6) {
+                    pdf.setDrawColor(220, 220, 220);
+                    pdf.setLineWidth(0.1);
+                    pdf.line(notesX, yPos + i, notesX + notesWidth - 4, yPos + i);
+                }
+                pdf.setDrawColor(150, 150, 150);
+                pdf.setLineWidth(0.3);
+            }
+            
+            // Add small reference number
+            pdf.setFontSize(8);
+            pdf.setTextColor(120, 120, 120);
+            pdf.text(`#${index + 1}`, margin, yPos + qrSize + 10);
+            pdf.setTextColor(0, 0, 0);
+            
+            yPos += qrSize + 20;
+        });
+        
+        pdf.save('qr-codes-printable.pdf');
+        showNotification(`Printable PDF with ${qrBucket.length} QR codes downloaded!`);
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'printable_pdf_download', {
+                'count': qrBucket.length
+            });
+        }
+    });
+}
+
 // Helper function to convert canvas to SVG
 function canvasToSVG() {
     const canvas = qrCanvas;
@@ -2482,6 +2837,9 @@ function canvasToSVG() {
 clearBtn.addEventListener('click', () => {
     textInput.value = '';
     labelInput.value = '';
+    if (qrNotesInput) {
+        qrNotesInput.value = '';
+    }
     selectedLogo = null;
     logoInput.value = '';
     logoStatus.textContent = 'No logo selected';

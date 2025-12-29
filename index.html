@@ -84,6 +84,14 @@
             </div>
 
             <div class="section">
+                <label for="qrNotesInput">📝 QR Code Notes (optional):</label>
+                <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+                    Add notes to help you remember what this QR code is for. These notes will be included in your PDF exports.
+                </p>
+                <textarea id="qrNotesInput" rows="2" placeholder="e.g., Main entrance code, WiFi password for guests, Contact card for John..."></textarea>
+            </div>
+
+            <div class="section">
                 <h3>Logo</h3>
                 <div class="logo-controls">
                     <input type="file" id="logoInput" accept="image/*" style="display: none;">
@@ -303,7 +311,7 @@
 
             <div id="bucketSection" class="bucket-section" style="display: none;">
                 <div class="bucket-header">
-                    <h3>QR Code Collection</h3>
+                    <h3>QR Code Collection <span id="bucketCount">(0/10)</span></h3>
                     <button id="clearBucketBtn" class="btn btn-icon-small">✕ Clear All</button>
                 </div>
                 <div id="bucketPreview" class="bucket-preview"></div>
@@ -313,6 +321,14 @@
                         <button id="downloadBucketPngBtn" class="btn btn-download">PNG Zip</button>
                         <button id="downloadBucketJpgBtn" class="btn btn-download">JPG Zip</button>
                         <button id="downloadBucketPdfBtn" class="btn btn-download">PDF Grid</button>
+                    </div>
+                    <div class="download-buttons" style="margin-top: 10px;">
+                        <button id="downloadMetadataPdfBtn" class="btn btn-download" style="background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);" title="Download PDF with all QR codes and their complete metadata (settings, colors, sliders, etc.)">
+                            📊 Metadata PDF
+                        </button>
+                        <button id="downloadPrintablePdfBtn" class="btn btn-download" style="background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);" title="Download clean printable PDF with QR codes and notes sections">
+                            📄 Printable PDF
+                        </button>
                     </div>
                 </div>
             </div>
