@@ -34,6 +34,7 @@ const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
 const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const downloadSectionTitle = document.getElementById('downloadSectionTitle');
 const clearBtn = document.getElementById('clearBtn');
 const qrCanvas = document.getElementById('qrCanvas');
 const previewPlaceholder = document.getElementById('previewPlaceholder');
@@ -1196,6 +1197,15 @@ function cloneCanvas(sourceCanvas) {
 
 function updateBucketUI() {
     bucketCount.textContent = `(${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`;
+    
+    // Update download section title based on metadata presence
+    if (downloadSectionTitle) {
+        if (qrBucket.length > 0) {
+            downloadSectionTitle.textContent = 'Download QR Code (+metadata)';
+        } else {
+            downloadSectionTitle.textContent = 'Download QR Code';
+        }
+    }
     
     if (qrBucket.length > 0) {
         bucketSection.style.display = 'block';
