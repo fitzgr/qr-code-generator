@@ -1098,6 +1098,11 @@ clearLogoBtn.addEventListener('click', () => {
     logoInput.value = '';
     logoStatus.textContent = 'No logo selected';
     logoStatus.style.color = '#888';
+    
+    // Regenerate QR code if one exists
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
 });
 
 // Clear label
