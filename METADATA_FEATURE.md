@@ -76,22 +76,25 @@ The system now captures and stores complete metadata for each QR code added to t
 **Button**: "📄 Printable PDF" (Green button)
 
 **Layout**:
-- Clean, professional design
-- QR code on the left (55% of page width, up to 60mm)
-- Notes section on the right (45% of page width)
-- Label text below each QR code
-- Reference numbers for each code
-
-**Notes Section Features**:
-- If notes were entered: Displays the notes in a bordered box
-- If no notes: Provides ruled lines for manual note-taking
-- Bordered box for clear separation
+- **Two-column design** for optimal organization
+- **Left column (45%)**: All QR codes stacked vertically
+  - Reference number (#1, #2, etc.) above each code
+  - QR code image (up to 50mm)
+  - Label text below code (if provided)
+- **Right column (50%)**: Notes summary section
+  - Reference number with label for each entry
+  - Complete notes text for each QR code
+  - Separator lines between entries
+  - Shows "(No notes provided)" if notes are empty
+- **Vertical separator line** between columns for clear visual division
+- **Footer legend** explains the reference numbering system
 
 **Use Cases**:
 - Physical reference sheets to keep with QR code deployments
 - Print and distribute to team members
-- Quick reference guides
-- On-site documentation
+- Quick reference guides with organized notes
+- On-site documentation where you need to quickly match codes to their purposes
+- Side-by-side comparison of all codes and their descriptions
 
 **Filename**: `qr-codes-printable.pdf`
 
@@ -206,9 +209,13 @@ Each QR code in the bucket stores:
 **Printable PDF**:
 - Format: A4 Portrait (210mm × 297mm)
 - Margins: 15mm
-- QR code size: Up to 60mm (maintains aspect ratio)
-- Notes box: Bordered with ruled lines if empty
-- Clean, professional layout
+- Layout: Two-column (45% left for QR codes, 50% right for notes, 5% gap)
+- QR code size: Up to 50mm (maintains aspect ratio)
+- Vertical separator line between columns
+- Reference numbers (#1, #2, etc.) link codes to notes
+- Notes summary organized with separators
+- Footer legend for reference system
+- Clean, professional layout optimized for quick scanning
 
 ## Future Enhancements (Potential)
 - Export metadata as JSON for import/recreation
