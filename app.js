@@ -2682,7 +2682,7 @@ if (downloadMetadataPdfBtn) {
     });
 }
 
-// Download Printable PDF - Clean layout with QR codes and notes sections
+// Download Printable PDF - Clean layout with QR codes on left, notes summary on right
 if (downloadPrintablePdfBtn) {
     downloadPrintablePdfBtn.addEventListener('click', () => {
         if (qrBucket.length === 0) {
@@ -2702,91 +2702,129 @@ if (downloadPrintablePdfBtn) {
         const margin = 15;
         const contentWidth = pageWidth - (margin * 2);
         
-        let yPos = margin;
+        // Layout: Left side for QR codes, Right side for notes summary
+        const leftColWidth = contentWidth * 0.45;  // 45% for QR codes
+        const rightColWidth = contentWidth * 0.50;  // 50% for notes
+        const colGap = contentWidth * 0.05;         // 5% gap
+        const rightColX = margin + leftColWidth + colGap;
+        
+        let leftYPos = margin;
+        let rightYPos = margin;
         
         // Title
         pdf.setFontSize(20);
         pdf.setFont(undefined, 'bold');
-        pdf.text('QR Codes Reference Sheet', pageWidth / 2, yPos, { align: 'center' });
+        pdf.text('QR Codes Reference Sheet', pageWidth / 2, leftYPos, { align: 'center' });
         
-        yPos += 15;
+        leftYPos += 12;
+        rightYPos += 12;
         
-        // Add each QR code with notes section
+        // Column headers
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('QR Codes', margin + leftColWidth / 2, leftYPos, { align: 'center' });
+        pdf.text('Notes Summary', rightColX + rightColWidth / 2, rightYPos, { align: 'center' });
+        
+        leftYPos += 8;
+        rightYPos += 8;
+        
+        // Draw vertical separator line
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setLineWidth(0.5);
+        pdf.line(rightColX - 3, margin + 8, rightColX - 3, pageHeight - margin);
+        
+        // Process each QR code
         qrBucket.forEach((qr, index) => {
             const meta = qr.metadata;
+            const refNumber = `#${index + 1}`;
             
-            // Check if we need a new page
-            if (yPos > pageHeight - 80) {
+            // LEFT COLUMN - QR Code
+            // Check if we need a new page for QR code
+            const qrSize = Math.min(leftColWidth - 10, 50);
+            if (leftYPos > pageHeight - qrSize - 30) {
                 pdf.addPage();
-                yPos = margin;
+                leftYPos = margin;
+                rightYPos = margin;
+                
+                // Redraw separator on new page
+                pdf.setDrawColor(200, 200, 200);
+                pdf.line(rightColX - 3, margin, rightColX - 3, pageHeight - margin);
             }
             
-            // QR Code on the left (60% of width)
-            const qrWidth = contentWidth * 0.55;
-            const qrSize = Math.min(qrWidth, 60);
-            
-            // Notes section on the right (40% of width)
-            const notesX = margin + qrWidth + 5;
-            const notesWidth = contentWidth - qrWidth - 5;
+            // Add reference number above QR code
+            pdf.setFontSize(10);
+            pdf.setFont(undefined, 'bold');
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(refNumber, margin + 2, leftYPos);
+            leftYPos += 5;
             
             // Draw QR code
-            pdf.addImage(qr.dataURL, 'PNG', margin, yPos, qrSize, qrSize);
+            pdf.addImage(qr.dataURL, 'PNG', margin + 5, leftYPos, qrSize, qrSize);
             
-            // QR label below code
+            // Add label below QR code if present
             if (meta.label) {
-                pdf.setFontSize(10);
-                pdf.setFont(undefined, 'bold');
-                const labelLines = pdf.splitTextToSize(meta.label, qrWidth);
-                pdf.text(labelLines, margin, yPos + qrSize + 5);
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'normal');
+                const labelLines = pdf.splitTextToSize(meta.label, leftColWidth - 10);
+                pdf.text(labelLines, margin + 5, leftYPos + qrSize + 4);
+                leftYPos += qrSize + 4 + (labelLines.length * 3.5) + 8;
+            } else {
+                leftYPos += qrSize + 12;
             }
             
-            // Notes section box
-            pdf.setDrawColor(150, 150, 150);
-            pdf.setLineWidth(0.3);
+            // RIGHT COLUMN - Notes
+            // Check if we need a new page for notes
+            if (rightYPos > pageHeight - 40) {
+                pdf.addPage();
+                leftYPos = margin;
+                rightYPos = margin;
+                
+                // Redraw separator on new page
+                pdf.setDrawColor(200, 200, 200);
+                pdf.line(rightColX - 3, margin, rightColX - 3, pageHeight - margin);
+            }
             
-            // Notes header
-            pdf.setFontSize(11);
+            // Notes entry with reference number
+            pdf.setFontSize(9);
             pdf.setFont(undefined, 'bold');
-            pdf.text('Notes:', notesX, yPos + 5);
+            pdf.setTextColor(80, 80, 80);
+            
+            // Reference number with label if available
+            let noteHeader = refNumber;
+            if (meta.label) {
+                noteHeader += ` - ${meta.label.substring(0, 25)}${meta.label.length > 25 ? '...' : ''}`;
+            }
+            pdf.text(noteHeader, rightColX, rightYPos);
+            rightYPos += 5;
             
             // Notes content
-            pdf.setFontSize(9);
-            pdf.setFont(undefined, 'normal');
-            
-            if (meta.notes) {
-                const notesLines = pdf.splitTextToSize(meta.notes, notesWidth - 4);
-                pdf.text(notesLines, notesX, yPos + 11);
-                
-                // Draw box around notes
-                const notesHeight = Math.max(qrSize, (notesLines.length * 4) + 10);
-                pdf.rect(notesX - 2, yPos, notesWidth, notesHeight);
-            } else {
-                // Empty notes box for user to fill in
-                pdf.setTextColor(180, 180, 180);
-                pdf.text('(Write your notes here)', notesX, yPos + 11);
-                pdf.setTextColor(0, 0, 0);
-                
-                // Draw ruled lines for writing
-                const notesHeight = qrSize;
-                pdf.rect(notesX - 2, yPos, notesWidth, notesHeight);
-                
-                for (let i = 15; i < notesHeight; i += 6) {
-                    pdf.setDrawColor(220, 220, 220);
-                    pdf.setLineWidth(0.1);
-                    pdf.line(notesX, yPos + i, notesX + notesWidth - 4, yPos + i);
-                }
-                pdf.setDrawColor(150, 150, 150);
-                pdf.setLineWidth(0.3);
-            }
-            
-            // Add small reference number
             pdf.setFontSize(8);
-            pdf.setTextColor(120, 120, 120);
-            pdf.text(`#${index + 1}`, margin, yPos + qrSize + 10);
+            pdf.setFont(undefined, 'normal');
             pdf.setTextColor(0, 0, 0);
             
-            yPos += qrSize + 20;
+            if (meta.notes) {
+                const notesLines = pdf.splitTextToSize(meta.notes, rightColWidth - 4);
+                pdf.text(notesLines, rightColX + 2, rightYPos);
+                rightYPos += (notesLines.length * 3.5) + 2;
+            } else {
+                pdf.setTextColor(180, 180, 180);
+                pdf.text('(No notes provided)', rightColX + 2, rightYPos);
+                pdf.setTextColor(0, 0, 0);
+                rightYPos += 4;
+            }
+            
+            // Draw separator line after each note
+            pdf.setDrawColor(220, 220, 220);
+            pdf.setLineWidth(0.2);
+            pdf.line(rightColX, rightYPos, rightColX + rightColWidth, rightYPos);
+            rightYPos += 6;
         });
+        
+        // Add footer with legend
+        pdf.setFontSize(7);
+        pdf.setTextColor(120, 120, 120);
+        pdf.setFont(undefined, 'italic');
+        pdf.text('Reference numbers (#1, #2, etc.) link QR codes to their corresponding notes.', pageWidth / 2, pageHeight - 8, { align: 'center' });
         
         pdf.save('qr-codes-printable.pdf');
         showNotification(`Printable PDF with ${qrBucket.length} QR codes downloaded!`);
