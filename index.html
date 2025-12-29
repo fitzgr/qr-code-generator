@@ -69,7 +69,9 @@
                     <button class="template-btn" data-template="phone">📞 Phone</button>
                     <button class="template-btn" data-template="sms">💬 SMS</button>
                     <button class="template-btn" data-template="wifi">📶 WiFi</button>
-                    <button class="template-btn" data-template="vcard">👤 Contact</button>
+                    <button class="template-btn" data-template="vcard" title="vCard format (standard contact card)">👤 vCard</button>
+                    <button class="template-btn" data-template="mecard" title="MECARD format (compact contact card)">👤 MECARD</button>
+                    <button class="template-btn" data-template="event" title="Calendar event (iCalendar format)">📅 Event</button>
                     <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
                 <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
@@ -343,29 +345,32 @@
             <div class="preview-container">
                 <!-- Use Case Helper -->
                 <div class="use-case-section">
-                    <h3>💡 QR Code Use Cases</h3>
+                    <h3>💡 Quick Templates</h3>
                     <div class="use-case-content">
                         <div class="use-case-item">
-                            <strong>🔗 URL:</strong> Link to websites, online stores, social media, or video content
+                            <strong>🔗 URL:</strong> Websites, stores, maps
                         </div>
                         <div class="use-case-item">
-                            <strong>📧 Email:</strong> Quick contact on business cards, customer support, or newsletter signups
+                            <strong>📧 Email:</strong> Contact forms
                         </div>
                         <div class="use-case-item">
-                            <strong>📞 Phone:</strong> One-tap calling for business cards, customer service, or reservations
+                            <strong>📞 Phone:</strong> One-tap calling
                         </div>
                         <div class="use-case-item">
-                            <strong>💬 SMS:</strong> Pre-filled feedback messages, contest entries, or order placement
+                            <strong>💬 SMS:</strong> Pre-filled messages
                         </div>
                         <div class="use-case-item">
-                            <strong>📶 WiFi:</strong> Guest network access for businesses, events, hotels, or restaurants
-                            <div class="security-warning">⚠️ Password is stored in plain text in QR code - use only for guest networks</div>
+                            <strong>📶 WiFi:</strong> Network access
+                            <div class="security-warning">⚠️ Use only for guest networks</div>
                         </div>
                         <div class="use-case-item">
-                            <strong>👤 Contact:</strong> Digital business cards, speaker info, or complete contact details
+                            <strong>👤 Contact:</strong> vCard/MECARD
                         </div>
                         <div class="use-case-item">
-                            <strong>📍 Location:</strong> Event venues, store directions, property listings, or delivery spots
+                            <strong>📍 Location:</strong> Geo coordinates
+                        </div>
+                        <div class="use-case-item">
+                            <strong>📅 Event:</strong> Calendar invites
                         </div>
                     </div>
                 </div>
@@ -486,6 +491,73 @@
                     <li><strong>Professional Appearance:</strong> Branded QR codes look more polished and legitimate on business cards and marketing materials.</li>
                     <li><strong>Higher Scan Rates:</strong> Custom QR codes with logos get scanned up to 30% more than plain black and white codes.</li>
                     <li><strong>Versatile Use:</strong> Perfect for business cards, flyers, posters, product packaging, restaurant menus, and event tickets.</li>
+                </ul>
+            </section>
+
+            <section class="info-section">
+                <h2>Real-World Applications by Template Type</h2>
+                
+                <h3>🔗 URL Template</h3>
+                <ul>
+                    <li><strong>Property Management:</strong> Link to guest check-in instructions, house rules documents, or maintenance schedules for vacation rentals and property managers</li>
+                    <li><strong>Google Maps Lists:</strong> Share curated location collections for vacation properties (local restaurants, hiking trails, attractions), event venues, or tour guides - guests scan to see all recommendations in one interactive map</li>
+                    <li><strong>Equipment Manuals:</strong> Link QR stickers on appliances (hot tubs, generators, HVAC) to PDF manuals or video tutorials for easy guest access</li>
+                    <li><strong>Social Media & Marketing:</strong> Direct customers to Instagram, LinkedIn, YouTube channels, or online storefronts</li>
+                    <li><strong>Menu & Product Info:</strong> Link to digital menus, product specifications, or allergen information</li>
+                </ul>
+
+                <h3>📧 Email & 📞 Phone Templates</h3>
+                <ul>
+                    <li><strong>Emergency Contacts:</strong> Property managers, maintenance, local hospital - guests tap to call or email instantly</li>
+                    <li><strong>Business Cards:</strong> One-tap contact for networking events, conferences, or service providers</li>
+                    <li><strong>Customer Support:</strong> Direct line to support teams, reservation desks, or concierge services</li>
+                    <li><strong>Vendor Scheduling:</strong> Quick contact for firewood delivery, propane service, snow removal, or housekeeping</li>
+                </ul>
+
+                <h3>💬 SMS Template</h3>
+                <ul>
+                    <li><strong>Feedback Collection:</strong> Pre-filled SMS for guest reviews, maintenance requests, or service feedback</li>
+                    <li><strong>Order Placement:</strong> Quick text-to-order for delivery services, catering, or supply requests</li>
+                    <li><strong>Check-in Notifications:</strong> Guests text arrival confirmation or checkout status</li>
+                </ul>
+
+                <h3>📶 WiFi Template</h3>
+                <ul>
+                    <li><strong>Guest Networks:</strong> Instant WiFi access for vacation rentals, Airbnb, hotels, coffee shops, or events</li>
+                    <li><strong>Secure Internal Use:</strong> For private properties, consider posting WiFi QR inside secure areas only (not externally visible)</li>
+                    <li class="security-warning">⚠️ <strong>Security Note:</strong> WiFi passwords are stored in plain text in QR codes. Only use for guest networks, never for primary/admin networks.</li>
+                </ul>
+
+                <h3>👤 Contact Templates (vCard & MECARD)</h3>
+                <ul>
+                    <li><strong>Property Manager Cards:</strong> Complete contact info (phone, email, address) for easy import to guest phones</li>
+                    <li><strong>Digital Business Cards:</strong> Networking events, trade shows, or professional conferences - recipients save your contact instantly</li>
+                    <li><strong>Speaker & Presenter Info:</strong> Event programs, conference badges, or workshop materials</li>
+                    <li><strong>Team Directories:</strong> Office door signs, employee badges, or organizational charts</li>
+                </ul>
+
+                <h3>📍 Location (Geo) Template</h3>
+                <ul>
+                    <li><strong>Property Navigation:</strong> Exact GPS coordinates on gates, mailboxes, or driveways for delivery drivers and emergency services</li>
+                    <li><strong>Trail Markers:</strong> Hiking trails, nature walks, or campground navigation with distance-to-destination info</li>
+                    <li><strong>Meeting Points:</strong> "Meet here" coordinates for group events, tours, or family gatherings</li>
+                    <li><strong>Asset Location:</strong> Mark utility shut-offs (water main, breaker panel, propane) with geo coordinates for maintenance crews</li>
+                </ul>
+
+                <h3>📅 Event (Calendar) Template</h3>
+                <ul>
+                    <li><strong>Property Events:</strong> Check-in/checkout times, maintenance windows, or seasonal opening dates - guests add to their calendar with one scan</li>
+                    <li><strong>Webinars & Conferences:</strong> Event invitations with time, location, and video conference links pre-populated</li>
+                    <li><strong>Appointment Scheduling:</strong> Service appointments, tour bookings, or reservation confirmations</li>
+                    <li><strong>Recurring Events:</strong> Weekly classes, monthly meetings, or seasonal maintenance reminders</li>
+                </ul>
+
+                <h3>🎨 Artistic QR Codes</h3>
+                <ul>
+                    <li><strong>Branded Property Signage:</strong> Use AI-generated backgrounds matching your property aesthetic (rustic cabin, modern mountain retreat, lakeside cottage)</li>
+                    <li><strong>Seasonal Themes:</strong> Winter ski lodge, summer beach house, fall foliage themes that enhance guest experience</li>
+                    <li><strong>Marketing Materials:</strong> Eye-catching QR codes for flyers, social media posts, or print ads that reflect your brand identity</li>
+                    <li><strong>Event Branding:</strong> Wedding QR codes with romantic themes, corporate events with company colors, festivals with vibrant artistic styles</li>
                 </ul>
             </section>
 

@@ -242,6 +242,12 @@ templateBtns.forEach(btn => {
             case 'vcard':
                 templateText = 'BEGIN:VCARD\nVERSION:3.0\nFN:Full Name\nTEL:+1234567890\nEMAIL:email@example.com\nORG:Company Name\nTITLE:Job Title\nEND:VCARD';
                 break;
+            case 'mecard':
+                templateText = 'MECARD:N:Last Name,First Name;TEL:+1234567890;EMAIL:email@example.com;URL:https://example.com;;';
+                break;
+            case 'event':
+                templateText = 'BEGIN:VEVENT\nSUMMARY:Event Title\nDTSTART:20250115T100000Z\nDTEND:20250115T110000Z\nLOCATION:Event Location\nDESCRIPTION:Event description here\nEND:VEVENT';
+                break;
             case 'geo':
                 templateText = 'geo:37.7749,-122.4194,100';
                 break;
