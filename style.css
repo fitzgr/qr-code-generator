@@ -1212,3 +1212,9 @@ input[type="range"]::-moz-range-thumb {
 .prompt-suggestion-card:hover .use-icon {
     opacity: 1;
 }
+
+/* Spinner animation for loading states */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
