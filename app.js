@@ -1081,7 +1081,7 @@ retryPromptBtn.addEventListener('click', () => {
 });
 
 function generatePromptSuggestions() {
-    const context = contextInput.value.trim().toLowerCase();
+    const context = contextInput.value.trim();
     
     if (!context) {
         alert('Please enter what your QR code is for (e.g., "coffee shop business card")');
@@ -1094,37 +1094,42 @@ function generatePromptSuggestions() {
     promptSuggestions.style.display = 'block';
     retryPromptBtn.style.display = 'none';
     
-    // Try Gemini API first, fallback to templates if it fails
+    // Call Gemini API to generate image prompts
     generatePromptWithGemini(context)
         .then(suggestions => {
             displayPromptSuggestions(suggestions);
         })
         .catch(error => {
-            console.warn('Gemini API failed, using template fallback:', error);
-            // Fallback to template-based generation
-            const suggestions = createPromptSuggestions(context);
-            displayPromptSuggestions(suggestions);
+            console.error('Failed to generate prompts:', error);
+            promptSuggestions.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Failed to generate ideas. Please try again.</div>';
+            retryPromptBtn.style.display = 'block';
         });
 }
 
 async function generatePromptWithGemini(context) {
-    const qrText = textInput.value.trim();
-    
-    const prompt = `You are a creative AI assistant helping users create artistic QR code backgrounds. Generate 3 diverse, creative image description prompts optimized for Stable Diffusion AI image generation.
+    const prompt = `You are a creative assistant helping generate image description prompts for AI art generation (Stable Diffusion).
 
-Context: The user's QR code is for "${context}" and contains "${qrText.substring(0, 100)}${qrText.length > 100 ? '...' : ''}"
+The user needs a background image for: "${context}"
 
-Requirements:
-- Each prompt should be 15-25 words
-- Describe visual elements, colors, mood, and artistic style
-- Ensure backgrounds will work well with QR codes (not too busy, good contrast areas)
-- Make them diverse (different styles, colors, moods)
-- Be creative and specific
+Generate 3 diverse, creative image descriptions that would make excellent AI-generated backgrounds. Each description should:
+- Be 15-25 words
+- Describe visual elements, colors, artistic style, mood, and atmosphere
+- Be suitable for QR code backgrounds (not too busy, good contrast potential)
+- Be unique and different from each other (vary style, color palette, mood)
+- Use vivid, descriptive language that works well with AI image generators
 
-Return ONLY a JSON array with 3 objects, each with "title" (3-5 words) and "prompt" (the description) fields.
-Example format: [{"title":"Modern Tech","prompt":"Clean geometric patterns in navy blue..."},...]
+Return ONLY a JSON array with exactly 3 objects. Each object must have:
+- "title": A catchy 2-4 word name for the style
+- "prompt": The detailed image description
 
-Return ONLY valid JSON, no other text.`;
+Example format:
+[
+  {"title":"Warm Coffee Vibes","prompt":"Warm brown espresso tones with soft steam wisps, cozy cafe atmosphere, artistic photography, soft bokeh lighting"},
+  {"title":"Modern Minimalist","prompt":"Clean geometric patterns in navy and gold, modern professional aesthetic, subtle gradients, corporate elegance"},
+  {"title":"Nature Inspired","prompt":"Fresh green leaves with morning dew, natural organic texture, peaceful zen atmosphere, soft natural lighting"}
+]
+
+Return ONLY valid JSON with no other text or markdown.`;
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -1138,23 +1143,29 @@ Return ONLY valid JSON, no other text.`;
                 }]
             }],
             generationConfig: {
-                temperature: 0.9,
-                maxOutputTokens: 800
+                temperature: 1.0,
+                maxOutputTokens: 1000
             }
         })
     });
 
     if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        throw new Error('Invalid API response structure');
+    }
+    
     const textResponse = data.candidates[0].content.parts[0].text;
     
-    // Extract JSON from response (sometimes wrapped in markdown)
+    // Extract JSON from response (remove markdown code blocks if present)
     let jsonText = textResponse.trim();
     if (jsonText.startsWith('```json')) {
-        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
     } else if (jsonText.startsWith('```')) {
         jsonText = jsonText.replace(/```\n?/g, '').trim();
     }
@@ -1163,9 +1174,10 @@ Return ONLY valid JSON, no other text.`;
     
     // Validate format
     if (!Array.isArray(suggestions) || suggestions.length === 0) {
-        throw new Error('Invalid response format');
+        throw new Error('Invalid response format from API');
     }
     
+    // Ensure we have exactly 3 suggestions
     return suggestions.slice(0, 3);
 }
 
