@@ -1101,7 +1101,12 @@ function generatePromptSuggestions() {
         })
         .catch(error => {
             console.error('Failed to generate prompts:', error);
-            promptSuggestions.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Failed to generate ideas. Please try again.</div>';
+            console.error('Error details:', error.message);
+            promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+                <strong>Failed to generate ideas.</strong><br>
+                <span style="font-size: 0.9em; color: #666;">Error: ${error.message}</span><br>
+                <span style="font-size: 0.9em; color: #666;">Check browser console for details.</span>
+            </div>`;
             retryPromptBtn.style.display = 'block';
         });
 }
@@ -1163,12 +1168,16 @@ Return ONLY valid JSON, no markdown, no other text.`;
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+        console.error('Gemini API Response Status:', response.status);
+        console.error('Gemini API Error Text:', errorText);
+        throw new Error(`API returned ${response.status}: ${errorText.substring(0, 200)}`);
     }
 
     const data = await response.json();
+    console.log('Gemini API Response:', data);
     
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        console.error('Invalid response structure:', data);
         throw new Error('Invalid API response structure');
     }
     
