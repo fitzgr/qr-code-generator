@@ -1107,29 +1107,41 @@ function generatePromptSuggestions() {
 }
 
 async function generatePromptWithGemini(context) {
-    const prompt = `You are a creative assistant helping generate image description prompts for AI art generation (Stable Diffusion).
+    const prompt = `You are a creative AI image prompt expert helping generate descriptions for Stable Diffusion artistic QR code backgrounds.
 
-The user needs a background image for: "${context}"
+User's context: "${context}"
 
-Generate 3 diverse, creative image descriptions that would make excellent AI-generated backgrounds. Each description should:
-- Be 15-25 words
-- Describe visual elements, colors, artistic style, mood, and atmosphere
-- Be suitable for QR code backgrounds (not too busy, good contrast potential)
-- Be unique and different from each other (vary style, color palette, mood)
-- Use vivid, descriptive language that works well with AI image generators
+Generate 3 diverse, creative image prompts optimized for AI art generation. Study these successful examples:
+- "skillet with two fried eggs and bacon"
+- "pancakes bacon scrambled eggs"
+- "rainbow music art with black background"
+- "Bees, honey comb and sunflowers with white background"
+- "gum trees on a white background"
+- "neon cats and balls of yarn"
+- "galactic explosion hindu symbols"
+- "wealthy forest masterpiece"
 
-Return ONLY a JSON array with exactly 3 objects. Each object must have:
-- "title": A catchy 2-4 word name for the style
-- "prompt": The detailed image description
+Your prompts should:
+- Be 5-15 words, direct and concrete
+- Specify main subjects/objects clearly (e.g., "coffee cup", "geometric shapes", "forest trees")
+- Include color palette or background color when relevant
+- Add artistic style descriptors (e.g., "neon", "watercolor", "realistic", "minimalist")
+- Work well as QR backgrounds (clear subject, not overly complex)
+- Be creative but concrete - avoid abstract concepts
+- Vary significantly from each other in subject, color, and style
 
-Example format:
+Return ONLY a JSON array with exactly 3 objects:
+- "title": Short catchy name (2-4 words)
+- "prompt": The image description (5-15 words)
+
+Example response format:
 [
-  {"title":"Warm Coffee Vibes","prompt":"Warm brown espresso tones with soft steam wisps, cozy cafe atmosphere, artistic photography, soft bokeh lighting"},
-  {"title":"Modern Minimalist","prompt":"Clean geometric patterns in navy and gold, modern professional aesthetic, subtle gradients, corporate elegance"},
-  {"title":"Nature Inspired","prompt":"Fresh green leaves with morning dew, natural organic texture, peaceful zen atmosphere, soft natural lighting"}
+  {"title":"Coffee Shop Vibes","prompt":"espresso cup with steam on rustic wood table warm brown tones"},
+  {"title":"Tech Minimalist","prompt":"geometric hexagon patterns in electric blue and white clean modern style"},
+  {"title":"Nature Organic","prompt":"green leaves with water droplets on white background botanical photography"}
 ]
 
-Return ONLY valid JSON with no other text or markdown.`;
+Return ONLY valid JSON, no markdown, no other text.`;
 
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
