@@ -16,7 +16,7 @@ body {
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 30px;
+    gap: 0;
     background: white;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -25,10 +25,13 @@ body {
 
 .left-panel, .right-panel {
     padding: 40px;
+    max-height: calc(100vh - 40px);
 }
 
 .left-panel {
     background: #f8f9fa;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 h1 {
@@ -546,10 +549,8 @@ input[type="range"]::-moz-range-thumb {
 .right-panel {
     display: flex;
     align-items: flex-start;
-    justify-content: center;
-    background: white;
-    position: sticky;
-    top: 20px;
+    overflow-y: auto;
+    border-left: 1px solid #e0e0e0
     align-self: start;
     max-height: calc(100vh - 40px);
 }
