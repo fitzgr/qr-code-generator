@@ -3,7 +3,7 @@
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
 const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
 // =========================
 
 let selectedLogo = null;
