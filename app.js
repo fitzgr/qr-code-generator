@@ -12,6 +12,124 @@ let currentBlendMode = 'overlay';
 let currentBgOpacity = 50;
 let currentQrStrength = 80;
 let isGeneratingAI = false;
+// Last AI generation metadata (used to embed into downloads)
+let lastAiBackgroundMeta = null;
+
+// --- PNG metadata helpers (insert/read tEXt chunk) --------------------
+function crc32(buf) {
+    const table = (function() {
+        let c; const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+            c = n;
+            for (let k = 0; k < 8; k++) {
+                c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+            }
+            table[n] = c >>> 0;
+        }
+        return table;
+    })();
+
+    let crc = 0 ^ (-1);
+    for (let i = 0; i < buf.length; i++) {
+        crc = (crc >>> 8) ^ table[(crc ^ buf[i]) & 0xFF];
+    }
+    return (crc ^ (-1)) >>> 0;
+}
+
+function createChunk(typeStr, dataBytes) {
+    const typeBytes = new TextEncoder().encode(typeStr);
+    const len = dataBytes ? dataBytes.length : 0;
+    const chunk = new Uint8Array(4 + 4 + len + 4);
+    // length
+    const dv = new DataView(chunk.buffer);
+    dv.setUint32(0, len);
+    // type
+    chunk.set(typeBytes, 4);
+    // data
+    if (len) chunk.set(dataBytes, 8);
+    // crc over type+data
+    const crcInput = new Uint8Array(typeBytes.length + len);
+    crcInput.set(typeBytes, 0);
+    if (len) crcInput.set(dataBytes, typeBytes.length);
+    const crc = crc32(crcInput);
+    dv.setUint32(8 + len, crc);
+    return chunk;
+}
+
+function insertTextChunkToPNG(dataURL, key, value) {
+    if (!dataURL.startsWith('data:image/png;base64,')) return dataURL;
+    const b64 = dataURL.split(',')[1];
+    const byteStr = atob(b64);
+    const bytes = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+
+    // PNG signature is 8 bytes
+    const sig = 8;
+    // Find IEND chunk index
+    // iterate chunks
+    let offset = sig;
+    while (offset < bytes.length) {
+        const dv = new DataView(bytes.buffer, offset, 8);
+        const length = dv.getUint32(0);
+        const type = String.fromCharCode(
+            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
+        );
+        if (type === 'IEND') break;
+        offset += 8 + length + 4; // move to next chunk
+    }
+
+    // Build tEXt chunk: key\0value
+    const textStr = key + '\u0000' + value;
+    const textBytes = new TextEncoder().encode(textStr);
+    const textChunk = createChunk('tEXt', textBytes);
+
+    // Compose new bytes: bytes[0:offset] + textChunk + bytes[offset:]
+    const before = bytes.slice(0, offset);
+    const after = bytes.slice(offset);
+    const out = new Uint8Array(before.length + textChunk.length + after.length);
+    out.set(before, 0);
+    out.set(textChunk, before.length);
+    out.set(after, before.length + textChunk.length);
+
+    // Convert back to base64 data URL
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let i = 0; i < out.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, out.subarray(i, i + chunkSize));
+    }
+    return 'data:image/png;base64,' + btoa(binary);
+}
+
+function readPNGTextChunk(dataURL, key) {
+    if (!dataURL.startsWith('data:image/png;base64,')) return null;
+    const b64 = dataURL.split(',')[1];
+    const byteStr = atob(b64);
+    const bytes = new Uint8Array(byteStr.length);
+    for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+    const sig = 8; let offset = sig;
+    while (offset < bytes.length) {
+        const dv = new DataView(bytes.buffer, offset, 8);
+        const length = dv.getUint32(0);
+        const type = String.fromCharCode(
+            bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]
+        );
+        if (type === 'tEXt') {
+            const start = offset + 8;
+            const txtBytes = bytes.slice(start, start + length);
+            const txt = new TextDecoder().decode(txtBytes);
+            const sepIdx = txt.indexOf('\u0000');
+            if (sepIdx !== -1) {
+                const k = txt.substring(0, sepIdx);
+                const v = txt.substring(sepIdx + 1);
+                if (k === key) return v;
+            }
+        }
+        if (type === 'IEND') break;
+        offset += 8 + length + 4;
+    }
+    return null;
+}
+// ---------------------------------------------------------------------
 
 // QR Code Bucket for batch processing with metadata
 let qrBucket = [];
@@ -134,6 +252,12 @@ templateBtns.forEach(btn => {
                 break;
             case 'vcard':
                 templateText = 'BEGIN:VCARD\nVERSION:3.0\nFN:Full Name\nTEL:+1234567890\nEMAIL:email@example.com\nORG:Company Name\nTITLE:Job Title\nEND:VCARD';
+                break;
+            case 'mecard':
+                templateText = 'MECARD:N:Last Name,First Name;TEL:+1234567890;EMAIL:email@example.com;URL:https://example.com;;';
+                break;
+            case 'event':
+                templateText = 'BEGIN:VEVENT\nSUMMARY:Event Title\nDTSTART:20250115T100000Z\nDTEND:20250115T110000Z\nLOCATION:Event Location\nDESCRIPTION:Event description here\nEND:VEVENT';
                 break;
             case 'geo':
                 templateText = 'geo:37.7749,-122.4194,100';
@@ -396,12 +520,69 @@ bgImageInput.addEventListener('change', (e) => {
     if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
+            const dataURL = event.target.result;
+
+            // If PNG, attempt to extract embedded QR metadata
+            try {
+                if (file.type === 'image/png') {
+                    const metaStr = readPNGTextChunk(dataURL, 'QR_META');
+                    if (metaStr) {
+                        try {
+                            const meta = JSON.parse(metaStr);
+                            if (meta.text) textInput.value = meta.text;
+                            if (meta.label) labelInput.value = meta.label;
+                            if (meta.blendMode) {
+                                currentBlendMode = meta.blendMode;
+                                blendModeSelect.value = currentBlendMode;
+                            }
+                            if (meta.bgOpacity !== undefined) {
+                                currentBgOpacity = parseInt(meta.bgOpacity);
+                                bgOpacityRange.value = currentBgOpacity;
+                                bgOpacityValue.textContent = currentBgOpacity;
+                            }
+                            if (meta.qrStrength !== undefined) {
+                                currentQrStrength = parseInt(meta.qrStrength);
+                                qrStrengthRange.value = currentQrStrength;
+                                qrStrengthValue.textContent = currentQrStrength;
+                            }
+                            if (meta.aiBackground) {
+                                lastAiBackgroundMeta = meta.aiBackground;
+                            }
+                            // Also read preserved analytics (separate chunk) if present
+                            try {
+                                const analyticsStr = readPNGTextChunk(dataURL, 'QR_ANALYTICS');
+                                if (analyticsStr) {
+                                    const analytics = JSON.parse(analyticsStr);
+                                    // Apply preserved analytics to UI for awareness
+                                    if (analytics.version) document.getElementById('qrVersion').textContent = analytics.version;
+                                    if (analytics.modules) document.getElementById('qrModules').textContent = `${analytics.modules}×${analytics.modules}`;
+                                    if (analytics.minSizeMM) document.getElementById('qrMinSize').textContent = `${analytics.minSizeMM}mm (${analytics.minSizeInch}")`;
+                                    if (analytics.usedPercent !== undefined) {
+                                        const capacityEl = document.getElementById('qrDataCapacity');
+                                        capacityEl.textContent = `${analytics.usedPercent}% used`;
+                                        capacityEl.className = 'analytics-value';
+                                    }
+                                    if (analytics.contrastRatio !== undefined) document.getElementById('qrContrast').textContent = `${analytics.contrastRatio}:1`;
+                                }
+                            } catch (ae) {
+                                console.warn('Failed to parse analytics chunk', ae);
+                            }
+                            showNotification('Embedded QR metadata detected and applied');
+                        } catch (ee) {
+                            console.warn('Failed to parse embedded QR metadata', ee);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Error reading PNG metadata', err);
+            }
+
             const img = new Image();
             img.onload = () => {
                 backgroundImage = img;
                 bgImageStatus.textContent = `Background: ${file.name}`;
                 bgImageStatus.style.color = '#4CAF50';
-                bgPreviewImage.src = event.target.result;
+                bgPreviewImage.src = dataURL;
                 bgPreviewSection.style.display = 'block';
                 blendControlsSection.style.display = 'block';
                 updateValidationStatus('idle', 'Click "Generate QR Code" to test');
@@ -409,7 +590,7 @@ bgImageInput.addEventListener('change', (e) => {
                     generateQRCode();
                 }
             };
-            img.src = event.target.result;
+            img.src = dataURL;
         };
         reader.readAsDataURL(file);
     }
@@ -436,19 +617,21 @@ cancelAiImageBtn.addEventListener('click', () => {
     if (isGeneratingAI) {
         cancelAIGeneration = true;
         isGeneratingAI = false;
-        generateAiImageBtn.disabled = false;
-        generateAiImageBtn.textContent = 'Render Image';
-        cancelAiImageBtn.style.display = 'none';
-        
-        // Hide progress bar
-        const progressContainer = document.getElementById('aiProgressContainer');
-        if (progressContainer) {
-            progressContainer.style.display = 'none';
-            const progressBar = document.getElementById('aiProgressBar');
-            if (progressBar) {
-                progressBar.style.width = '0%';
-            }
-        }
+                // start reading as data URL so we can inspect metadata and create Image
+                reader.readAsDataURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    backgroundImage = img;
+                    bgImageStatus.textContent = `Background: ${file.name}`;
+                    bgImageStatus.style.color = '#4CAF50';
+                    bgPreviewImage.src = dataURL;
+                    bgPreviewSection.style.display = 'block';
+                    blendControlsSection.style.display = 'block';
+                    updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+                    if (currentQRDataURL) {
+                        generateQRCode();
+                    }
+                };
         
         aiImageStatus.innerHTML = 'Generation cancelled. <strong>Next steps:</strong> Upload an image or try again later.';
         aiImageStatus.style.color = '#757575';
@@ -570,8 +753,21 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         generateAiImageBtn.textContent = 'Render Image';
         cancelAiImageBtn.style.display = 'none';
         
-        if (currentQRDataURL) {
+        // Save AI metadata so downloads embed the prompt and generator info
+        lastAiBackgroundMeta = {
+            prompt: prompt,
+            imageUrl: imageUrl,
+            generatedAt: Date.now()
+        };
+
+        // Regenerate QR (now with artistic background) and add to bucket automatically
+        try {
             generateQRCode();
+            setTimeout(() => {
+                try { addQRToBucket(); } catch (e) { console.warn('Failed to auto-add to bucket', e); }
+            }, 150);
+        } catch (e) {
+            console.warn('Failed to auto-generate QR after AI background', e);
         }
         
     } catch (error) {
@@ -628,9 +824,19 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
                 generateAiImageBtn.disabled = false;
                 generateAiImageBtn.textContent = 'Render Image';
                 cancelAiImageBtn.style.display = 'none';
-                
-                if (currentQRDataURL) {
+                // Save AI metadata and auto-add to bucket
+                lastAiBackgroundMeta = {
+                    prompt: prompt,
+                    imageUrl: hordeImage.src,
+                    generatedAt: Date.now()
+                };
+                try {
                     generateQRCode();
+                    setTimeout(() => {
+                        try { addQRToBucket(); } catch (e) { console.warn('Failed to auto-add to bucket', e); }
+                    }, 150);
+                } catch (e) {
+                    console.warn('Failed to auto-generate QR after AI background', e);
                 }
             } catch (hordeError) {
                 console.error('❌ Stable Horde also failed:', hordeError);
@@ -699,7 +905,7 @@ async function generateWithStableHorde(prompt) {
     // Step 2: Poll for completion
     const checkUrl = `https://stablehorde.net/api/v2/generate/check/${requestId}`;
     let attempts = 0;
-    const maxPollAttempts = 60; // 60 attempts * 2 seconds = 2 minutes max
+    const maxPollAttempts = 180; // 180 attempts * 2 seconds = ~6 minutes max (increased per user request)
     
     while (attempts < maxPollAttempts) {
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between polls
@@ -1164,15 +1370,30 @@ function addQRToBucket() {
             backgroundDataURL: backgroundImage ? bgPreviewImage.src : null,
             blendMode: currentBlendMode,
             bgOpacity: currentBgOpacity,
-            qrStrength: currentQrStrength
+            qrStrength: currentQrStrength,
+            aiBackground: lastAiBackgroundMeta || null
         }
     };
+
+    // Compute analytics
+    const analytics = computeAnalytics(parseInt(sizeRange.value || qrCanvas.width));
+
+    // Embed metadata and analytics into PNG tEXt chunks
+    let dataWithMeta = currentQRDataURL;
+    try {
+        dataWithMeta = insertTextChunkToPNG(dataWithMeta, 'QR_META', JSON.stringify(metadata));
+        dataWithMeta = insertTextChunkToPNG(dataWithMeta, 'QR_ANALYTICS', JSON.stringify(analytics));
+    } catch (e) {
+        console.warn('Failed to embed metadata into bucket PNG', e);
+        dataWithMeta = currentQRDataURL;
+    }
     
-    // Store QR code data with metadata
+    // Store QR code data with metadata (dataURL now includes embedded metadata)
     const qrData = {
-        dataURL: currentQRDataURL,
+        dataURL: dataWithMeta,
         canvas: cloneCanvas(qrCanvas),
-        metadata: metadata
+        metadata: metadata,
+        analytics: analytics
     };
     
     qrBucket.push(qrData);
@@ -1766,6 +1987,39 @@ function updateAnalytics(qrSize) {
     calculateQualityScore(contrastCheck.ratio, usedPercent, qrSize);
 }
 
+// Compute analytics object (same logic as updateAnalytics but returns values)
+function computeAnalytics(qrSize) {
+    const text = textInput.value.trim();
+    const textLength = text.length;
+    let version = 1;
+    const capacities = [17, 32, 53, 78, 106, 134, 154, 192, 230, 271];
+    for (let i = 0; i < capacities.length; i++) {
+        if (textLength <= capacities[i]) {
+            version = i + 1;
+            break;
+        }
+    }
+    if (textLength > capacities[capacities.length - 1]) {
+        version = Math.min(40, Math.ceil(textLength / 100) + 10);
+    }
+    const modules = 21 + (version - 1) * 4;
+    const minSizeMM = Math.ceil(modules * 2.5);
+    const minSizeInch = (minSizeMM / 25.4).toFixed(1);
+    const maxCapacity = version <= 10 ? capacities[version - 1] : Math.floor(version * 100);
+    const usedPercent = Math.round((textLength / maxCapacity) * 100);
+    const contrastCheck = validateContrast(currentDarkColor, currentLightColor);
+
+    return {
+        version,
+        modules,
+        minSizeMM,
+        minSizeInch,
+        usedPercent,
+        contrastRatio: contrastCheck.ratio,
+        errorCorrection: 'High (30%)'
+    };
+}
+
 // Calculate Quality Score
 function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
     let score = 0;
@@ -2224,11 +2478,48 @@ downloadPngBtn.addEventListener('click', () => {
     
     const label = labelInput.value.trim();
     
+    // Embed metadata into PNG so re-uploads can restore state
+    const meta = {
+        text: textInput.value.trim(),
+        label: labelInput.value.trim(),
+        blendMode: currentBlendMode,
+        bgOpacity: currentBgOpacity,
+        qrStrength: currentQrStrength,
+        timestamp: Date.now(),
+        aiBackground: lastAiBackgroundMeta || null
+    };
+
+    let dataWithMeta = currentQRDataURL;
+    try {
+        // First embed QR_META
+        dataWithMeta = insertTextChunkToPNG(dataWithMeta, 'QR_META', JSON.stringify(meta));
+
+        // Also compute analytics and embed as separate chunk QR_ANALYTICS
+        const analytics = computeAnalytics(parseInt(sizeRange.value || 1024));
+        try {
+            dataWithMeta = insertTextChunkToPNG(dataWithMeta, 'QR_ANALYTICS', JSON.stringify(analytics));
+        } catch (ae) {
+            console.warn('Failed to embed analytics chunk', ae);
+        }
+    } catch (e) {
+        console.warn('Failed to embed metadata into PNG, falling back to plain PNG', e);
+        dataWithMeta = currentQRDataURL;
+    }
+
     // Download the preview canvas (which already includes label if present)
+    const blob = (function() {
+        const b64 = dataWithMeta.split(',')[1];
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: 'image/png' });
+    })();
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = 'qr-code.png';
-    link.href = currentQRDataURL;
+    link.href = url;
     link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
     
     // Track download
     if (typeof gtag !== 'undefined') {
