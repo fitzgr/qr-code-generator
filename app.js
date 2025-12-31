@@ -1066,14 +1066,33 @@ async function generateWithStableHorde(prompt) {
                 const imageUrl = statusData.generations[0].img;
                 console.log('🖼️ Image URL:', imageUrl);
                 
-                // Load the image
+                // Load the image and crop watermark
                 return new Promise((resolve, reject) => {
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
                     
                     img.onload = () => {
                         console.log('✅ Stable Horde image loaded successfully!');
-                        resolve(img);
+                        console.log('🔧 Cropping watermark from bottom...');
+                        
+                        // Create canvas to crop watermark (remove bottom ~40 pixels)
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        const cropHeight = 40; // Height of watermark to remove
+                        canvas.width = img.width;
+                        canvas.height = img.height - cropHeight;
+                        
+                        // Draw image without bottom portion
+                        ctx.drawImage(img, 0, 0, img.width, img.height - cropHeight, 0, 0, canvas.width, canvas.height);
+                        
+                        // Convert back to image
+                        const croppedImg = new Image();
+                        croppedImg.onload = () => {
+                            console.log('✅ Watermark cropped successfully!');
+                            resolve(croppedImg);
+                        };
+                        croppedImg.src = canvas.toDataURL('image/png');
                     };
                     
                     img.onerror = () => {
@@ -1740,9 +1759,20 @@ function updateBucketUI() {
             const item = document.createElement('div');
             item.className = 'bucket-item';
             
+            // Show QR code
             const img = document.createElement('img');
             img.src = qr.dataURL;
             img.alt = `QR ${index + 1}`;
+            
+            // If there's a background image, show it too
+            if (qr.metadata.artistic && qr.metadata.artistic.backgroundDataURL) {
+                const bgThumb = document.createElement('img');
+                bgThumb.src = qr.metadata.artistic.backgroundDataURL;
+                bgThumb.alt = 'Background';
+                bgThumb.style.cssText = 'width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 6px; border: 1px solid #ddd;';
+                bgThumb.title = 'Background image';
+                item.appendChild(bgThumb);
+            }
             
             const info = document.createElement('div');
             info.className = 'bucket-item-info';
@@ -3030,9 +3060,25 @@ downloadBucketPngBtn.addEventListener('click', async () => {
     
     const zip = new JSZip();
     qrBucket.forEach((qr, index) => {
-        const fileName = qr.label ? `${qr.label.replace(/[^a-z0-9]/gi, '_')}.png` : `qr-code-${index + 1}.png`;
-        const base64 = qr.dataURL.split(',')[1];
-        zip.file(fileName, base64, {base64: true});
+        const qrNum = index + 1;
+        
+        // Add QR code with numbered filename
+        const qrFileName = `qr-${qrNum}.png`;
+        const qrBase64 = qr.dataURL.split(',')[1];
+        if (!qrBase64) {
+            console.warn(`Skipping QR ${qrNum} - invalid dataURL`);
+            return;
+        }
+        zip.file(qrFileName, qrBase64, {base64: true});
+        
+        // Add background image if it exists with matching number
+        if (qr.metadata.artistic && qr.metadata.artistic.backgroundDataURL) {
+            const bgFileName = `background-${qrNum}.png`;
+            const bgBase64 = qr.metadata.artistic.backgroundDataURL.split(',')[1];
+            if (bgBase64) {
+                zip.file(bgFileName, bgBase64, {base64: true});
+            }
+        }
     });
     
     const blob = await zip.generateAsync({type: 'blob'});
@@ -3083,6 +3129,9 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
     
     const zip = new JSZip();
     qrBucket.forEach((qr, index) => {
+        const qrNum = index + 1;
+        
+        // Convert QR code to JPG
         const canvas = document.createElement('canvas');
         canvas.width = qr.canvas.width;
         canvas.height = qr.canvas.height;
@@ -3091,9 +3140,30 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(qr.canvas, 0, 0);
         
-        const fileName = qr.label ? `${qr.label.replace(/[^a-z0-9]/gi, '_')}.jpg` : `qr-code-${index + 1}.jpg`;
-        const base64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
-        zip.file(fileName, base64, {base64: true});
+        const qrFileName = `qr-${qrNum}.jpg`;
+        const qrBase64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+        if (qrBase64) {
+            zip.file(qrFileName, qrBase64, {base64: true});
+        }
+        
+        // Add background image if it exists (convert to JPG too) with matching number
+        if (qr.metadata.artistic && qr.metadata.artistic.backgroundDataURL) {
+            const bgCanvas = document.createElement('canvas');
+            const bgImg = new Image();
+            bgImg.src = qr.metadata.artistic.backgroundDataURL;
+            bgCanvas.width = bgImg.width || 1024;
+            bgCanvas.height = bgImg.height || 1024;
+            const bgCtx = bgCanvas.getContext('2d');
+            bgCtx.fillStyle = '#ffffff';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgCtx.drawImage(bgImg, 0, 0);
+            
+            const bgFileName = `background-${qrNum}.jpg`;
+            const bgBase64 = bgCanvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+            if (bgBase64) {
+                zip.file(bgFileName, bgBase64, {base64: true});
+            }
+        }
     });
     
     const blob = await zip.generateAsync({type: 'blob'});
@@ -3256,6 +3326,34 @@ if (downloadMetadataPdfBtn) {
                 yPos += 4;
                 pdf.text(`QR Strength: ${meta.artistic.qrStrength}%`, col1X, yPos);
                 yPos += 5;
+                
+                // Add AI prompts if available
+                if (meta.artistic.context || meta.artistic.imagePrompt) {
+                    pdf.setFont(undefined, 'bold');
+                    pdf.text('AI Generation Details:', margin, yPos);
+                    yPos += 4;
+                    
+                    pdf.setFont(undefined, 'normal');
+                    if (meta.artistic.context) {
+                        pdf.setFont(undefined, 'bold');
+                        pdf.text('Context (What\'s your QR code for?):', margin + 2, yPos);
+                        yPos += 4;
+                        pdf.setFont(undefined, 'normal');
+                        const contextLines = pdf.splitTextToSize(meta.artistic.context, contentWidth - 5);
+                        pdf.text(contextLines, margin + 4, yPos);
+                        yPos += (contextLines.length * 4) + 2;
+                    }
+                    
+                    if (meta.artistic.imagePrompt) {
+                        pdf.setFont(undefined, 'bold');
+                        pdf.text('Image Description Used:', margin + 2, yPos);
+                        yPos += 4;
+                        pdf.setFont(undefined, 'normal');
+                        const promptLines = pdf.splitTextToSize(meta.artistic.imagePrompt, contentWidth - 5);
+                        pdf.text(promptLines, margin + 4, yPos);
+                        yPos += (promptLines.length * 4) + 2;
+                    }
+                }
                 
                 // Add background image if available
                 if (meta.artistic.backgroundDataURL) {
