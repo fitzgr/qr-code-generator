@@ -23,7 +23,7 @@ let isGeneratingAI = false;
 let lastAiBackgroundMeta = null;
 
 // --- Utility Functions --------------------
-// Generate timestamp prefix for filenames: yyyy,mmm.dd-hh.mm
+// Generate timestamp prefix for filenames: yyyy.mmm.dd-hh.mm
 function getTimestampPrefix() {
     const now = new Date();
     const year = now.getFullYear();
@@ -33,7 +33,7 @@ function getTimestampPrefix() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     
-    return `${year},${month}.${day}-${hours}.${minutes}`;
+    return `${year}.${month}.${day}-${hours}.${minutes}`;
 }
 
 // --- PNG metadata helpers (insert/read tEXt chunk) --------------------
