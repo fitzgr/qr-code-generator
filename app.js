@@ -3,7 +3,15 @@
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
 const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent';
+// Models to try in order (newest to oldest, fast to slower)
+const GEMINI_MODELS = [
+    'gemini-2.0-flash',      // Latest, fastest
+    'gemini-1.5-flash',      // Stable, widely supported
+    'gemini-1.5-flash-8b',   // Lighter, faster
+    'gemini-1.5-pro',        // Higher quality
+    'gemini-1.0-pro'         // Oldest, most stable
+];
+let workingGeminiModel = GEMINI_MODELS[0]; // Cache the working model
 // =========================
 
 let selectedLogo = null;
@@ -19,6 +27,8 @@ let currentBlendMode = 'overlay';
 let currentBgOpacity = 50;
 let currentQrStrength = 80;
 let isGeneratingAI = false;
+let cancelAIGeneration = false;
+let cancelBackupRenderer = false;
 // Last AI generation metadata (used to embed into downloads)
 let lastAiBackgroundMeta = null;
 
@@ -181,6 +191,7 @@ const previewPlaceholder = document.getElementById('previewPlaceholder');
 // Bucket elements
 const addToBucketBtn = document.getElementById('addToBucketBtn');
 const bucketCount = document.getElementById('bucketCount');
+const bucketCountBtn = document.getElementById('bucketCountBtn');
 const bucketSection = document.getElementById('bucketSection');
 const bucketPreview = document.getElementById('bucketPreview');
 const clearBucketBtn = document.getElementById('clearBucketBtn');
@@ -217,6 +228,7 @@ const bgImageStatus = document.getElementById('bgImageStatus');
 const aiPromptInput = document.getElementById('aiPromptInput');
 const generateAiImageBtn = document.getElementById('generateAiImageBtn');
 const cancelAiImageBtn = document.getElementById('cancelAiImageBtn');
+const tryBackupRendererBtn = document.getElementById('tryBackupRendererBtn');
 const aiImageStatus = document.getElementById('aiImageStatus');
 const bgPreviewSection = document.getElementById('bgPreviewSection');
 const bgPreviewImage = document.getElementById('bgPreviewImage');
@@ -638,25 +650,98 @@ cancelAiImageBtn.addEventListener('click', () => {
     if (isGeneratingAI) {
         cancelAIGeneration = true;
         isGeneratingAI = false;
-                // start reading as data URL so we can inspect metadata and create Image
-                reader.readAsDataURL(file);
-                const img = new Image();
-                img.onload = () => {
-                    backgroundImage = img;
-                    bgImageStatus.textContent = `Background: ${file.name}`;
-                    bgImageStatus.style.color = '#4CAF50';
-                    bgPreviewImage.src = dataURL;
-                    bgPreviewSection.style.display = 'block';
-                    blendControlsSection.style.display = 'block';
-                    updateValidationStatus('idle', 'Click "Generate QR Code" to test');
-                    if (currentQRDataURL) {
-                        generateQRCode();
-                    }
-                };
+        generateAiImageBtn.disabled = false;
+        generateAiImageBtn.textContent = 'Render Image';
+        cancelAiImageBtn.style.display = 'none';
+        tryBackupRendererBtn.style.display = 'none';
         
         aiImageStatus.innerHTML = 'Generation cancelled. <strong>Next steps:</strong> Upload an image or try again later.';
         aiImageStatus.style.color = '#757575';
         console.log('🚫 User cancelled AI generation');
+    } else {
+        // Cancel backup renderer
+        cancelBackupRenderer = true;
+        cancelAiImageBtn.style.display = 'none';
+        tryBackupRendererBtn.style.display = 'inline-block';
+        generateAiImageBtn.disabled = false;
+        
+        aiImageStatus.innerHTML = 'Backup renderer cancelled.';
+        aiImageStatus.style.color = '#757575';
+        console.log('🚫 User cancelled backup renderer');
+    }
+});
+
+// Try Backup Renderer button - allows user to manually switch to Stable Horde
+tryBackupRendererBtn.addEventListener('click', async () => {
+    if (!aiPromptInput.value.trim()) {
+        alert('Please enter a prompt first!');
+        return;
+    }
+    
+    const prompt = aiPromptInput.value.trim();
+    
+    // Disable buttons during generation
+    cancelBackupRenderer = false;
+    tryBackupRendererBtn.style.display = 'none';
+    generateAiImageBtn.disabled = true;
+    cancelAiImageBtn.style.display = 'inline-block'; // Show cancel button
+    aiImageStatus.textContent = 'Trying backup renderer (may take 30-60 seconds)...';
+    aiImageStatus.style.color = '#1565C0';
+    
+    try {
+        const hordeImage = await generateWithStableHorde(prompt);
+        
+        // Success!
+        backgroundImage = hordeImage;
+        aiImageStatus.textContent = 'Vision rendered successfully (via backup service)! ✨';
+        aiImageStatus.style.color = '#4CAF50';
+        
+        // Play notification sound
+        playNotificationSound();
+        
+        bgPreviewImage.src = hordeImage.src;
+        bgPreviewSection.style.display = 'block';
+        blendControlsSection.style.display = 'block';
+        updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+        
+        // Hide the backup button since we already used it
+        tryBackupRendererBtn.style.display = 'none';
+        cancelAiImageBtn.style.display = 'none';
+        generateAiImageBtn.disabled = false;
+        cancelBackupRenderer = false;
+        
+        // Save AI metadata
+        lastAiBackgroundMeta = {
+            prompt: prompt,
+            imageUrl: hordeImage.src,
+            generatedAt: Date.now()
+        };
+        
+        // Auto-generate QR and add to bucket
+        try {
+            generateQRCode();
+            setTimeout(() => {
+                try { addQRToBucket(); } catch (e) { console.warn('Failed to auto-add to bucket', e); }
+            }, 150);
+        } catch (e) {
+            console.warn('Failed to auto-generate QR after AI background', e);
+        }
+    } catch (error) {
+        console.error('❌ Backup renderer failed:', error);
+        
+        // Check if it was cancelled by user
+        if (cancelBackupRenderer) {
+            aiImageStatus.innerHTML = 'Backup renderer cancelled.';
+            aiImageStatus.style.color = '#757575';
+        } else {
+            aiImageStatus.innerHTML = 'Backup renderer unavailable. Please use the "Upload Image" tab or try again later.';
+            aiImageStatus.style.color = '#f44336';
+        }
+        
+        tryBackupRendererBtn.style.display = 'inline-block';
+        cancelAiImageBtn.style.display = 'none';
+        generateAiImageBtn.disabled = false;
+        cancelBackupRenderer = false;
     }
 });
 
@@ -689,6 +774,7 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
     cancelAIGeneration = false;
     generateAiImageBtn.disabled = true;
     cancelAiImageBtn.style.display = 'inline-block';
+    tryBackupRendererBtn.style.display = 'none'; // Hide backup button during generation
     generateAiImageBtn.textContent = attempt > 1 ? `Retrying... (${attempt}/${maxAttempts})` : 'Generating...';
     aiImageStatus.textContent = attempt > 1 ? `Attempt ${attempt}/${maxAttempts} - Rendering your vision...` : 'Rendering your vision...';
     aiImageStatus.style.color = '#1565C0';
@@ -758,7 +844,7 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         
         // Success!
         backgroundImage = img;
-        aiImageStatus.textContent = 'Vision rendered successfully! ✨';
+        aiImageStatus.innerHTML = 'Vision rendered successfully! ✨ <small style="color: #666;">(If you see a rate limit message, click "Try Backup Renderer")</small>';
         aiImageStatus.style.color = '#4CAF50';
         
         // Play notification sound
@@ -773,6 +859,7 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         generateAiImageBtn.disabled = false;
         generateAiImageBtn.textContent = 'Render Image';
         cancelAiImageBtn.style.display = 'none';
+        tryBackupRendererBtn.style.display = 'inline-block';
         
         // Save AI metadata so downloads embed the prompt and generator info
         lastAiBackgroundMeta = {
@@ -933,7 +1020,7 @@ async function generateWithStableHorde(prompt) {
         attempts++;
         
         // Check if cancelled
-        if (cancelAIGeneration) {
+        if (cancelAIGeneration || cancelBackupRenderer) {
             console.log('🚫 Stable Horde generation cancelled by user');
             throw new Error('Generation cancelled by user');
         }
@@ -1016,7 +1103,12 @@ async function generateWithStableHorde(prompt) {
             const elapsedSecs = elapsedSeconds % 60;
             const elapsedFormatted = `${elapsedMinutes}:${elapsedSecs.toString().padStart(2, '0')}`;
             
-            aiImageStatus.textContent = `In queue: position ${checkData.queue_position} (${waitTimeFormatted} estimated) • ${elapsedFormatted} elapsed`;
+            // Position 0 means actively processing, not in queue
+            if (checkData.queue_position === 0) {
+                aiImageStatus.textContent = `🎨 Processing now (${waitTimeFormatted} estimated) • ${elapsedFormatted} elapsed`;
+            } else {
+                aiImageStatus.textContent = `⏳ Queue position ${checkData.queue_position} (${waitTimeFormatted} estimated) • ${elapsedFormatted} elapsed`;
+            }
             aiImageStatus.style.color = '#1565C0';
             
             // Update progress bar
@@ -1200,58 +1292,86 @@ Example response format:
 
 Return ONLY valid JSON, no markdown, no other text.`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{
-                    text: prompt
-                }]
-            }],
-            generationConfig: {
-                temperature: 1.0,
-                maxOutputTokens: 1000
+    // Try models in order until one works
+    const modelsToTry = [workingGeminiModel, ...GEMINI_MODELS.filter(m => m !== workingGeminiModel)];
+    let lastError = null;
+    
+    for (const model of modelsToTry) {
+        try {
+            console.log(`🔄 Trying Gemini model: ${model}`);
+            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
+            
+            const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 1.0,
+                        maxOutputTokens: 1000
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.warn(`❌ Model ${model} failed (${response.status}):`, errorText.substring(0, 100));
+                lastError = new Error(`${model} returned ${response.status}`);
+                continue; // Try next model
             }
-        })
-    });
-
-    if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gemini API Response Status:', response.status);
-        console.error('Gemini API Error Text:', errorText);
-        throw new Error(`API returned ${response.status}: ${errorText.substring(0, 200)}`);
+            
+            const data = await response.json();
+            
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                console.warn(`❌ Model ${model} returned invalid structure`);
+                lastError = new Error(`${model} invalid response structure`);
+                continue; // Try next model
+            }
+            
+            // Success! Cache this model for future use
+            if (workingGeminiModel !== model) {
+                console.log(`✅ Found working model: ${model} (updating cache)`);
+                workingGeminiModel = model;
+            } else {
+                console.log(`✅ Model ${model} working`);
+            }
+            
+            const textResponse = data.candidates[0].content.parts[0].text;
+            
+            // Extract JSON from response (remove markdown code blocks if present)
+            let jsonText = textResponse.trim();
+            if (jsonText.startsWith('```json')) {
+                jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
+            } else if (jsonText.startsWith('```')) {
+                jsonText = jsonText.replace(/```\n?/g, '').trim();
+            }
+            
+            const suggestions = JSON.parse(jsonText);
+            
+            // Validate format
+            if (!Array.isArray(suggestions) || suggestions.length === 0) {
+                throw new Error('Invalid response format from API');
+            }
+            
+            // Ensure we have exactly 3 suggestions
+            return suggestions.slice(0, 3);
+            
+        } catch (error) {
+            console.warn(`❌ Model ${model} error:`, error.message);
+            lastError = error;
+            continue; // Try next model
+        }
     }
-
-    const data = await response.json();
-    console.log('Gemini API Response:', data);
     
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-        console.error('Invalid response structure:', data);
-        throw new Error('Invalid API response structure');
-    }
-    
-    const textResponse = data.candidates[0].content.parts[0].text;
-    
-    // Extract JSON from response (remove markdown code blocks if present)
-    let jsonText = textResponse.trim();
-    if (jsonText.startsWith('```json')) {
-        jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?$/g, '').trim();
-    } else if (jsonText.startsWith('```')) {
-        jsonText = jsonText.replace(/```\n?/g, '').trim();
-    }
-    
-    const suggestions = JSON.parse(jsonText);
-    
-    // Validate format
-    if (!Array.isArray(suggestions) || suggestions.length === 0) {
-        throw new Error('Invalid response format from API');
-    }
-    
-    // Ensure we have exactly 3 suggestions
-    return suggestions.slice(0, 3);
+    // All models failed
+    console.error('❌ All Gemini models failed');
+    throw lastError || new Error('All Gemini models unavailable');
 }
 
 function displayPromptSuggestions(suggestions) {
@@ -1596,7 +1716,11 @@ function cloneCanvas(sourceCanvas) {
 }
 
 function updateBucketUI() {
-    bucketCount.textContent = `(${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`;
+    const countText = `(${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`;
+    bucketCount.textContent = countText;
+    if (bucketCountBtn) {
+        bucketCountBtn.textContent = countText;
+    }
     
     // Update download section title based on metadata presence
     if (downloadSectionTitle) {

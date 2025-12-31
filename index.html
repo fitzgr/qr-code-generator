@@ -133,7 +133,7 @@
                             <label for="contextInput">What's your QR code for?</label>
                             <input type="text" id="contextInput" placeholder="e.g., Coffee shop business card, Tech startup website, Wedding invitation">
                             <div class="helper-buttons">
-                                <button id="generatePromptBtn" class="btn btn-secondary">Generate Description Ideas</button>
+                                <button id="generatePromptBtn" class="btn btn-secondary">Generative Description Ideas</button>
                                 <button id="retryPromptBtn" class="btn btn-secondary" style="display: none;">🔄 Try Different Ideas</button>
                             </div>
                             <div id="promptSuggestions" class="prompt-suggestions" style="display: none;"></div>
@@ -145,6 +145,7 @@
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <button id="generateAiImageBtn" class="btn btn-primary">Render Image</button>
                         <button id="cancelAiImageBtn" class="btn" style="display: none; background: #757575; color: white;">Cancel</button>
+                        <button id="tryBackupRendererBtn" class="btn" style="display: none; background: #FF9800; color: white;">🔄 Try Backup Renderer</button>
                     </div>
                     <p id="aiImageStatus" class="status-text">Describe the context to generate an image</p>
                     <div id="aiProgressContainer" style="display: none; margin-top: 10px;">
@@ -307,7 +308,7 @@
             </div>
 
             <div class="button-group">
-                <button id="addToBucketBtn" class="btn btn-bucket" disabled>Add to Bucket <span id="bucketCount">(0/8)</span></button>
+                <button id="addToBucketBtn" class="btn btn-bucket" disabled>Add to Bucket <span id="bucketCountBtn">(0/10)</span></button>
                 <button id="clearBtn" class="btn btn-secondary">Clear</button>
             </div>
 
