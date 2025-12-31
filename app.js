@@ -1102,12 +1102,50 @@ function generatePromptSuggestions() {
         .catch(error => {
             console.error('Failed to generate prompts:', error);
             console.error('Error details:', error.message);
-            promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
-                <strong>Failed to generate ideas.</strong><br>
-                <span style="font-size: 0.9em; color: #666;">Error: ${error.message}</span><br>
-                <span style="font-size: 0.9em; color: #666;">Check browser console for details.</span>
-            </div>`;
-            retryPromptBtn.style.display = 'block';
+            
+            // Check if it's a rate limit error (429)
+            if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
+                // Rate limit hit - offer auto-retry
+                let countdown = 60;
+                promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #FF9800;">
+                    <strong>⏱️ Rate Limit Reached</strong><br>
+                    <span style="font-size: 0.95em; margin-top: 8px; display: inline-block;">The free API allows 15 requests per minute.</span><br>
+                    <span style="font-size: 0.9em; color: #666; margin-top: 8px; display: inline-block;">Auto-retrying in <span id="countdown">${countdown}</span> seconds...</span><br>
+                    <button id="cancelRetry" style="margin-top: 12px; padding: 6px 16px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer;">Cancel</button>
+                </div>`;
+                promptSuggestions.style.display = 'block';
+                retryPromptBtn.style.display = 'none';
+                
+                const countdownElement = document.getElementById('countdown');
+                const cancelButton = document.getElementById('cancelRetry');
+                
+                const intervalId = setInterval(() => {
+                    countdown--;
+                    if (countdownElement) {
+                        countdownElement.textContent = countdown;
+                    }
+                    if (countdown <= 0) {
+                        clearInterval(intervalId);
+                        generatePromptSuggestions(); // Retry automatically
+                    }
+                }, 1000);
+                
+                if (cancelButton) {
+                    cancelButton.addEventListener('click', () => {
+                        clearInterval(intervalId);
+                        promptSuggestions.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Retry cancelled. Click "Generate Description Ideas" when ready.</div>';
+                        retryPromptBtn.style.display = 'block';
+                    });
+                }
+            } else {
+                // Other errors
+                promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+                    <strong>Failed to generate ideas.</strong><br>
+                    <span style="font-size: 0.9em; color: #666;">Error: ${error.message}</span><br>
+                    <span style="font-size: 0.9em; color: #666;">Check browser console for details.</span>
+                </div>`;
+                retryPromptBtn.style.display = 'block';
+            }
         });
 }
 
