@@ -22,6 +22,20 @@ let isGeneratingAI = false;
 // Last AI generation metadata (used to embed into downloads)
 let lastAiBackgroundMeta = null;
 
+// --- Utility Functions --------------------
+// Generate timestamp prefix for filenames: yyyy,mmm.dd-hh.mm
+function getTimestampPrefix() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[now.getMonth()];
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    
+    return `${year},${month}.${day}-${hours}.${minutes}`;
+}
+
 // --- PNG metadata helpers (insert/read tEXt chunk) --------------------
 function crc32(buf) {
     const table = (function() {
@@ -2681,7 +2695,7 @@ downloadPngBtn.addEventListener('click', () => {
     })();
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.download = 'qr-code.png';
+    link.download = `${getTimestampPrefix()}_qr-code.png`;
     link.href = url;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
@@ -2710,7 +2724,7 @@ downloadSvgBtn.addEventListener('click', () => {
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
-    link.download = 'qr-code.svg';
+    link.download = `${getTimestampPrefix()}_qr-code.svg`;
     link.href = url;
     link.click();
     
@@ -2747,7 +2761,7 @@ downloadJpgBtn.addEventListener('click', () => {
     ctx.drawImage(qrCanvas, 0, 0);
     
     const link = document.createElement('a');
-    link.download = 'qr-code.jpg';
+    link.download = `${getTimestampPrefix()}_qr-code.jpg`;
     link.href = canvas.toDataURL('image/jpeg', 0.95);
     link.click();
     
@@ -2795,7 +2809,7 @@ downloadPdfBtn.addEventListener('click', () => {
     });
     
     pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-    pdf.save('qr-code.pdf');
+    pdf.save(`${getTimestampPrefix()}_qr-code.pdf`);
     
     // Track download
     if (typeof gtag !== 'undefined') {
@@ -2858,7 +2872,7 @@ downloadBucketPdfBtn.addEventListener('click', () => {
         pdf.addImage(qr.dataURL, 'PNG', x, y + yOffset, imgWidth, imgHeight);
     });
     
-    pdf.save('qr-codes-batch.pdf');
+    pdf.save(`${getTimestampPrefix()}_qr-codes-batch.pdf`);
     showNotification(`${qrBucket.length} QR codes downloaded as PDF grid!`);
     
     if (typeof gtag !== 'undefined') {
@@ -2899,7 +2913,7 @@ downloadBucketPngBtn.addEventListener('click', async () => {
     
     const blob = await zip.generateAsync({type: 'blob'});
     const link = document.createElement('a');
-    link.download = 'qr-codes.zip';
+    link.download = `${getTimestampPrefix()}_qr-codes.zip`;
     link.href = URL.createObjectURL(blob);
     link.click();
     URL.revokeObjectURL(link.href);
@@ -2960,7 +2974,7 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
     
     const blob = await zip.generateAsync({type: 'blob'});
     const link = document.createElement('a');
-    link.download = 'qr-codes.zip';
+    link.download = `${getTimestampPrefix()}_qr-codes.zip`;
     link.href = URL.createObjectURL(blob);
     link.click();
     URL.revokeObjectURL(link.href);
@@ -3142,7 +3156,7 @@ if (downloadMetadataPdfBtn) {
             yPos += 10;
         });
         
-        pdf.save('qr-codes-metadata.pdf');
+        pdf.save(`${getTimestampPrefix()}_qr-codes-metadata.pdf`);
         showNotification(`Metadata PDF with ${qrBucket.length} QR codes downloaded!`);
         
         if (typeof gtag !== 'undefined') {
@@ -3297,7 +3311,7 @@ if (downloadPrintablePdfBtn) {
         pdf.setFont(undefined, 'italic');
         pdf.text('Reference numbers (#1, #2, etc.) link QR codes to their corresponding notes.', pageWidth / 2, pageHeight - 8, { align: 'center' });
         
-        pdf.save('qr-codes-printable.pdf');
+        pdf.save(`${getTimestampPrefix()}_qr-codes-printable.pdf`);
         showNotification(`Printable PDF with ${qrBucket.length} QR codes downloaded!`);
         
         if (typeof gtag !== 'undefined') {
