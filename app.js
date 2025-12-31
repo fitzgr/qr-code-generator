@@ -1520,14 +1520,23 @@ function addQRToBucket() {
             logoDataURL: selectedLogo ? selectedLogo.src : null
         },
         
-        // Artistic QR
+        // Artistic QR with enhanced tracking
         artistic: {
             hasBackground: backgroundImage !== null,
             backgroundDataURL: backgroundImage ? bgPreviewImage.src : null,
             blendMode: currentBlendMode,
             bgOpacity: currentBgOpacity,
             qrStrength: currentQrStrength,
-            aiBackground: lastAiBackgroundMeta || null
+            aiBackground: lastAiBackgroundMeta || null,
+            // New: Track user's context and prompt
+            context: contextInput ? contextInput.value.trim() : '',
+            imagePrompt: aiPromptInput ? aiPromptInput.value.trim() : '',
+            // Link prompt to generated image
+            promptToImageMapping: backgroundImage ? {
+                prompt: aiPromptInput ? aiPromptInput.value.trim() : '',
+                imageDataURL: bgPreviewImage.src,
+                generatedAt: lastAiBackgroundMeta ? lastAiBackgroundMeta.timestamp : Date.now()
+            } : null
         }
     };
 
