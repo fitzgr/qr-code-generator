@@ -31,6 +31,7 @@ let cancelAIGeneration = false;
 let cancelBackupRenderer = false;
 // Last AI generation metadata (used to embed into downloads)
 let lastAiBackgroundMeta = null;
+let lastGeneratedSuggestions = null; // Store all AI-generated suggestions
 
 // --- Utility Functions --------------------
 // Generate timestamp prefix for filenames: yyyy.mmm.dd-hh.mm
@@ -1394,6 +1395,9 @@ Return ONLY valid JSON, no markdown, no other text.`;
 }
 
 function displayPromptSuggestions(suggestions) {
+    // Store suggestions for metadata tracking
+    lastGeneratedSuggestions = suggestions;
+    
     // Display suggestions
     promptSuggestions.innerHTML = '';
     promptSuggestions.style.display = 'flex';
@@ -1684,6 +1688,7 @@ function addQRToBucket() {
             // New: Track user's context and prompt
             context: contextInput ? contextInput.value.trim() : '',
             imagePrompt: aiPromptInput ? aiPromptInput.value.trim() : '',
+            allGeneratedSuggestions: lastGeneratedSuggestions || null, // Store all suggestions
             // Link prompt to generated image
             promptToImageMapping: backgroundImage ? {
                 prompt: aiPromptInput ? aiPromptInput.value.trim() : '',
@@ -3352,6 +3357,28 @@ if (downloadMetadataPdfBtn) {
                         const promptLines = pdf.splitTextToSize(meta.artistic.imagePrompt, contentWidth - 5);
                         pdf.text(promptLines, margin + 4, yPos);
                         yPos += (promptLines.length * 4) + 2;
+                    }
+                    
+                    // Show other generated suggestions that were not used
+                    if (meta.artistic.allGeneratedSuggestions && Array.isArray(meta.artistic.allGeneratedSuggestions)) {
+                        const unusedSuggestions = meta.artistic.allGeneratedSuggestions.filter(
+                            s => s.prompt !== meta.artistic.imagePrompt
+                        );
+                        
+                        if (unusedSuggestions.length > 0) {
+                            pdf.setFont(undefined, 'bold');
+                            pdf.text('Image Descriptions Not Used:', margin + 2, yPos);
+                            yPos += 4;
+                            pdf.setFont(undefined, 'normal');
+                            
+                            unusedSuggestions.forEach((suggestion, idx) => {
+                                const suggestionText = `${idx + 1}. ${suggestion.title}: ${suggestion.prompt}`;
+                                const suggestionLines = pdf.splitTextToSize(suggestionText, contentWidth - 5);
+                                pdf.text(suggestionLines, margin + 4, yPos);
+                                yPos += (suggestionLines.length * 4) + 1;
+                            });
+                            yPos += 2;
+                        }
                     }
                 }
                 
