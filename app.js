@@ -508,6 +508,13 @@ labelSizeRange.addEventListener('change', (e) => {
     }
 });
 
+// Label input change - regenerate QR code when label is modified
+labelInput.addEventListener('input', (e) => {
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
 // ============================================
 // ARTISTIC QR CODE EVENT LISTENERS
 // ============================================
@@ -1628,6 +1635,9 @@ clearLogoBtn.addEventListener('click', () => {
 // Clear label
 clearLabelBtn.addEventListener('click', () => {
     labelInput.value = '';
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
 });
 
 // Bucket functionality
