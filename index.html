@@ -12,6 +12,8 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Content Security Policy: Allow required scripts for QRCode.js library -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai; font-src 'self' data:;">
     <title>Free QR Code Generator with Logo | No Sign Up Required</title>
     
     <!-- Favicon -->
@@ -231,13 +233,15 @@
                 <div class="color-pickers">
                     <div class="color-input-group">
                         <label for="darkColorPicker">QR Code Color:</label>
-                        <input type="color" id="darkColorPicker" value="#000000">
-                        <input type="text" id="darkColorText" value="#000000" maxlength="7">
+                        <input type="color" id="darkColorPicker" value="#000000" aria-label="QR Code Color Picker">
+                        <label for="darkColorText" class="sr-only">QR Code Color Hex Value</label>
+                        <input type="text" id="darkColorText" value="#000000" maxlength="7" aria-label="QR Code Color Hex">
                     </div>
                     <div class="color-input-group">
                         <label for="lightColorPicker">Background Color:</label>
-                        <input type="color" id="lightColorPicker" value="#ffffff">
-                        <input type="text" id="lightColorText" value="#ffffff" maxlength="7">
+                        <input type="color" id="lightColorPicker" value="#ffffff" aria-label="Background Color Picker">
+                        <label for="lightColorText" class="sr-only">Background Color Hex Value</label>
+                        <input type="text" id="lightColorText" value="#ffffff" maxlength="7" aria-label="Background Color Hex">
                     </div>
                 </div>
             </div>
@@ -470,8 +474,9 @@
                 <div class="label-color-control" style="margin-top: 20px;">
                     <div class="color-input-group">
                         <label for="labelColorPicker">Label Color:</label>
-                        <input type="color" id="labelColorPicker" value="#000000">
-                        <input type="text" id="labelColorText" value="#000000" maxlength="7">
+                        <input type="color" id="labelColorPicker" value="#000000" aria-label="Label Color Picker">
+                        <label for="labelColorText" class="sr-only">Label Color Hex Value</label>
+                        <input type="text" id="labelColorText" value="#000000" maxlength="7" aria-label="Label Color Hex">
                     </div>
                 </div>
             </div>
