@@ -5,11 +5,10 @@
 const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
 // Models to try in order (newest to oldest, fast to slower)
 const GEMINI_MODELS = [
-    'gemini-2.0-flash',      // Latest, fastest
+    'gemini-2.0-flash-exp',  // Latest experimental
     'gemini-1.5-flash',      // Stable, widely supported
     'gemini-1.5-flash-8b',   // Lighter, faster
-    'gemini-1.5-pro',        // Higher quality
-    'gemini-1.0-pro'         // Oldest, most stable
+    'gemini-1.5-pro'         // Higher quality
 ];
 let workingGeminiModel = GEMINI_MODELS[0]; // Cache the working model
 // =========================
