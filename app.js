@@ -3,12 +3,12 @@
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
 const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
-// Models to try in order (newest to oldest, fast to slower)
+// Models to try in order (using -latest suffix for stable versions)
 const GEMINI_MODELS = [
-    'gemini-2.0-flash-exp',  // Latest experimental
-    'gemini-1.5-flash',      // Stable, widely supported
-    'gemini-1.5-flash-8b',   // Lighter, faster
-    'gemini-1.5-pro'         // Higher quality
+    'gemini-1.5-flash-latest',  // Latest stable flash model
+    'gemini-1.5-flash',         // Stable flash model
+    'gemini-1.5-pro-latest',    // Latest stable pro model
+    'gemini-pro'                // Legacy fallback
 ];
 let workingGeminiModel = GEMINI_MODELS[0]; // Cache the working model
 // =========================
