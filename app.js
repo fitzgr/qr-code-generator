@@ -19,6 +19,9 @@ let currentQRStyle = 'squares';
 let currentDarkColor = '#000000';
 let currentLightColor = '#ffffff';
 let currentLabelColor = '#000000';
+let isGoogleReviewMode = false;
+let useGoogleColorsInLabel = true;
+let currentErrorCorrectionLevel = 'H'; // L, M, Q, or H
 
 // Artistic QR Code variables
 let backgroundImage = null;
@@ -162,6 +165,131 @@ function readPNGTextChunk(dataURL, key) {
 }
 // ---------------------------------------------------------------------
 
+// --- Image Cropper Functions --------------------
+function showImageCropper(imageDataURL, mode, fileName) {
+    currentCropMode = mode;
+    pendingImageFile = fileName;
+    
+    // Show modal
+    cropperModal.style.display = 'flex';
+    
+    // Prevent body scroll on mobile when modal is open
+    document.body.style.overflow = 'hidden';
+    
+    // Initialize cropper
+    if (cropperInstance) {
+        cropperInstance.destroy();
+    }
+    
+    // Set image source and wait for load before initializing cropper
+    cropperImage.src = imageDataURL;
+    
+    // Wait for image to be fully loaded before initializing cropper
+    cropperImage.onload = () => {
+        cropperInstance = new Cropper(cropperImage, {
+            aspectRatio: NaN, // Free aspect ratio
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+            responsive: true,
+            background: false,
+            checkOrientation: true, // Handle EXIF orientation
+            rotatable: true,
+            scalable: true,
+            zoomable: true,
+            zoomOnWheel: true,
+            zoomOnTouch: true, // Enable pinch-to-zoom on mobile
+            wheelZoomRatio: 0.1,
+            ready: function() {
+                // Cropper is ready and image is loaded
+                console.log('Cropper initialized and ready');
+            }
+        });
+    };
+}
+
+function hideImageCropper() {
+    cropperModal.style.display = 'none';
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+    }
+    currentCropMode = null;
+    pendingImageFile = null;
+}
+
+function applyCroppedImage() {
+    if (!cropperInstance) return;
+    
+    // Get cropped canvas
+    const canvas = cropperInstance.getCroppedCanvas({
+        maxWidth: 4096,
+        maxHeight: 4096,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+    });
+    
+    if (!canvas) {
+        console.error('Failed to get cropped canvas');
+        return;
+    }
+    
+    // Convert to data URL
+    const croppedDataURL = canvas.toDataURL('image/png');
+    
+    // Apply based on mode
+    if (currentCropMode === 'logo') {
+        const img = new Image();
+        img.onload = () => {
+            selectedLogo = img;
+            logoStatus.textContent = `Logo: ${pendingImageFile}`;
+            logoStatus.style.color = '#4CAF50';
+            
+            // Suggest High error correction when logo is added
+            suggestErrorCorrectionLevel();
+            
+            // Regenerate QR code if one exists
+            if (currentQRDataURL) {
+                generateQRCode();
+            }
+        };
+        img.src = croppedDataURL;
+    } else if (currentCropMode === 'background') {
+        const img = new Image();
+        img.onload = () => {
+            backgroundImage = img;
+            bgImageStatus.textContent = `Background: ${pendingImageFile}`;
+            bgImageStatus.style.color = '#4CAF50';
+            bgPreviewImage.src = croppedDataURL;
+            bgPreviewSection.style.display = 'block';
+            blendControlsSection.style.display = 'block';
+            updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+
+            // Suggest High error correction when background is added
+            suggestErrorCorrectionLevel();
+
+            if (currentQRDataURL) {
+                generateQRCode();
+            }
+        };
+        img.src = croppedDataURL;
+    }
+    
+    hideImageCropper();
+}
+// ---------------------------------------------------------------------
+
 // QR Code Bucket for batch processing with metadata
 let qrBucket = [];
 const MAX_BUCKET_SIZE_PDF = 8;  // 2 columns × 4 rows
@@ -258,9 +386,74 @@ const labelColorPicker = document.getElementById('labelColorPicker');
 const labelColorText = document.getElementById('labelColorText');
 const colorPresets = document.querySelectorAll('.color-preset');
 const styleBtns = document.querySelectorAll('.style-btn');
+const errorCorrectionLevel = document.getElementById('errorCorrectionLevel');
 
 // Quick template buttons
 const templateBtns = document.querySelectorAll('.template-btn');
+
+// Cropper modal elements
+const cropperModal = document.getElementById('cropperModal');
+const cropperImage = document.getElementById('cropperImage');
+const cropperCancel = document.getElementById('cropperCancel');
+const cropperApply = document.getElementById('cropperApply');
+const cropperRotateLeft = document.getElementById('cropperRotateLeft');
+const cropperRotateRight = document.getElementById('cropperRotateRight');
+const cropperFlipH = document.getElementById('cropperFlipH');
+const cropperFlipV = document.getElementById('cropperFlipV');
+const cropperReset = document.getElementById('cropperReset');
+
+// Cropper instance and state
+let cropperInstance = null;
+let currentCropMode = null; // 'logo' or 'background'
+let pendingImageFile = null;
+
+// Cropper control event listeners
+cropperCancel.addEventListener('click', () => {
+    hideImageCropper();
+});
+
+cropperApply.addEventListener('click', () => {
+    applyCroppedImage();
+});
+
+cropperRotateLeft.addEventListener('click', () => {
+    if (cropperInstance) {
+        cropperInstance.rotate(-90);
+    }
+});
+
+cropperRotateRight.addEventListener('click', () => {
+    if (cropperInstance) {
+        cropperInstance.rotate(90);
+    }
+});
+
+cropperFlipH.addEventListener('click', () => {
+    if (cropperInstance) {
+        const data = cropperInstance.getData();
+        cropperInstance.scaleX(data.scaleX === 1 ? -1 : 1);
+    }
+});
+
+cropperFlipV.addEventListener('click', () => {
+    if (cropperInstance) {
+        const data = cropperInstance.getData();
+        cropperInstance.scaleY(data.scaleY === 1 ? -1 : 1);
+    }
+});
+
+cropperReset.addEventListener('click', () => {
+    if (cropperInstance) {
+        cropperInstance.reset();
+    }
+});
+
+// Close modal when clicking on background
+cropperModal.addEventListener('click', (e) => {
+    if (e.target === cropperModal) {
+        hideImageCropper();
+    }
+});
 
 templateBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -268,32 +461,56 @@ templateBtns.forEach(btn => {
         let templateText = '';
         
         switch(template) {
+            case 'google-review':
+                templateText = 'https://search.google.com/local/writereview?placeid=your place id';
+                labelInput.value = 'Leave us a Google Review!';
+                isGoogleReviewMode = true;
+                document.getElementById('googleColorToggle').style.display = 'block';
+                break;
             case 'url':
                 templateText = 'https://';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'email':
                 templateText = 'mailto:your@email.com';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'phone':
                 templateText = 'tel:+1234567890';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'sms':
                 templateText = 'sms:+1234567890?body=Your message here';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'wifi':
                 templateText = 'WIFI:T:WPA;S:NetworkName;P:Password;;';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'vcard':
                 templateText = 'BEGIN:VCARD\nVERSION:3.0\nFN:Full Name\nTEL:+1234567890\nEMAIL:email@example.com\nORG:Company Name\nTITLE:Job Title\nEND:VCARD';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'mecard':
                 templateText = 'MECARD:N:Last Name,First Name;TEL:+1234567890;EMAIL:email@example.com;URL:https://example.com;;';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'event':
                 templateText = 'BEGIN:VEVENT\nSUMMARY:Event Title\nDTSTART:20250115T100000Z\nDTEND:20250115T110000Z\nLOCATION:Event Location\nDESCRIPTION:Event description here\nEND:VEVENT';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
             case 'geo':
                 templateText = 'geo:37.7749,-122.4194,100';
+                isGoogleReviewMode = false;
+                document.getElementById('googleColorToggle').style.display = 'none';
                 break;
         }
         
@@ -303,6 +520,10 @@ templateBtns.forEach(btn => {
         // Select the template text for easy editing
         if (template === 'url') {
             textInput.setSelectionRange(8, 8); // Place cursor after https://
+        } else if (template === 'google-review') {
+            // Select 'your place id' for easy replacement
+            const startPos = templateText.indexOf('your place id');
+            textInput.setSelectionRange(startPos, startPos + 13);
         } else {
             textInput.select();
         }
@@ -404,6 +625,17 @@ labelColorText.addEventListener('input', (e) => {
     }
 });
 
+// Google colors checkbox toggle
+const useGoogleColorsCheckbox = document.getElementById('useGoogleColors');
+if (useGoogleColorsCheckbox) {
+    useGoogleColorsCheckbox.addEventListener('change', (e) => {
+        useGoogleColorsInLabel = e.target.checked;
+        if (currentQRDataURL) {
+            generateQRCode();
+        }
+    });
+}
+
 // Style buttons
 styleBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -420,6 +652,37 @@ styleBtns.forEach(btn => {
     });
 });
 
+// Error Correction Level selector
+errorCorrectionLevel.addEventListener('change', (e) => {
+    currentErrorCorrectionLevel = e.target.value;
+    
+    // Track error correction selection
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'error_correction_selected', {
+            'level': currentErrorCorrectionLevel
+        });
+    }
+    
+    // Regenerate QR code if one exists
+    if (currentQRDataURL) {
+        generateQRCode();
+    }
+});
+
+// Helper function to auto-suggest error correction level based on logo presence
+function suggestErrorCorrectionLevel() {
+    // Only auto-suggest if user hasn't explicitly changed from High
+    if (currentErrorCorrectionLevel === 'H') {
+        if (selectedLogo || backgroundImage) {
+            // Keep High for logos and backgrounds
+            if (errorCorrectionLevel.value !== 'H') {
+                errorCorrectionLevel.value = 'H';
+                currentErrorCorrectionLevel = 'H';
+            }
+        }
+    }
+}
+
 // Convert hex color to RGB
 function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -428,6 +691,72 @@ function hexToRgb(hex) {
         g: parseInt(result[2], 16),
         b: parseInt(result[3], 16)
     } : null;
+}
+
+// Helper function to draw text with Google-colored "Google" word only
+function drawGoogleColoredText(ctx, text, x, y, maxWidth) {
+    const googleColors = ['#4285F4', '#EA4335', '#FBBC05', '#4285F4', '#34A853', '#EA4335'];
+    const words = text.split(' ');
+    let line = '';
+    let lines = [];
+    
+    // First, determine all lines (for word wrapping)
+    for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + ' ';
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > maxWidth && i > 0) {
+            lines.push(line.trim());
+            line = words[i] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line.trim());
+    
+    // Set text alignment to left for precise positioning
+    ctx.textAlign = 'left';
+    
+    // Now draw each line, colorizing only the word "Google"
+    let currentY = y;
+    const fontSize = parseInt(ctx.font);
+    
+    for (const lineText of lines) {
+        const lineWidth = ctx.measureText(lineText).width;
+        const startX = x - (lineWidth / 2); // Center the line
+        
+        // Check if this line contains "Google"
+        const googleIndex = lineText.indexOf('Google');
+        
+        if (googleIndex !== -1) {
+            // Draw text before "Google"
+            const textBefore = lineText.substring(0, googleIndex);
+            ctx.fillStyle = currentLabelColor;
+            ctx.fillText(textBefore, startX, currentY);
+            
+            // Draw "Google" with character-by-character coloring
+            const googleStartX = startX + ctx.measureText(textBefore).width;
+            const googleWord = 'Google';
+            for (let charIdx = 0; charIdx < googleWord.length; charIdx++) {
+                const char = googleWord[charIdx];
+                ctx.fillStyle = googleColors[charIdx % googleColors.length];
+                const charX = googleStartX + (charIdx > 0 ? ctx.measureText(googleWord.substring(0, charIdx)).width : 0);
+                ctx.fillText(char, charX, currentY);
+            }
+            
+            // Draw text after "Google"
+            const textAfter = lineText.substring(googleIndex + 6); // 6 = length of "Google"
+            ctx.fillStyle = currentLabelColor;
+            const afterStartX = googleStartX + ctx.measureText(googleWord).width;
+            ctx.fillText(textAfter, afterStartX, currentY);
+        } else {
+            // No "Google" in this line, draw normally
+            ctx.fillStyle = currentLabelColor;
+            ctx.fillText(lineText, startX, currentY);
+        }
+        
+        currentY += fontSize * 1.2;
+    }
 }
 
 // Contrast validation function
@@ -617,24 +946,28 @@ bgImageInput.addEventListener('change', (e) => {
                 console.warn('Error reading PNG metadata', err);
             }
 
-            const img = new Image();
-            img.onload = () => {
-                backgroundImage = img;
-                bgImageStatus.textContent = `Background: ${file.name}`;
-                bgImageStatus.style.color = '#4CAF50';
-                bgPreviewImage.src = dataURL;
-                bgPreviewSection.style.display = 'block';
-                blendControlsSection.style.display = 'block';
-                updateValidationStatus('idle', 'Click "Generate QR Code" to test');
-                if (currentQRDataURL) {
-                    generateQRCode();
-                }
-            };
-            img.src = dataURL;
+            // Show cropper instead of directly loading image
+            showImageCropper(dataURL, 'background', file.name);
         };
         reader.readAsDataURL(file);
     }
 });
+
+// Extract a prominent color from an image (simple average, can be improved)
+function extractProminentColor(img) {
+    // Use Color Thief to get the dominant color
+    try {
+        const colorThief = new window.ColorThief();
+        // Color Thief requires the image to be loaded and on the same origin or CORS-enabled
+        if (img.complete && img.naturalWidth !== 0) {
+            const rgb = colorThief.getColor(img);
+            return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        }
+    } catch (e) {
+        console.warn('Color Thief failed, falling back to black', e);
+    }
+    return '#000000';
+}
 
 // AI image generation
 generateAiImageBtn.addEventListener('click', async () => {
@@ -1607,13 +1940,8 @@ logoInput.addEventListener('change', (e) => {
     if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                selectedLogo = img;
-                logoStatus.textContent = `Logo: ${file.name}`;
-                logoStatus.style.color = '#4CAF50';
-            };
-            img.src = event.target.result;
+            // Show cropper instead of directly loading image
+            showImageCropper(event.target.result, 'logo', file.name);
         };
         reader.readAsDataURL(file);
     }
@@ -1680,6 +2008,9 @@ function addQRToBucket() {
         // Style
         style: currentQRStyle,
         
+        // Error Correction
+        errorCorrection: currentErrorCorrectionLevel,
+        
         // Logo
         logo: {
             hasLogo: selectedLogo !== null,
@@ -1721,11 +2052,15 @@ function addQRToBucket() {
     }
     
     // Store QR code data with metadata (dataURL now includes embedded metadata)
+    // Deselect all existing QRs
+    qrBucket.forEach(qr => qr.selected = false);
+    
     const qrData = {
         dataURL: dataWithMeta,
         canvas: cloneCanvas(qrCanvas),
         metadata: metadata,
-        analytics: analytics
+        analytics: analytics,
+        selected: true // Auto-select the newly added QR
     };
     
     qrBucket.push(qrData);
@@ -1771,7 +2106,20 @@ function updateBucketUI() {
         bucketPreview.innerHTML = '';
         qrBucket.forEach((qr, index) => {
             const item = document.createElement('div');
-            item.className = 'bucket-item';
+            item.className = 'bucket-item' + (qr.selected ? ' selected' : '');
+            item.onclick = () => toggleBucketSelection(index);
+            item.style.cursor = 'pointer';
+            
+            // Add checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = qr.selected;
+            checkbox.className = 'bucket-item-checkbox';
+            checkbox.onclick = (e) => {
+                e.stopPropagation();
+                toggleBucketSelection(index);
+            };
+            item.appendChild(checkbox);
             
             // Show QR code
             const img = document.createElement('img');
@@ -1812,6 +2160,11 @@ function updateBucketUI() {
     }
 }
 
+function toggleBucketSelection(index) {
+    qrBucket[index].selected = !qrBucket[index].selected;
+    updateBucketUI();
+}
+
 function removeFromBucket(index) {
     qrBucket.splice(index, 1);
     updateBucketUI();
@@ -1832,49 +2185,56 @@ function clearBucket() {
 generateBtn.addEventListener('click', generateQRCode);
 
 function generateQRCode() {
+    window.multiQRPairs = undefined;
     const text = textInput.value.trim();
-    
     if (!text) {
         alert('Please enter some text or URL!');
         return;
     }
-    
+
+    // Check for multi-pair mode: first line is name,url
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length > 1 && lines[0].toLowerCase() === 'name,url') {
+        // Parse all lines after the header as label,url pairs
+        const pairs = [];
+        for (let i = 1; i < lines.length; i++) {
+            const [label, url] = lines[i].split(/,(.+)/); // split on first comma only
+            if (label && url) {
+                pairs.push({ label: label.trim(), url: url.trim() });
+            }
+        }
+        if (pairs.length > 0) {
+            showMultiQRPreview(pairs);
+            return;
+        }
+    }
+
+    // Single QR code fallback (original logic)
     // Validate contrast
     const contrastCheck = validateContrast(currentDarkColor, currentLightColor);
     if (!contrastCheck.valid) {
         alert(`⚠️ Color Contrast Too Low!\n\nThe colors you selected don't have enough contrast for QR codes to scan reliably.\n\nContrast ratio: ${contrastCheck.ratio}:1 (minimum: 3.0:1)\n\nPlease choose colors with more contrast:\n• Dark QR code on light background\n• Light QR code on dark background\n• Use the color presets for safe combinations`);
         return;
     }
-
     try {
-        // Clear previous QR code
         qrCanvas.getContext('2d').clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-        
-        // QR code settings
         const size = parseInt(sizeRange.value);
         const border = parseInt(borderRange.value);
-        const qrSize = size * 32; // Scale up for better quality
-        
-        // Create temporary container for QR generation
+        const qrSize = size * 32;
         const tempDiv = document.createElement('div');
         tempDiv.style.display = 'none';
         document.body.appendChild(tempDiv);
-        
-        // Generate QR code - ALWAYS use black/white for generation, we'll recolor later
         const qr = new QRCode(tempDiv, {
             text: text,
             width: qrSize,
             height: qrSize,
             colorDark: "#000000",
             colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
+            correctLevel: QRCode.CorrectLevel[currentErrorCorrectionLevel]
         });
-        
-        // Wait for QR code to be generated
         setTimeout(() => {
             const qrCanvas = tempDiv.querySelector('canvas');
             const qrImage = tempDiv.querySelector('img');
-            
             if (qrCanvas) {
                 drawQRWithLogoFromCanvas(qrCanvas, qrSize);
                 document.body.removeChild(tempDiv);
@@ -1891,11 +2251,187 @@ function generateQRCode() {
                 document.body.removeChild(tempDiv);
             }
         }, 100);
-        
     } catch (error) {
         alert('Failed to generate QR code: ' + error.message);
         console.error(error);
     }
+}
+
+// --- Multi-QR Preview Logic ---
+function showMultiQRPreview(pairs) {
+    window.multiQRPairs = pairs
+    // Remove any previous preview container
+    let multiPreview = document.getElementById('multiQRPreview');
+    if (multiPreview) multiPreview.remove();
+
+    // Create a new preview container
+    multiPreview = document.createElement('div');
+    multiPreview.id = 'multiQRPreview';
+    multiPreview.style.display = 'flex';
+    multiPreview.style.flexWrap = 'wrap';
+    multiPreview.style.gap = '24px';
+    multiPreview.style.margin = '24px 0';
+    multiPreview.style.justifyContent = 'center';
+
+    // Insert before the main QR preview
+    const previewContainer = document.querySelector('.preview-container');
+    if (previewContainer) previewContainer.insertBefore(multiPreview, previewContainer.firstChild);
+
+    // For each pair, generate a QR and label
+    pairs.forEach((pair, idx) => {
+        const qrDiv = document.createElement('div');
+        qrDiv.style.display = 'flex';
+        qrDiv.style.flexDirection = 'column';
+        qrDiv.style.alignItems = 'center';
+        qrDiv.style.margin = '8px';
+
+        const qrCanvas = document.createElement('canvas');
+        const size = parseInt(sizeRange.value);
+        const border = parseInt(borderRange.value);
+        const qrSize = size * 32;
+        qrCanvas.width = qrSize + (border * 8);
+        qrCanvas.height = qrSize + (border * 8) + 40;
+
+        // Generate QR code for this pair
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+        const qr = new QRCode(tempDiv, {
+            text: pair.url,
+            width: qrSize,
+            height: qrSize,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel[currentErrorCorrectionLevel]
+        });
+        setTimeout(() => {
+            const qrImg = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
+            if (qrImg) {
+                const ctx = qrCanvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, qrCanvas.width, qrCanvas.height);
+                ctx.drawImage(qrImg, border * 4, border * 4, qrSize, qrSize);
+                // Draw label
+                ctx.fillStyle = currentLabelColor;
+                ctx.font = 'bold 18px Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(pair.label, qrCanvas.width / 2, qrSize + border * 4 + 8);
+            }
+            document.body.removeChild(tempDiv);
+        }, 100);
+
+        qrDiv.appendChild(qrCanvas);
+        const label = document.createElement('div');
+        label.textContent = pair.label;
+        label.style.marginTop = '8px';
+        label.style.fontWeight = 'bold';
+        qrDiv.appendChild(label);
+        multiPreview.appendChild(qrDiv);
+    });
+
+    // Add controls for bucket and PDF
+    let controls = document.getElementById('multiQRControls');
+    if (controls) controls.remove();
+    controls = document.createElement('div');
+    controls.id = 'multiQRControls';
+    controls.style.display = 'flex';
+    controls.style.justifyContent = 'center';
+    controls.style.gap = '16px';
+    controls.style.margin = '16px 0 32px 0';
+
+    const addAllBtn = document.createElement('button');
+    addAllBtn.textContent = 'Add All to Bucket';
+    addAllBtn.className = 'btn btn-bucket';
+    addAllBtn.onclick = function() { addAllMultiQRToBucket(pairs); };
+    controls.appendChild(addAllBtn);
+
+    const pdfBtn = document.createElement('button');
+    pdfBtn.textContent = 'Download All as PDF';
+    pdfBtn.className = 'btn btn-download';
+    pdfBtn.onclick = function() { downloadMultiQRAsPDF(pairs); };
+    controls.appendChild(pdfBtn);
+
+    if (previewContainer) previewContainer.insertBefore(controls, multiPreview.nextSibling);
+}
+
+function addAllMultiQRToBucket(pairs) {
+    // Add each QR to the bucket (if not full)
+    let added = 0;
+    pairs.forEach(pair => {
+        if (qrBucket.length < MAX_BUCKET_SIZE_OTHER) {
+            qrBucket.push({
+                text: pair.url,
+                label: pair.label,
+                darkColor: currentDarkColor,
+                lightColor: currentLightColor,
+                labelColor: currentLabelColor,
+                style: currentQRStyle
+            });
+            added++;
+        }
+    });
+    updateBucketUI();
+    showNotification(`${added} QR code${added !== 1 ? 's' : ''} added to bucket.`);
+}
+
+function downloadMultiQRAsPDF(pairs) {
+    // Use jsPDF to create a PDF with all QR codes and labels, paginated
+    const size = parseInt(sizeRange.value);
+    const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const margin = 32;
+    const gap = 24;
+    const cols = 2;
+    const rows = 4; // fixed rows per page
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const cellW = (pageWidth - margin * 2 - gap * (cols - 1)) / cols;
+    const cellH = (pageHeight - margin * 2 - gap * (rows - 1)) / rows;
+    const qrMaxSize = Math.min(cellW, cellH - 32); // leave space for label
+    let total = pairs.length;
+    function processQR(idx) {
+        if (idx >= total) {
+            doc.save('qr-codes.pdf');
+            return;
+        }
+        const pair = pairs[idx];
+        const tempDiv = document.createElement('div');
+        tempDiv.style.display = 'none';
+        document.body.appendChild(tempDiv);
+        const qr = new QRCode(tempDiv, {
+            text: pair.url,
+            width: qrMaxSize,
+            height: qrMaxSize,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel[currentErrorCorrectionLevel]
+        });
+        setTimeout(() => {
+            const qrImg = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
+            if (qrImg) {
+                const qrDataUrl = qrImg.toDataURL ? qrImg.toDataURL('image/png') : qrImg.src;
+                const indexOnPage = idx % (cols * rows);
+                const col = indexOnPage % cols;
+                const row = Math.floor(indexOnPage / cols);
+                // Center QR in cell
+                const cellX = margin + col * (cellW + gap);
+                const cellY = margin + row * (cellH + gap);
+                const qrX = cellX + (cellW - qrMaxSize) / 2;
+                const qrY = cellY;
+                if (idx > 0 && indexOnPage === 0) {
+                    doc.addPage();
+                }
+                doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrMaxSize, qrMaxSize);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                // Center label below QR
+                doc.text(pair.label, cellX + cellW / 2, qrY + qrMaxSize + 20, { align: 'center' });
+            }
+            document.body.removeChild(tempDiv);
+            processQR(idx + 1);
+        }, 100);
+    }
+    processQR(0);
 }
 
 function drawQRWithLogo(qrImage, qrSize) {
@@ -1969,7 +2505,7 @@ function drawQRWithLogo(qrImage, qrSize) {
         
         ctx.putImageData(fullImageData, padding, padding);
     }
-    
+
     // Apply QR code style (dots or rounded)
     if (currentQRStyle !== 'squares') {
         applyQRStyle(ctx, qrSize, padding, padding);
@@ -2012,30 +2548,39 @@ function drawQRWithLogo(qrImage, qrSize) {
         // Gap scales with both font size and QR size for consistent visual separation
         const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
         
-        ctx.fillStyle = currentLabelColor;
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         
-        // Wrap text if too long (max width is QR code width)
         const maxWidth = qrSize;
-        const words = label.split(' ');
-        let line = '';
-        let y = qrSize + padding + labelGap; // Start after QR code + gap
+        const startY = qrSize + padding + labelGap;
         
-        for (let i = 0; i < words.length; i++) {
-            const testLine = line + words[i] + ' ';
-            const metrics = ctx.measureText(testLine);
+        // Use Google colors if enabled and in Google Review mode
+        if (isGoogleReviewMode && useGoogleColorsInLabel) {
+            drawGoogleColoredText(ctx, label, qrCanvas.width / 2, startY, maxWidth);
+        } else {
+            // Normal label drawing with single color
+            ctx.fillStyle = currentLabelColor;
             
-            if (metrics.width > maxWidth && i > 0) {
-                ctx.fillText(line, qrCanvas.width / 2, y);
-                line = words[i] + ' ';
-                y += fontSize * 1.2;
-            } else {
-                line = testLine;
+            // Wrap text if too long (max width is QR code width)
+            const words = label.split(' ');
+            let line = '';
+            let y = startY;
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + words[i] + ' ';
+                const metrics = ctx.measureText(testLine);
+                
+                if (metrics.width > maxWidth && i > 0) {
+                    ctx.fillText(line, qrCanvas.width / 2, y);
+                    line = words[i] + ' ';
+                    y += fontSize * 1.2;
+                } else {
+                    line = testLine;
+                }
             }
+            ctx.fillText(line, qrCanvas.width / 2, y);
         }
-        ctx.fillText(line, qrCanvas.width / 2, y);
     }
     
     // Store the data URL for download
@@ -2184,30 +2729,39 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
         // Gap scales with both font size and QR size for consistent visual separation
         const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02); // Min 15px or 2% of QR size
         
-        ctx.fillStyle = currentLabelColor;
         ctx.font = `bold ${fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top'; // Changed to 'top' for better positioning
         
-        // Wrap text if too long (max width is QR code width)
         const maxWidth = qrSize;
-        const words = label.split(' ');
-        let line = '';
-        let y = qrSize + padding + labelGap; // Start after QR code + gap
+        const startY = qrSize + padding + labelGap;
         
-        for (let i = 0; i < words.length; i++) {
-            const testLine = line + words[i] + ' ';
-            const metrics = ctx.measureText(testLine);
+        // Use Google colors if enabled and in Google Review mode
+        if (isGoogleReviewMode && useGoogleColorsInLabel) {
+            drawGoogleColoredText(ctx, label, qrCanvas.width / 2, startY, maxWidth);
+        } else {
+            // Normal label drawing with single color
+            ctx.fillStyle = currentLabelColor;
             
-            if (metrics.width > maxWidth && i > 0) {
-                ctx.fillText(line, qrCanvas.width / 2, y);
-                line = words[i] + ' ';
-                y += fontSize * 1.2;
-            } else {
-                line = testLine;
+            // Wrap text if too long (max width is QR code width)
+            const words = label.split(' ');
+            let line = '';
+            let y = startY;
+            
+            for (let i = 0; i < words.length; i++) {
+                const testLine = line + words[i] + ' ';
+                const metrics = ctx.measureText(testLine);
+                
+                if (metrics.width > maxWidth && i > 0) {
+                    ctx.fillText(line, qrCanvas.width / 2, y);
+                    line = words[i] + ' ';
+                    y += fontSize * 1.2;
+                } else {
+                    line = testLine;
+                }
             }
+            ctx.fillText(line, qrCanvas.width / 2, y);
         }
-        ctx.fillText(line, qrCanvas.width / 2, y);
     }
     
     // Show canvas and hide placeholder
@@ -2225,29 +2779,38 @@ function drawQRWithLogoFromCanvas(sourceCanvas, qrSize) {
             const fontSize = Math.floor(baseFontSize * labelSizePercent);
             const labelGap = Math.max(15, fontSize * 0.5, qrSize * 0.02);
             
-            ctx.fillStyle = currentLabelColor;
             ctx.font = `bold ${fontSize}px Arial, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             
             const maxWidth = qrSize;
-            const words = label.split(' ');
-            let line = '';
-            let y = qrSize + padding + labelGap;
+            const startY = qrSize + padding + labelGap;
             
-            for (let i = 0; i < words.length; i++) {
-                const testLine = line + words[i] + ' ';
-                const metrics = ctx.measureText(testLine);
+            // Use Google colors if enabled and in Google Review mode
+            if (isGoogleReviewMode && useGoogleColorsInLabel) {
+                drawGoogleColoredText(ctx, label, qrCanvas.width / 2, startY, maxWidth);
+            } else {
+                // Normal label drawing with single color
+                ctx.fillStyle = currentLabelColor;
                 
-                if (metrics.width > maxWidth && i > 0) {
-                    ctx.fillText(line, qrCanvas.width / 2, y);
-                    line = words[i] + ' ';
-                    y += fontSize * 1.2;
-                } else {
-                    line = testLine;
+                const words = label.split(' ');
+                let line = '';
+                let y = startY;
+                
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = line + words[i] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && i > 0) {
+                        ctx.fillText(line, qrCanvas.width / 2, y);
+                        line = words[i] + ' ';
+                        y += fontSize * 1.2;
+                    } else {
+                        line = testLine;
+                    }
                 }
+                ctx.fillText(line, qrCanvas.width / 2, y);
             }
-            ctx.fillText(line, qrCanvas.width / 2, y);
         }
     }
     
@@ -2312,10 +2875,19 @@ function updateAnalytics(qrSize) {
     // Get contrast ratio
     const contrastCheck = validateContrast(currentDarkColor, currentLightColor);
     
+    // Dynamic error correction level display
+    const errorCorrectionLabels = {
+        'L': 'Low (7%)',
+        'M': 'Medium (15%)',
+        'Q': 'Quality (25%)',
+        'H': 'High (30%)'
+    };
+    
     // Update UI
     document.getElementById('qrVersion').textContent = version;
     document.getElementById('qrModules').textContent = `${modules}×${modules}`;
     document.getElementById('qrMinSize').textContent = `${minSizeMM}mm (${minSizeInch}\")`;
+    document.getElementById('qrErrorLevel').textContent = errorCorrectionLabels[currentErrorCorrectionLevel] || 'High (30%)';
     
     const capacityEl = document.getElementById('qrDataCapacity');
     capacityEl.textContent = `${usedPercent}% used`;
@@ -2355,6 +2927,14 @@ function computeAnalytics(qrSize) {
     const maxCapacity = version <= 10 ? capacities[version - 1] : Math.floor(version * 100);
     const usedPercent = Math.round((textLength / maxCapacity) * 100);
     const contrastCheck = validateContrast(currentDarkColor, currentLightColor);
+    
+    // Dynamic error correction level display
+    const errorCorrectionLabels = {
+        'L': 'Low (7%)',
+        'M': 'Medium (15%)',
+        'Q': 'Quality (25%)',
+        'H': 'High (30%)'
+    };
 
     return {
         version,
@@ -2363,7 +2943,7 @@ function computeAnalytics(qrSize) {
         minSizeInch,
         usedPercent,
         contrastRatio: contrastCheck.ratio,
-        errorCorrection: 'High (30%)'
+        errorCorrection: errorCorrectionLabels[currentErrorCorrectionLevel] || 'High (30%)'
     };
 }
 
@@ -2817,9 +3397,68 @@ function applyQRStyle(ctx, qrSize, offsetX = 0, offsetY = 0) {
 }
 
 // Download QR Code as PNG
-downloadPngBtn.addEventListener('click', () => {
+downloadPngBtn.addEventListener('click', async () => {
+    // Check if there are selected bucket items
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    
+    if (selectedQRs.length > 0) {
+        // Download selected bucket items with metadata
+        if (selectedQRs.length === 1) {
+            // Single item: download directly
+            const qr = selectedQRs[0];
+            const blob = (function() {
+                const b64 = qr.dataURL.split(',')[1];
+                const bin = atob(b64);
+                const arr = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                return new Blob([arr], { type: 'image/png' });
+            })();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const fileName = qr.metadata.label || 'qr-code';
+            link.download = `${getTimestampPrefix()}_${fileName.replace(/[^a-z0-9]/gi, '_')}.png`;
+            link.href = url;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 30000);
+            showNotification('Selected QR Code downloaded as PNG with metadata!');
+        } else {
+            // Multiple items: create ZIP
+            const JSZip = window.JSZip ? window.JSZip : null;
+            if (!JSZip) {
+                alert('JSZip library not loaded. Cannot create ZIP file.');
+                return;
+            }
+            const zip = new JSZip();
+            selectedQRs.forEach((qr, index) => {
+                const qrNum = index + 1;
+                const fileName = qr.metadata.label ? `${qr.metadata.label.replace(/[^a-z0-9]/gi, '_')}.png` : `qr-${qrNum}.png`;
+                const qrBase64 = qr.dataURL.split(',')[1];
+                if (qrBase64) {
+                    zip.file(fileName, qrBase64, {base64: true});
+                }
+            });
+            const blob = await zip.generateAsync({type: 'blob'});
+            const link = document.createElement('a');
+            link.download = `${getTimestampPrefix()}_qr-codes-with-metadata.zip`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showNotification(`${selectedQRs.length} QR Codes downloaded as PNG with metadata!`);
+        }
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'download', {
+                'format': 'PNG',
+                'count': selectedQRs.length,
+                'from_bucket': 'yes'
+            });
+        }
+        return;
+    }
+    
+    // Fallback: download current QR code
     if (!currentQRDataURL) {
-        alert('Please generate a QR code first!');
+        alert('Please generate a QR code first or select items from the bucket!');
         return;
     }
     
@@ -2880,9 +3519,61 @@ downloadPngBtn.addEventListener('click', () => {
 });
 
 // Download QR Code as SVG
-downloadSvgBtn.addEventListener('click', () => {
+downloadSvgBtn.addEventListener('click', async () => {
+    // Check if there are selected bucket items
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    
+    if (selectedQRs.length > 0) {
+        // Download selected bucket items as SVG
+        if (selectedQRs.length === 1) {
+            // Single item: convert canvas to SVG
+            const qr = selectedQRs[0];
+            const svg = canvasToSVGFromCanvas(qr.canvas);
+            const blob = new Blob([svg], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const fileName = qr.metadata.label || 'qr-code';
+            link.download = `${getTimestampPrefix()}_${fileName.replace(/[^a-z0-9]/gi, '_')}.svg`;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+            showNotification('Selected QR Code downloaded as SVG!');
+        } else {
+            // Multiple items: create ZIP of SVGs
+            const JSZip = window.JSZip ? window.JSZip : null;
+            if (!JSZip) {
+                alert('JSZip library not loaded. Cannot create ZIP file.');
+                return;
+            }
+            const zip = new JSZip();
+            selectedQRs.forEach((qr, index) => {
+                const qrNum = index + 1;
+                const fileName = qr.metadata.label ? `${qr.metadata.label.replace(/[^a-z0-9]/gi, '_')}.svg` : `qr-${qrNum}.svg`;
+                const svg = canvasToSVGFromCanvas(qr.canvas);
+                zip.file(fileName, svg);
+            });
+            const blob = await zip.generateAsync({type: 'blob'});
+            const link = document.createElement('a');
+            link.download = `${getTimestampPrefix()}_qr-codes.zip`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showNotification(`${selectedQRs.length} QR Codes downloaded as SVG!`);
+        }
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'download', {
+                'format': 'SVG',
+                'count': selectedQRs.length,
+                'from_bucket': 'yes'
+            });
+        }
+        return;
+    }
+    
+    // Fallback: download current QR code
     if (!currentQRDataURL) {
-        alert('Please generate a QR code first!');
+        alert('Please generate a QR code first or select items from the bucket!');
         return;
     }
     
@@ -2909,9 +3600,75 @@ downloadSvgBtn.addEventListener('click', () => {
 });
 
 // Download QR Code as JPG
-downloadJpgBtn.addEventListener('click', () => {
+downloadJpgBtn.addEventListener('click', async () => {
+    // Check if there are selected bucket items
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    
+    if (selectedQRs.length > 0) {
+        // Download selected bucket items as JPG
+        if (selectedQRs.length === 1) {
+            // Single item: convert to JPG
+            const qr = selectedQRs[0];
+            const canvas = document.createElement('canvas');
+            canvas.width = qr.canvas.width;
+            canvas.height = qr.canvas.height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(qr.canvas, 0, 0);
+            
+            const link = document.createElement('a');
+            const fileName = qr.metadata.label || 'qr-code';
+            link.download = `${getTimestampPrefix()}_${fileName.replace(/[^a-z0-9]/gi, '_')}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+            showNotification('Selected QR Code downloaded as JPG!');
+        } else {
+            // Multiple items: create ZIP of JPGs
+            const JSZip = window.JSZip ? window.JSZip : null;
+            if (!JSZip) {
+                alert('JSZip library not loaded. Cannot create ZIP file.');
+                return;
+            }
+            const zip = new JSZip();
+            selectedQRs.forEach((qr, index) => {
+                const qrNum = index + 1;
+                const canvas = document.createElement('canvas');
+                canvas.width = qr.canvas.width;
+                canvas.height = qr.canvas.height;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(qr.canvas, 0, 0);
+                
+                const fileName = qr.metadata.label ? `${qr.metadata.label.replace(/[^a-z0-9]/gi, '_')}.jpg` : `qr-${qrNum}.jpg`;
+                const jpgBase64 = canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+                if (jpgBase64) {
+                    zip.file(fileName, jpgBase64, {base64: true});
+                }
+            });
+            const blob = await zip.generateAsync({type: 'blob'});
+            const link = document.createElement('a');
+            link.download = `${getTimestampPrefix()}_qr-codes.zip`;
+            link.href = URL.createObjectURL(blob);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            showNotification(`${selectedQRs.length} QR Codes downloaded as JPG!`);
+        }
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'download', {
+                'format': 'JPG',
+                'count': selectedQRs.length,
+                'from_bucket': 'yes'
+            });
+        }
+        return;
+    }
+    
+    // Fallback: download current QR code
     if (!currentQRDataURL) {
-        alert('Please generate a QR code first!');
+        alert('Please generate a QR code first or select items from the bucket!');
         return;
     }
     
@@ -2946,20 +3703,100 @@ downloadJpgBtn.addEventListener('click', () => {
 
 // Download QR Code as PDF
 downloadPdfBtn.addEventListener('click', () => {
-    if (!currentQRDataURL) {
-        alert('Please generate a QR code first!');
+    // Check if there are selected bucket items
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    
+    if (selectedQRs.length > 0) {
+        // Download selected bucket items as PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+        
+        const pdfWidth = 210;
+        const pdfHeight = 297;
+        const margin = 10;
+        const cols = 2;
+        const rows = 4;
+        const perPage = cols * rows;
+        
+        const cellWidth = (pdfWidth - margin * (cols + 1)) / cols;
+        const cellHeight = (pdfHeight - margin * (rows + 1)) / rows;
+        const qrSize = Math.min(cellWidth, cellHeight);
+        
+        selectedQRs.forEach((qr, index) => {
+            const pageIndex = Math.floor(index / perPage);
+            const indexOnPage = index % perPage;
+            const col = indexOnPage % cols;
+            const row = Math.floor(indexOnPage / cols);
+            const x = margin + col * (qrSize + margin);
+            const y = margin + row * (cellHeight + margin);
+            
+            // Calculate dimensions maintaining aspect ratio and fitting within cell
+            const imgAspect = qr.canvas.height / qr.canvas.width;
+            let imgWidth = qrSize;
+            let imgHeight = qrSize * imgAspect;
+            
+            // If height exceeds cell, scale down to fit
+            if (imgHeight > cellHeight) {
+                imgHeight = cellHeight;
+                imgWidth = cellHeight / imgAspect;
+            }
+            
+            const xOffset = (qrSize - imgWidth) / 2;
+            const yOffset = (cellHeight - imgHeight) / 2;
+            
+            if (index > 0 && indexOnPage === 0) {
+                pdf.addPage();
+            }
+            pdf.addImage(qr.dataURL, 'PNG', x + xOffset, y + yOffset, imgWidth, imgHeight);
+        });
+        
+        pdf.save(`${getTimestampPrefix()}_qr-codes.pdf`);
+        showNotification(`${selectedQRs.length} QR Codes downloaded as PDF!`);
+        
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'download', {
+                'format': 'PDF',
+                'count': selectedQRs.length,
+                'from_bucket': 'yes'
+            });
+        }
         return;
     }
     
+    // Fallback: download current QR code or multi-QR pairs
+    if (!currentQRDataURL) {
+        // Try to find multi-QR pairs from the UI (if present)
+        let pairs = window.multiQRPairs || [];
+        // Fallback: try to find from a global or DOM if available
+        if (!pairs.length && typeof getMultiQRPairs === 'function') {
+            pairs = getMultiQRPairs();
+        }
+        // Or try to find from a known variable
+        if (!pairs.length && window.lastMultiQRPairs) {
+            pairs = window.lastMultiQRPairs;
+        }
+        if (pairs && pairs.length > 0) {
+            downloadMultiQRAsPDF(pairs);
+            return;
+        } else {
+            alert('Please generate a QR code first or select items from the bucket!');
+            return;
+        }
+    }
+
     const label = labelInput.value.trim();
-    
+
     // Use the preview canvas which already includes label
     const imgData = qrCanvas.toDataURL('image/png');
-    
+
     // Calculate PDF dimensions (A4 size in mm, portrait)
     const pdfWidth = 210; // A4 width in mm
     const pdfHeight = 297; // A4 height in mm
-    
+
     // Calculate image dimensions to fit on page
     const imgWidth = 150; // QR code width in mm on PDF
     const imgHeight = (qrCanvas.height / qrCanvas.width) * imgWidth;
@@ -2996,57 +3833,68 @@ downloadBucketPdfBtn.addEventListener('click', () => {
         alert('Please add QR codes to the bucket first!');
         return;
     }
-    
-    if (qrBucket.length > MAX_BUCKET_SIZE_PDF) {
-        alert(`PDF can only include ${MAX_BUCKET_SIZE_PDF} QR codes. Please remove ${qrBucket.length - MAX_BUCKET_SIZE_PDF} code(s).`);
+
+    // Filter to only selected QR codes
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    if (selectedQRs.length === 0) {
+        alert('Please select at least one QR code from the bucket!');
         return;
     }
-    
-    // Create PDF with 2 columns × 4 rows grid
+
+    // Create PDF with 2 columns × 4 rows grid, paginating as needed
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
     });
-    
+
     const pageWidth = 210;  // A4 width in mm
     const pageHeight = 297; // A4 height in mm
     const margin = 10;
     const cols = 2;
     const rows = 4;
-    
+    const perPage = cols * rows;
+
     const cellWidth = (pageWidth - margin * (cols + 1)) / cols;
     const cellHeight = (pageHeight - margin * (rows + 1)) / rows;
-    
-    // Use the smaller dimension to maintain aspect ratio
     const qrSize = Math.min(cellWidth, cellHeight);
-    
-    qrBucket.forEach((qr, index) => {
-        const col = index % cols;
-        const row = Math.floor(index / cols);
-        
+
+    selectedQRs.forEach((qr, index) => {
+        const pageIndex = Math.floor(index / perPage);
+        const indexOnPage = index % perPage;
+        const col = indexOnPage % cols;
+        const row = Math.floor(indexOnPage / cols);
         const x = margin + col * (qrSize + margin);
         const y = margin + row * (cellHeight + margin);
-        
-        // Calculate image dimensions maintaining aspect ratio
+
+        // Calculate dimensions maintaining aspect ratio and fitting within cell
         const imgAspect = qr.canvas.height / qr.canvas.width;
         let imgWidth = qrSize;
         let imgHeight = qrSize * imgAspect;
         
-        // Center the image in the cell if it's shorter than the cell
-        const yOffset = (cellHeight - imgHeight) / 2;
+        // If height exceeds cell, scale down to fit
+        if (imgHeight > cellHeight) {
+            imgHeight = cellHeight;
+            imgWidth = cellHeight / imgAspect;
+        }
         
-        pdf.addImage(qr.dataURL, 'PNG', x, y + yOffset, imgWidth, imgHeight);
+        const xOffset = (qrSize - imgWidth) / 2;
+        const yOffset = (cellHeight - imgHeight) / 2;
+
+        if (index > 0 && indexOnPage === 0) {
+            pdf.addPage();
+        }
+        pdf.addImage(qr.dataURL, 'PNG', x + xOffset, y + yOffset, imgWidth, imgHeight);
     });
-    
+
     pdf.save(`${getTimestampPrefix()}_qr-codes-batch.pdf`);
-    showNotification(`${qrBucket.length} QR codes downloaded as PDF grid!`);
-    
+    showNotification(`${selectedQRs.length} QR codes downloaded as PDF grid!`);
+
     if (typeof gtag !== 'undefined') {
         gtag('event', 'batch_download', {
             'format': 'PDF',
-            'count': qrBucket.length
+            'count': selectedQRs.length
         });
     }
 });
@@ -3057,23 +3905,30 @@ downloadBucketPngBtn.addEventListener('click', async () => {
         return;
     }
     
+    // Filter to only selected QR codes
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    if (selectedQRs.length === 0) {
+        alert('Please select at least one QR code from the bucket!');
+        return;
+    }
+    
     // Create a zip file with all PNG images
     const JSZip = window.JSZip ? window.JSZip : null;
     if (!JSZip) {
         // Fallback: download individually
-        qrBucket.forEach((qr, index) => {
+        selectedQRs.forEach((qr, index) => {
             const link = document.createElement('a');
             const fileName = qr.label ? `${qr.label.replace(/[^a-z0-9]/gi, '_')}.png` : `qr-code-${index + 1}.png`;
             link.download = fileName;
             link.href = qr.dataURL;
             link.click();
         });
-        showNotification(`${qrBucket.length} PNG files downloaded!`);
+        showNotification(`${selectedQRs.length} PNG files downloaded!`);
         return;
     }
     
     const zip = new JSZip();
-    qrBucket.forEach((qr, index) => {
+    selectedQRs.forEach((qr, index) => {
         const qrNum = index + 1;
         
         // Add QR code with numbered filename
@@ -3102,12 +3957,12 @@ downloadBucketPngBtn.addEventListener('click', async () => {
     link.click();
     URL.revokeObjectURL(link.href);
     
-    showNotification(`${qrBucket.length} PNG files downloaded as ZIP!`);
+    showNotification(`${selectedQRs.length} PNG files downloaded as ZIP!`);
     
     if (typeof gtag !== 'undefined') {
         gtag('event', 'batch_download', {
             'format': 'PNG_ZIP',
-            'count': qrBucket.length
+            'count': selectedQRs.length
         });
     }
 });
@@ -3118,11 +3973,18 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
         return;
     }
     
+    // Filter to only selected QR codes
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    if (selectedQRs.length === 0) {
+        alert('Please select at least one QR code from the bucket!');
+        return;
+    }
+    
     // Convert all to JPG and create zip
     const JSZip = window.JSZip ? window.JSZip : null;
     if (!JSZip) {
         // Fallback: download individually
-        qrBucket.forEach((qr, index) => {
+        selectedQRs.forEach((qr, index) => {
             const canvas = document.createElement('canvas');
             canvas.width = qr.canvas.width;
             canvas.height = qr.canvas.height;
@@ -3137,12 +3999,12 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
             link.href = canvas.toDataURL('image/jpeg', 0.95);
             link.click();
         });
-        showNotification(`${qrBucket.length} JPG files downloaded!`);
+        showNotification(`${selectedQRs.length} JPG files downloaded!`);
         return;
     }
     
     const zip = new JSZip();
-    qrBucket.forEach((qr, index) => {
+    selectedQRs.forEach((qr, index) => {
         const qrNum = index + 1;
         
         // Convert QR code to JPG
@@ -3187,12 +4049,12 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
     link.click();
     URL.revokeObjectURL(link.href);
     
-    showNotification(`${qrBucket.length} JPG files downloaded as ZIP!`);
+    showNotification(`${selectedQRs.length} JPG files downloaded as ZIP!`);
     
     if (typeof gtag !== 'undefined') {
         gtag('event', 'batch_download', {
             'format': 'JPG_ZIP',
-            'count': qrBucket.length
+            'count': selectedQRs.length
         });
     }
 });
@@ -3613,6 +4475,40 @@ function canvasToSVG() {
     svg += '</svg>';
     return svg;
 }
+
+// Helper function for converting any canvas to SVG (for bucket items)
+function canvasToSVGFromCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">`;
+    
+    // Add white background
+    svg += `<rect width="${canvas.width}" height="${canvas.height}" fill="white"/>`;
+    
+    // Convert pixels to rectangles (simplified approach)
+    const pixelSize = 1;
+    for (let y = 0; y < canvas.height; y += pixelSize) {
+        for (let x = 0; x < canvas.width; x += pixelSize) {
+            const i = (y * canvas.width + x) * 4;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const a = data[i + 3] / 255;
+            
+            // Only draw non-white pixels
+            if (r < 250 || g < 250 || b < 250) {
+                const color = `rgba(${r},${g},${b},${a})`;
+                svg += `<rect x="${x}" y="${y}" width="${pixelSize}" height="${pixelSize}" fill="${color}"/>`;
+            }
+        }
+    }
+    
+    svg += '</svg>';
+    return svg;
+}
+
 
 // Clear all
 clearBtn.addEventListener('click', () => {

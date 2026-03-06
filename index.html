@@ -15,6 +15,13 @@
     <!-- Content Security Policy: Allow required scripts for QRCode.js library -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai; font-src 'self' data:;">
     <title>Free QR Code Generator with Logo | No Sign Up Required</title>
+
+    <!-- Color Thief for dominant color extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
+    
+    <!-- Cropper.js for image cropping -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23fff'/%3E%3Crect x='2' y='2' width='8' height='8' fill='%23000'/%3E%3Crect x='22' y='2' width='8' height='8' fill='%23000'/%3E%3Crect x='2' y='22' width='8' height='8' fill='%23000'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%23fff'/%3E%3Crect x='24' y='4' width='4' height='4' fill='%23fff'/%3E%3Crect x='4' y='24' width='4' height='4' fill='%23fff'/%3E%3Crect x='12' y='2' width='2' height='2' fill='%23000'/%3E%3Crect x='16' y='2' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='6' width='2' height='2' fill='%23000'/%3E%3Crect x='18' y='6' width='2' height='2' fill='%23000'/%3E%3Crect x='14' y='10' width='4' height='4' fill='%23000'/%3E%3Crect x='20' y='12' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='16' width='2' height='2' fill='%23000'/%3E%3Crect x='18' y='18' width='2' height='2' fill='%23000'/%3E%3Crect x='22' y='20' width='2' height='2' fill='%23000'/%3E%3Crect x='26' y='22' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='22' width='2' height='2' fill='%23000'/%3E%3Crect x='16' y='26' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='28' width='2' height='2' fill='%23000'/%3E%3C/svg%3E">
@@ -66,6 +73,7 @@
             <div class="section">
                 <label for="textInput">Select QR template type, then enter details:</label>
                 <div class="quick-templates">
+                    <button class="template-btn" data-template="google-review" title="Create a QR code for Google Review submissions">🔗✍️ URL: <span style="color: #4285F4;">G</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">o</span><span style="color: #4285F4;">g</span><span style="color: #34A853;">l</span><span style="color: #EA4335;">e</span> Review</button>
                     <button class="template-btn" data-template="url">🔗 URL</button>
                     <button class="template-btn" data-template="email">📧 Email</button>
                     <button class="template-btn" data-template="phone">📞 Phone</button>
@@ -77,6 +85,11 @@
                     <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
                 <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
+                <div style="margin-top: 8px;">
+                    <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #1976d2; text-decoration: none;">
+                        🔍 Find your Place ID, for Google Review
+                    </a>
+                </div>
             </div>
 
             <div class="section">
@@ -84,6 +97,12 @@
                 <div class="label-controls">
                     <input type="text" id="labelInput" placeholder="e.g., Visit our website, Scan for menu, Contact info...">
                     <button id="clearLabelBtn" class="btn-icon" title="Clear label">✕</button>
+                </div>
+                <div style="margin-top: 8px; display: none;" id="googleColorToggle">
+                    <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="useGoogleColors" checked style="cursor: pointer;">
+                        <span>Use <span style="color: #4285F4;">G</span><span style="color: #EA4335;">o</span><span style="color: #FBBC05;">o</span><span style="color: #4285F4;">g</span><span style="color: #34A853;">l</span><span style="color: #EA4335;">e</span> colors in label</span>
+                    </label>
                 </div>
             </div>
 
@@ -283,6 +302,24 @@
                 </div>
             </div>
 
+            <div class="section">
+                <h3>Error Correction</h3>
+                
+                <div class="option-group">
+                    <label for="errorCorrectionLevel">Error Correction Level:</label>
+                    <select id="errorCorrectionLevel" class="error-correction-select">
+                        <option value="L">Low (7%) - Smallest, more data capacity</option>
+                        <option value="M">Medium (15%) - Balanced</option>
+                        <option value="Q">Quality (25%) - Good balance</option>
+                        <option value="H" selected>High (30%) - Best for logos</option>
+                    </select>
+                    <p style="font-size: 12px; color: #666; margin-top: 8px;">
+                        💡 <strong>Tip:</strong> Higher levels allow more damage/covering but create denser QR codes. 
+                        Use <strong>High</strong> when adding logos or artistic backgrounds.
+                    </p>
+                </div>
+            </div>
+
             <div class="button-group">
                 <button id="generateBtn" class="btn btn-primary">Generate QR Code</button>
             </div>
@@ -417,7 +454,7 @@
                         <div class="analytics-item">
                             <span class="analytics-label">
                                 Error Correction:
-                                <span class="info-icon" title="Up to 30% of the code can be damaged or covered (by your logo) and still scan perfectly.">ℹ️</span>
+                                <span class="info-icon" title="Higher levels allow more damage/covering but create denser QR codes. Recommended: High (30%) when using logos.">ℹ️</span>
                             </span>
                             <span class="analytics-value" id="qrErrorLevel">High (30%)</span>
                         </div>
@@ -654,6 +691,30 @@
     <footer class="footer">
         <p>Questions or feedback? Contact us at <a href="mailto:canadianwindrider@gmail.com">canadianwindrider@gmail.com</a></p>
     </footer>
+
+    <!-- Image Cropper Modal -->
+    <div id="cropperModal" class="cropper-modal" style="display: none;">
+        <div class="cropper-modal-content">
+            <div class="cropper-modal-header">
+                <h3>Crop Image</h3>
+                <p style="font-size: 14px; color: #666; margin-top: 5px;">Adjust the crop area to prevent distortion</p>
+            </div>
+            <div class="cropper-container-wrapper">
+                <img id="cropperImage" alt="Image to crop">
+            </div>
+            <div class="cropper-modal-controls">
+                <button id="cropperRotateLeft" class="btn btn-secondary" title="Rotate left 90°">↶</button>
+                <button id="cropperRotateRight" class="btn btn-secondary" title="Rotate right 90°">↷</button>
+                <button id="cropperFlipH" class="btn btn-secondary" title="Flip horizontal">⇄</button>
+                <button id="cropperFlipV" class="btn btn-secondary" title="Flip vertical">⇅</button>
+                <button id="cropperReset" class="btn btn-secondary">Reset</button>
+            </div>
+            <div class="cropper-modal-footer">
+                <button id="cropperCancel" class="btn">Cancel</button>
+                <button id="cropperApply" class="btn btn-primary">Apply Crop</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Include QRCode.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>

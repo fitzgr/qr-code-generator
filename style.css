@@ -502,6 +502,24 @@ input[type="range"]::-moz-range-thumb {
     flex-direction: column;
     align-items: center;
     gap: 6px;
+    transition: all 0.2s;
+}
+
+.bucket-item.selected {
+    border-color: #FFB300;
+    background: #FFF8E1;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.3);
+}
+
+.bucket-item-checkbox {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    z-index: 2;
+    accent-color: #FFB300;
 }
 
 .bucket-item img {
@@ -1030,6 +1048,23 @@ input[type="range"]::-moz-range-thumb {
     border-color: #667eea;
 }
 
+.error-correction-select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.error-correction-select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
 .validation-status {
     margin-top: 20px;
     padding: 15px;
@@ -1054,6 +1089,124 @@ input[type="range"]::-moz-range-thumb {
     flex: 1;
     font-size: 14px;
     color: #666;
+}
+
+/* ============================================
+   IMAGE CROPPER MODAL STYLES
+   ============================================ */
+
+.cropper-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.cropper-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.cropper-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.cropper-modal-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.cropper-container-wrapper {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    padding: 20px;
+    min-height: 300px;
+    touch-action: none; /* Prevent browser gestures from interfering */
+}
+
+.cropper-container-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+
+.cropper-modal-controls {
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.cropper-modal-controls .btn {
+    min-width: 80px;
+    min-height: 44px; /* Ensure touch-friendly size */
+}
+
+.cropper-modal-footer {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Mobile responsiveness for cropper modal */
+@media (max-width: 768px) {
+    .cropper-modal {
+        padding: 10px;
+    }
+    
+    .cropper-modal-content {
+        max-height: 95vh;
+    }
+    
+    .cropper-container-wrapper {
+        padding: 10px;
+        min-height: 200px;
+    }
+    
+    .cropper-modal-controls {
+        padding: 10px;
+    }
+    
+    .cropper-modal-controls .btn {
+        min-width: 70px;
+        font-size: 13px;
+        padding: 10px 12px;
+        min-height: 44px; /* Maintain touch-friendly size on mobile */
+    }
+    
+    .cropper-modal-footer {
+        padding: 10px;
+        flex-direction: column-reverse;
+    }
+    
+    .cropper-modal-footer .btn {
+        width: 100%;
+        min-height: 48px; /* Larger touch target on mobile */
+    }
+}
     line-height: 1.4;
 }
 

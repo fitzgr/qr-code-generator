@@ -163,4 +163,9 @@ qr_code_generator_web/
 
 ## 📝 License
 
+
+https://ny4ts1f3mf32sdxzurep66yyqergntks.ui.nabu.casa/api/webhook/pull_config_and_restart_4f9a2e
+automatic git pull + restart Scarborough HA!
+github pull for home assistant
+
 Free to use and modify!
