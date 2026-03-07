@@ -23,6 +23,12 @@ let isGoogleReviewMode = false;
 let useGoogleColorsInLabel = true;
 let currentErrorCorrectionLevel = 'H'; // L, M, Q, or H
 
+// State history for undo/redo functionality
+let stateHistory = [];
+let currentStateIndex = -1;
+const MAX_HISTORY = 50;
+let isRestoringState = false; // Prevent saving during undo/redo
+
 // Artistic QR Code variables
 let backgroundImage = null;
 let currentBlendMode = 'overlay';
@@ -261,6 +267,7 @@ function applyCroppedImage() {
             
             // Regenerate QR code if one exists
             if (currentQRDataURL) {
+                saveCurrentState('Added logo');
                 generateQRCode();
             }
         };
@@ -280,6 +287,7 @@ function applyCroppedImage() {
             suggestErrorCorrectionLevel();
 
             if (currentQRDataURL) {
+                saveCurrentState('Added artistic background');
                 generateQRCode();
             }
         };
@@ -307,6 +315,9 @@ const selectLogoBtn = document.getElementById('selectLogoBtn');
 const clearLogoBtn = document.getElementById('clearLogoBtn');
 const logoStatus = document.getElementById('logoStatus');
 const generateBtn = document.getElementById('generateBtn');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const historyPosition = document.getElementById('historyPosition');
 const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
@@ -567,6 +578,7 @@ darkColorPicker.addEventListener('input', (e) => {
     currentDarkColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
     if (currentQRDataURL) {
+        saveCurrentState('Changed dark color');
         generateQRCode();
     }
 });
@@ -577,6 +589,7 @@ lightColorPicker.addEventListener('input', (e) => {
     currentLightColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
     if (currentQRDataURL) {
+        saveCurrentState('Changed light color');
         generateQRCode();
     }
 });
@@ -588,6 +601,7 @@ darkColorText.addEventListener('input', (e) => {
         currentDarkColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
         if (currentQRDataURL) {
+            saveCurrentState('Changed dark color');
             generateQRCode();
         }
     }
@@ -600,6 +614,7 @@ lightColorText.addEventListener('input', (e) => {
         currentLightColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
         if (currentQRDataURL) {
+            saveCurrentState('Changed light color');
             generateQRCode();
         }
     }
@@ -610,6 +625,7 @@ labelColorPicker.addEventListener('input', (e) => {
     labelColorText.value = color;
     currentLabelColor = color;
     if (currentQRDataURL) {
+        saveCurrentState('Changed label color');
         generateQRCode();
     }
 });
@@ -620,6 +636,7 @@ labelColorText.addEventListener('input', (e) => {
         labelColorPicker.value = color;
         currentLabelColor = color;
         if (currentQRDataURL) {
+            saveCurrentState('Changed label color');
             generateQRCode();
         }
     }
@@ -665,6 +682,8 @@ errorCorrectionLevel.addEventListener('change', (e) => {
     
     // Regenerate QR code if one exists
     if (currentQRDataURL) {
+        const errorCorrectionLabels = { 'L': 'Low', 'M': 'Medium', 'Q': 'Quality', 'H': 'High' };
+        saveCurrentState(`Changed error correction to ${errorCorrectionLabels[e.target.value]}`);
         generateQRCode();
     }
 });
@@ -759,6 +778,268 @@ function drawGoogleColoredText(ctx, text, x, y, maxWidth) {
     }
 }
 
+// ===== STATE HISTORY MANAGEMENT =====
+
+// Save current state to history
+function saveCurrentState(actionLabel = 'Change') {
+    if (isRestoringState) return; // Skip during undo/redo
+    
+    try {
+        const state = {
+            timestamp: Date.now(),
+            label: actionLabel,
+            text: textInput.value,
+            colors: {
+                dark: currentDarkColor,
+                light: currentLightColor,
+                label: currentLabelColor
+            },
+            size: parseInt(sizeRange.value),
+            logoSize: parseInt(logoSizeRange.value),
+            labelSize: parseInt(labelSizeRange.value),
+            style: currentQRStyle,
+            errorCorrection: currentErrorCorrectionLevel,
+            quietZone: parseInt(quietZoneRange.value),
+            labelText: labelInput.value,
+            googleReviewMode: isGoogleReviewMode,
+            useGoogleColors: useGoogleColorsInLabel,
+            logo: selectedLogo ? selectedLogo.src : null,
+            background: backgroundImage ? backgroundImage.src : null,
+            blendMode: currentBlendMode,
+            bgOpacity: currentBgOpacity,
+            qrStrength: currentQrStrength
+        };
+        
+        // Truncate history if we're in the middle (user made change after undo)
+        if (currentStateIndex < stateHistory.length - 1) {
+            stateHistory = stateHistory.slice(0, currentStateIndex + 1);
+        }
+        
+        stateHistory.push(state);
+        currentStateIndex++;
+        
+        // Limit history size with graceful degradation
+        if (stateHistory.length > MAX_HISTORY) {
+            stateHistory.shift();
+            currentStateIndex--;
+            showNotification(`History limit reached. Oldest state removed (keeping last ${MAX_HISTORY} changes).`, 'info');
+        }
+        
+        updateUndoRedoButtons();
+        saveHistoryToLocalStorage();
+        
+    } catch (error) {
+        console.error('Error saving state:', error);
+    }
+}
+
+// Restore a specific state from history
+function restoreState(state) {
+    isRestoringState = true;
+    
+    try {
+        // Restore text input
+        textInput.value = state.text;
+        
+        // Restore colors
+        currentDarkColor = state.colors.dark;
+        currentLightColor = state.colors.light;
+        currentLabelColor = state.colors.label;
+        darkColorPicker.value = currentDarkColor;
+        lightColorPicker.value = currentLightColor;
+        labelColorPicker.value = currentLabelColor;
+        darkColorText.value = currentDarkColor;
+        lightColorText.value = currentLightColor;
+        labelColorText.value = currentLabelColor;
+        
+        // Restore sizes
+        sizeRange.value = state.size;
+        sizeValue.textContent = state.size;
+        logoSizeRange.value = state.logoSize;
+        logoSizeValue.textContent = state.logoSize;
+        labelSizeRange.value = state.labelSize;
+        labelSizeValue.textContent = state.labelSize;
+        
+        // Restore style
+        currentQRStyle = state.style;
+        document.querySelectorAll('.style-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.style === state.style);
+        });
+        
+        // Restore error correction
+        currentErrorCorrectionLevel = state.errorCorrection;
+        errorCorrectionLevel.value = state.errorCorrection;
+        
+        // Restore quiet zone
+        quietZoneRange.value = state.quietZone;
+        quietZoneValue.textContent = state.quietZone;
+        
+        // Restore label
+        labelInput.value = state.labelText;
+        
+        // Restore Google Review mode
+        isGoogleReviewMode = state.googleReviewMode;
+        useGoogleColorsInLabel = state.useGoogleColors;
+        const googleColorsCheckbox = document.getElementById('useGoogleColors');
+        if (googleColorsCheckbox) {
+            googleColorsCheckbox.checked = state.useGoogleColors;
+        }
+        
+        // Restore logo
+        if (state.logo) {
+            const img = new Image();
+            img.onload = () => {
+                selectedLogo = img;
+                logoStatus.textContent = 'Logo loaded from history';
+                clearLogoBtn.style.display = 'inline-block';
+                generateQRCode();
+            };
+            img.src = state.logo;
+        } else if (selectedLogo) {
+            selectedLogo = null;
+            logoStatus.textContent = 'No logo';
+            clearLogoBtn.style.display = 'none';
+        }
+        
+        // Restore artistic background
+        if (state.background) {
+            const img = new Image();
+            img.onload = () => {
+                backgroundImage = img;
+                currentBlendMode = state.blendMode;
+                currentBgOpacity = state.bgOpacity;
+                currentQrStrength = state.qrStrength;
+                
+                if (blendModeSelect) blendModeSelect.value = state.blendMode;
+                if (bgOpacityRange) {
+                    bgOpacityRange.value = state.bgOpacity;
+                    bgOpacityValue.textContent = state.bgOpacity;
+                }
+                if (qrStrengthRange) {
+                    qrStrengthRange.value = state.qrStrength;
+                    qrStrengthValue.textContent = state.qrStrength;
+                }
+                
+                generateQRCode();
+            };
+            img.src = state.background;
+        } else if (backgroundImage) {
+            backgroundImage = null;
+            currentBlendMode = 'overlay';
+            currentBgOpacity = 50;
+            currentQrStrength = 80;
+        }
+        
+        // If no logo or background change, regenerate immediately
+        if (!state.logo && !state.background) {
+            generateQRCode();
+        }
+        
+        showNotification(`↶ Restored: ${state.label}`, 'success');
+        
+    } catch (error) {
+        console.error('Error restoring state:', error);
+        showNotification('Error restoring state', 'error');
+    } finally {
+        isRestoringState = false;
+    }
+}
+
+// Undo to previous state
+function undo() {
+    if (currentStateIndex > 0) {
+        currentStateIndex--;
+        restoreState(stateHistory[currentStateIndex]);
+        updateUndoRedoButtons();
+    }
+}
+
+// Redo to next state
+function redo() {
+    if (currentStateIndex < stateHistory.length - 1) {
+        currentStateIndex++;
+        restoreState(stateHistory[currentStateIndex]);
+        updateUndoRedoButtons();
+    }
+}
+
+// Update undo/redo button states and position display
+function updateUndoRedoButtons() {
+    const canUndo = currentStateIndex > 0;
+    const canRedo = currentStateIndex < stateHistory.length - 1;
+    
+    undoBtn.disabled = !canUndo;
+    redoBtn.disabled = !canRedo;
+    
+    // Update tooltip with current state label
+    if (canUndo && currentStateIndex > 0) {
+        undoBtn.title = `Undo: ${stateHistory[currentStateIndex - 1].label} (Ctrl+Z)`;
+    } else {
+        undoBtn.title = 'Undo (Ctrl+Z)';
+    }
+    
+    if (canRedo && currentStateIndex < stateHistory.length - 1) {
+        redoBtn.title = `Redo: ${stateHistory[currentStateIndex + 1].label} (Ctrl+Y)`;
+    } else {
+        redoBtn.title = 'Redo (Ctrl+Y)';
+    }
+    
+    // Update position display
+    const position = stateHistory.length > 0 ? currentStateIndex + 1 : 1;
+    const total = Math.max(stateHistory.length, 1);
+    historyPosition.textContent = `${position}/${total}`;
+}
+
+// Save history to localStorage
+function saveHistoryToLocalStorage() {
+    try {
+        const historyData = {
+            version: 1,
+            timestamp: Date.now(),
+            history: stateHistory,
+            index: currentStateIndex
+        };
+        localStorage.setItem('qr_history', JSON.stringify(historyData));
+    } catch (error) {
+        if (error.name === 'QuotaExceededError') {
+            // Storage quota exceeded - remove oldest states
+            console.warn('localStorage quota exceeded, removing old states');
+            stateHistory = stateHistory.slice(-Math.floor(MAX_HISTORY / 2)); // Keep last 50%
+            currentStateIndex = Math.min(currentStateIndex, stateHistory.length - 1);
+            showNotification('Storage full. Removed older history to make room.', 'warning');
+            saveHistoryToLocalStorage(); // Try again
+        } else {
+            console.error('Error saving history to localStorage:', error);
+        }
+    }
+}
+
+// Load history from localStorage on page load
+function loadHistoryFromLocalStorage() {
+    try {
+        const data = localStorage.getItem('qr_history');
+        if (!data) return;
+        
+        const historyData = JSON.parse(data);
+        
+        // Validate data structure
+        if (historyData && historyData.version === 1 && Array.isArray(historyData.history)) {
+            stateHistory = historyData.history;
+            currentStateIndex = historyData.index;
+            updateUndoRedoButtons();
+            
+            if (stateHistory.length > 0) {
+                showNotification(`✨ Restored ${stateHistory.length} previous QR code versions`, 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading history from localStorage:', error);
+        localStorage.removeItem('qr_history'); // Clear corrupted data
+    }
+}
+
+// ===== END STATE HISTORY MANAGEMENT =====
+
 // Contrast validation function
 function validateContrast(darkColor, lightColor) {
     // Calculate relative luminance
@@ -814,24 +1095,28 @@ labelSizeRange.addEventListener('input', (e) => {
 // Regenerate QR code when sliders are released
 sizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
+        saveCurrentState(`Changed size to ${e.target.value}`);
         generateQRCode();
     }
 });
 
 borderRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
+        saveCurrentState(`Changed border to ${e.target.value}`);
         generateQRCode();
     }
 });
 
 logoSizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
+        saveCurrentState(`Changed logo size to ${e.target.value}%`);
         generateQRCode();
     }
 });
 
 labelSizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
+        saveCurrentState(`Changed label size to ${e.target.value}%`);
         generateQRCode();
     }
 });
@@ -839,6 +1124,7 @@ labelSizeRange.addEventListener('change', (e) => {
 // Label input change - regenerate QR code when label is modified
 labelInput.addEventListener('input', (e) => {
     if (currentQRDataURL) {
+        saveCurrentState('Modified label text');
         generateQRCode();
     }
 });
@@ -1494,6 +1780,7 @@ async function generateWithStableHorde(prompt) {
 blendModeSelect.addEventListener('change', (e) => {
     currentBlendMode = e.target.value;
     if (currentQRDataURL && backgroundImage) {
+        saveCurrentState(`Changed blend mode to ${e.target.value}`);
         generateQRCode();
     }
 });
@@ -1505,6 +1792,7 @@ bgOpacityRange.addEventListener('input', (e) => {
 bgOpacityRange.addEventListener('change', (e) => {
     currentBgOpacity = parseInt(e.target.value);
     if (currentQRDataURL && backgroundImage) {
+        saveCurrentState(`Changed background opacity to ${e.target.value}%`);
         generateQRCode();
     }
 });
@@ -1516,6 +1804,7 @@ qrStrengthRange.addEventListener('input', (e) => {
 qrStrengthRange.addEventListener('change', (e) => {
     currentQrStrength = parseInt(e.target.value);
     if (currentQRDataURL && backgroundImage) {
+        saveCurrentState(`Changed QR strength to ${e.target.value}%`);
         generateQRCode();
     }
 });
@@ -1955,6 +2244,7 @@ clearLogoBtn.addEventListener('click', () => {
     
     // Regenerate QR code if one exists
     if (currentQRDataURL) {
+        saveCurrentState('Removed logo');
         generateQRCode();
     }
 });
@@ -1963,6 +2253,7 @@ clearLogoBtn.addEventListener('click', () => {
 clearLabelBtn.addEventListener('click', () => {
     labelInput.value = '';
     if (currentQRDataURL) {
+        saveCurrentState('Cleared label');
         generateQRCode();
     }
 });
@@ -2182,7 +2473,28 @@ function clearBucket() {
 }
 
 // Generate QR Code
-generateBtn.addEventListener('click', generateQRCode);
+generateBtn.addEventListener('click', () => {
+    saveCurrentState('Generated QR Code');
+    generateQRCode();
+});
+
+// Undo/Redo button event listeners
+undoBtn.addEventListener('click', undo);
+redoBtn.addEventListener('click', redo);
+
+// Keyboard shortcuts for undo/redo
+document.addEventListener('keydown', (e) => {
+    // Ctrl+Z or Cmd+Z for undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+    }
+    // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z for redo
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+    }
+});
 
 function generateQRCode() {
     window.multiQRPairs = undefined;
@@ -3044,6 +3356,7 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
             action: () => {
                 logoSizeRange.value = 25;
                 logoSizeValue.textContent = '25';
+                saveCurrentState('Reduced logo size to 25% (quality score)');
                 generateQRCode();
             }
         });
@@ -3121,6 +3434,7 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
                     action: () => {
                         sizeRange.value = optimalSize;
                         sizeValue.textContent = optimalSize;
+                        saveCurrentState(`Optimized size to ${optimalSize}`);
                         generateQRCode();
                         
                         if (typeof gtag !== 'undefined') {
@@ -3153,6 +3467,7 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
             action: () => {
                 sizeRange.value = optimalSize;
                 sizeValue.textContent = optimalSize;
+                saveCurrentState(`Optimized size to ${optimalSize}`);
                 generateQRCode();
                 
                 if (typeof gtag !== 'undefined') {
@@ -4727,6 +5042,10 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// ===== INITIALIZATION =====
+// Load history from localStorage on page load
+loadHistoryFromLocalStorage();
 // ============================================
 // ARTISTIC QR CODE FUNCTIONS
 // ============================================
