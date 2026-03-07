@@ -3099,14 +3099,68 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
                 text: 'Dots style with large logo may affect scanning. ',
                 actionText: 'Switch to squares',
                 action: () => {
-                    document.querySelector('.style-btn[data-style=\"squares\"]').click();
+                    document.querySelector('.style-btn[data-style="squares"]').click();
                     generateQRCode();
                 }
             });
         }
     }
     
-    // 6. Artistic QR Mode (affects score if active)
+    // 6. Error Correction Level (check if appropriate for design)
+    const errorCorrectionLevels = { 'L': 1, 'M': 2, 'Q': 3, 'H': 4 };
+    const currentECLevel = errorCorrectionLevels[currentErrorCorrectionLevel] || 4;
+    
+    // Check if higher error correction is needed
+    if ((selectedLogo || isArtisticMode) && currentECLevel < 4) {
+        // Logo or artistic mode active but not using High error correction
+        const recommendedLevel = (logoSize > 25 || isArtisticMode) ? 'H' : 'Q';
+        const recommendedName = recommendedLevel === 'H' ? 'High (30%)' : 'Quality (25%)';
+        
+        recommendations.push({
+            type: 'warning',
+            icon: '🛡️',
+            text: `Error correction is ${currentErrorCorrectionLevel}. With ${selectedLogo ? 'logo' : 'artistic background'}, `,
+            actionText: `upgrade to ${recommendedName}`,
+            action: () => {
+                errorCorrectionLevel.value = recommendedLevel;
+                currentErrorCorrectionLevel = recommendedLevel;
+                generateQRCode();
+                
+                // Track in analytics
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'error_correction_changed', {
+                        'from': currentErrorCorrectionLevel,
+                        'to': recommendedLevel,
+                        'source': 'quality_score_recommendation'
+                    });
+                }
+            }
+        });
+        
+        // Deduct points based on gap
+        if (currentECLevel === 1) { // L
+            score -= 10; // Significant risk with logo/artistic mode
+        } else if (currentECLevel === 2) { // M
+            score -= 5;
+        } else if (currentECLevel === 3) { // Q
+            score -= 2;
+        }
+    } else if (currentECLevel < 3 && dataUsage > 80) {
+        // High data usage with low error correction
+        recommendations.push({
+            type: 'info',
+            icon: 'ℹ️',
+            text: 'QR code is full. ',
+            actionText: 'Increase error correction to Q or H',
+            action: () => {
+                errorCorrectionLevel.value = 'Q';
+                currentErrorCorrectionLevel = 'Q';
+                generateQRCode();
+            }
+        });
+    }
+    
+    // 7. Artistic QR Mode (affects score if active)
     if (isArtisticMode) {
         // Deduct points based on background settings that may affect scannability
         let artisticPenalty = 0;
