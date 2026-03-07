@@ -799,7 +799,7 @@ function saveCurrentState(actionLabel = 'Change') {
             labelSize: parseInt(labelSizeRange.value),
             style: currentQRStyle,
             errorCorrection: currentErrorCorrectionLevel,
-            quietZone: parseInt(quietZoneRange.value),
+            border: parseInt(borderRange.value),
             labelText: labelInput.value,
             googleReviewMode: isGoogleReviewMode,
             useGoogleColors: useGoogleColorsInLabel,
@@ -870,9 +870,11 @@ function restoreState(state) {
         currentErrorCorrectionLevel = state.errorCorrection;
         errorCorrectionLevel.value = state.errorCorrection;
         
-        // Restore quiet zone
-        quietZoneRange.value = state.quietZone;
-        quietZoneValue.textContent = state.quietZone;
+        // Restore border
+        if (state.border !== undefined) {
+            borderRange.value = state.border;
+            borderValue.textContent = state.border;
+        }
         
         // Restore label
         labelInput.value = state.labelText;
