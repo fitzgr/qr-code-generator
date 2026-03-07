@@ -318,6 +318,9 @@ const generateBtn = document.getElementById('generateBtn');
 const undoBtn = document.getElementById('undoBtn');
 const redoBtn = document.getElementById('redoBtn');
 const historyPosition = document.getElementById('historyPosition');
+const historyDropdownBtn = document.getElementById('historyDropdownBtn');
+const historyDropdown = document.getElementById('historyDropdown');
+const historyList = document.getElementById('historyList');
 const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
@@ -953,6 +956,7 @@ function undo() {
         currentStateIndex--;
         restoreState(stateHistory[currentStateIndex]);
         updateUndoRedoButtons();
+        historyDropdown.classList.add('hidden');
     }
 }
 
@@ -962,6 +966,7 @@ function redo() {
         currentStateIndex++;
         restoreState(stateHistory[currentStateIndex]);
         updateUndoRedoButtons();
+        historyDropdown.classList.add('hidden');
     }
 }
 
@@ -990,6 +995,67 @@ function updateUndoRedoButtons() {
     const position = stateHistory.length > 0 ? currentStateIndex + 1 : 1;
     const total = Math.max(stateHistory.length, 1);
     historyPosition.textContent = `${position}/${total}`;
+    
+    // Update history dropdown content
+    populateHistoryDropdown();
+}
+
+// Populate history dropdown with all states
+function populateHistoryDropdown() {
+    if (!historyList) return;
+    
+    historyList.innerHTML = '';
+    
+    if (stateHistory.length === 0) {
+        historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">No history yet</div>';
+        return;
+    }
+    
+    // Add items in reverse order (newest first)
+    for (let i = stateHistory.length - 1; i >= 0; i--) {
+        const state = stateHistory[i];
+        const isCurrent = i === currentStateIndex;
+        
+        const item = document.createElement('div');
+        item.className = 'history-item' + (isCurrent ? ' current' : '');
+        item.dataset.index = i;
+        
+        const number = document.createElement('span');
+        number.className = 'history-item-number';
+        number.textContent = `${i + 1}.`;
+        
+        const label = document.createElement('span');
+        label.className = 'history-item-label';
+        label.textContent = isCurrent ? `→ ${state.label}` : state.label;
+        
+        const time = document.createElement('span');
+        time.className = 'history-item-time';
+        const date = new Date(state.timestamp);
+        time.textContent = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        item.appendChild(number);
+        item.appendChild(label);
+        item.appendChild(time);
+        
+        // Click handler to jump to this state
+        item.addEventListener('click', () => {
+            jumpToHistoryState(i);
+            historyDropdown.classList.add('hidden');
+        });
+        
+        historyList.appendChild(item);
+    }
+}
+
+// Jump to a specific history state
+function jumpToHistoryState(index) {
+    if (index < 0 || index >= stateHistory.length || index === currentStateIndex) {
+        return;
+    }
+    
+    currentStateIndex = index;
+    restoreState(stateHistory[index]);
+    updateUndoRedoButtons();
 }
 
 // Save history to localStorage
@@ -2484,8 +2550,29 @@ generateBtn.addEventListener('click', () => {
 undoBtn.addEventListener('click', undo);
 redoBtn.addEventListener('click', redo);
 
+// History dropdown toggle
+historyDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    historyDropdown.classList.toggle('hidden');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!historyDropdown.classList.contains('hidden') && 
+        !historyDropdown.contains(e.target) && 
+        e.target !== historyDropdownBtn) {
+        historyDropdown.classList.add('hidden');
+    }
+});
+
 // Keyboard shortcuts for undo/redo
 document.addEventListener('keydown', (e) => {
+    // Escape to close history dropdown
+    if (e.key === 'Escape' && !historyDropdown.classList.contains('hidden')) {
+        historyDropdown.classList.add('hidden');
+        return;
+    }
+    
     // Ctrl+Z or Cmd+Z for undo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();

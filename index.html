@@ -326,6 +326,15 @@
                     <button id="undoBtn" class="btn btn-secondary" disabled title="Undo (Ctrl+Z)">↶ Undo</button>
                     <span id="historyPosition" class="history-position">1/1</span>
                     <button id="redoBtn" class="btn btn-secondary" disabled title="Redo (Ctrl+Y)">↷ Redo</button>
+                    <div class="history-dropdown-container">
+                        <button id="historyDropdownBtn" class="btn btn-secondary" title="View History">📜 History ▼</button>
+                        <div id="historyDropdown" class="history-dropdown hidden">
+                            <div class="history-dropdown-header">History</div>
+                            <div id="historyList" class="history-list">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
