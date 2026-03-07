@@ -3062,25 +3062,107 @@ function calculateQualityScore(contrastRatio, dataUsage, qrSize) {
         });
     }
     
-    // 4. Print Size (15 points)
+    // 4. Print Size (15 points) - Smart sizing based on complexity
+    const currentSize = parseInt(sizeRange.value);
     const printSizeMM = Math.ceil(qrSize / 10); // Rough estimate
+    
+    // Calculate optimal size based on QR complexity
+    let optimalSize = 10; // Base minimum
+    
+    // Adjust for data usage
+    if (dataUsage > 85) {
+        optimalSize = Math.max(optimalSize, 18);
+    } else if (dataUsage > 70) {
+        optimalSize = Math.max(optimalSize, 15);
+    } else if (dataUsage > 50) {
+        optimalSize = Math.max(optimalSize, 12);
+    }
+    
+    // Adjust for logo
+    if (selectedLogo) {
+        optimalSize = Math.max(optimalSize, 15);
+        if (logoSize > 25) {
+            optimalSize = Math.max(optimalSize, 18);
+        }
+    }
+    
+    // Adjust for artistic mode
+    if (isArtisticMode) {
+        optimalSize = Math.max(optimalSize, 18); // Artistic QR needs to be larger
+    }
+    
+    // Adjust for style
+    if (currentQRStyle === 'dots') {
+        optimalSize = Math.max(optimalSize, 15); // Dots need more clarity
+    }
+    
+    // Score and recommend based on actual size vs optimal
     if (printSizeMM > 100) {
         score += 15;
     } else if (printSizeMM >= 50) {
         score += 12;
     } else if (printSizeMM >= 30) {
         score += 8;
+        
+        // Check if below optimal
+        if (currentSize < optimalSize) {
+            const reasons = [];
+            if (dataUsage > 70) reasons.push('high data usage');
+            if (logoSize > 25) reasons.push('large logo');
+            if (isArtisticMode) reasons.push('artistic background');
+            if (currentQRStyle === 'dots') reasons.push('dots style');
+            
+            if (reasons.length > 0) {
+                recommendations.push({
+                    type: 'info',
+                    icon: '📏',
+                    text: `Size ${currentSize} is below optimal due to ${reasons.join(', ')}. `,
+                    actionText: `Increase to ${optimalSize} for better scanning`,
+                    action: () => {
+                        sizeRange.value = optimalSize;
+                        sizeValue.textContent = optimalSize;
+                        generateQRCode();
+                        
+                        if (typeof gtag !== 'undefined') {
+                            gtag('event', 'size_optimized', {
+                                'from': currentSize,
+                                'to': optimalSize,
+                                'source': 'quality_score_recommendation'
+                            });
+                        }
+                    }
+                });
+            }
+        }
     } else {
         score += 3;
+        
+        // Small size - strong recommendation
+        const reasons = [];
+        if (dataUsage > 70) reasons.push('complex data');
+        if (selectedLogo) reasons.push('logo present');
+        if (isArtisticMode) reasons.push('artistic mode');
+        
+        const reasonText = reasons.length > 0 ? ` (${reasons.join(', ')})` : '';
+        
         recommendations.push({
-            type: 'info',
-            icon: 'ℹ️',
-            text: 'Small QR code may be hard to scan. ',
-            actionText: 'Increase size to 15',
+            type: 'warning',
+            icon: '⚠️',
+            text: `QR code at size ${currentSize} may be hard to scan${reasonText}. `,
+            actionText: `Increase to ${optimalSize}`,
             action: () => {
-                sizeRange.value = 15;
-                sizeValue.textContent = '15';
+                sizeRange.value = optimalSize;
+                sizeValue.textContent = optimalSize;
                 generateQRCode();
+                
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'size_optimized', {
+                        'from': currentSize,
+                        'to': optimalSize,
+                        'source': 'quality_score_recommendation',
+                        'severity': 'warning'
+                    });
+                }
             }
         });
     }
