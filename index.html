@@ -534,17 +534,48 @@
         </div>
     </div>
 
-    <!-- SEO Content Section -->
+    <!-- SEO Content Section with Industry Tabs -->
     <div class="seo-content">
         <div class="content-wrapper">
-            <section class="info-section">
-                <h2>Free QR Code Generator with Custom Logo</h2>
-                <p>
-                    Create professional QR codes with your logo in seconds. Our free QR code generator allows you to 
-                    customize your QR codes with your brand logo, perfect for business cards, marketing materials, 
-                    product packaging, and event promotions. No sign up or registration required.
-                </p>
-            </section>
+            <!-- Tab Navigation -->
+            <div class="industry-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="general">
+                        <span class="tab-icon">🏠</span>
+                        <span class="tab-label">General</span>
+                    </button>
+                    <button class="tab-btn" data-tab="events">
+                        <span class="tab-icon">🎉</span>
+                        <span class="tab-label">Event Planning</span>
+                    </button>
+                    <button class="tab-btn" data-tab="business">
+                        <span class="tab-icon">💼</span>
+                        <span class="tab-label">Business</span>
+                    </button>
+                    <button class="tab-btn" data-tab="hospitality">
+                        <span class="tab-icon">🏨</span>
+                        <span class="tab-label">Hospitality</span>
+                    </button>
+                    <button class="tab-btn" data-tab="restaurant">
+                        <span class="tab-icon">🍽️</span>
+                        <span class="tab-label">Restaurants</span>
+                    </button>
+                </div>
+                <button class="print-guide-btn" onclick="printIndustryGuide()">
+                    <span>🖨️</span> Print Guide
+                </button>
+            </div>
+
+            <!-- General Tab Content -->
+            <div class="tab-content active" id="general-tab">
+                <section class="info-section">
+                    <h2>Free QR Code Generator with Custom Logo</h2>
+                    <p>
+                        Create professional QR codes with your logo in seconds. Our free QR code generator allows you to 
+                        customize your QR codes with your brand logo, perfect for business cards, marketing materials, 
+                        product packaging, and event promotions. No sign up or registration required.
+                    </p>
+                </section>
 
             <section class="info-section">
                 <h2>How to Create QR Codes for Business Cards</h2>
@@ -701,6 +732,237 @@
                     </p>
                 </div>
             </section>
+            </div>
+            <!-- End General Tab -->
+
+            <!-- Event Planning Tab Content -->
+            <div class="tab-content" id="events-tab">
+                <section class="info-section">
+                    <h2>🎉 QR Codes for Event Planners</h2>
+                    <p>Transform your events with QR codes! From weddings to corporate conferences, QR codes make your event planning more efficient and your guests' experience more seamless.</p>
+                </section>
+
+                <div class="template-chart">
+                    <h3>📋 Quick Template Reference</h3>
+                    <p class="chart-subtitle">QR Code templates available in this tool that work for Event Planning:</p>
+                    <div class="template-grid">
+                        <div class="template-item high-value">
+                            <span class="template-icon">📅</span>
+                            <span class="template-name">Calendar Event</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value">
+                            <span class="template-icon">📍</span>
+                            <span class="template-name">Location (Geo)</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value">
+                            <span class="template-icon">📱</span>
+                            <span class="template-name">Contact (vCard)</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value">
+                            <span class="template-icon">🌐</span>
+                            <span class="template-name">Website/URL</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item medium-value">
+                            <span class="template-icon">📶</span>
+                            <span class="template-name">WiFi Network</span>
+                            <span class="value-badge">⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item medium-value">
+                            <span class="template-icon">💬</span>
+                            <span class="template-name">SMS/Text</span>
+                            <span class="value-badge">⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item medium-value">
+                            <span class="template-icon">✉️</span>
+                            <span class="template-name">Email</span>
+                            <span class="value-badge">⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item medium-value">
+                            <span class="template-icon">☎️</span>
+                            <span class="template-name">Phone</span>
+                            <span class="value-badge">⭐⭐⭐</span>
+                        </div>
+                    </div>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for most events | ⭐⭐⭐⭐ = Very useful | ⭐⭐⭐ = Helpful for specific scenarios</p>
+                </div>
+
+                <section class="info-section">
+                    <h2>📅 Essential Event Templates</h2>
+                    
+                    <div class="event-template">
+                        <h3>1. Event Calendar QR Code ⭐⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Guests scan and the event automatically adds to their phone calendar</p>
+                        <p><strong>Perfect for:</strong> Weddings, birthday parties, conferences, corporate galas, concerts</p>
+                        <div class="example-box">
+                            <strong>Example - Wedding:</strong>
+                            <pre>SUMMARY:Sarah & Mike's Wedding
+DTSTART:20260815T160000Z
+DTEND:20260815T230000Z
+LOCATION:The Grand Ballroom
+DESCRIPTION:Join us! Cocktail hour 4pm</pre>
+                            <p><strong>Use on:</strong> Invitations, save-the-dates → Guests scan → Never forget the date!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template">
+                        <h3>2. Venue Location QR Code ⭐⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Opens GPS navigation directly to venue</p>
+                        <p><strong>Format:</strong> <code>geo:latitude,longitude</code></p>
+                        <p><strong>Perfect for:</strong> Remote venues, festival entrances, parking lots</p>
+                        <div class="example-box">
+                            <strong>Example:</strong> <code>geo:40.7589,-73.9851</code>
+                            <p><strong>Use on:</strong> Invitations, signage → Scan → Start Navigation</p>
+                            <p><em>Tip: Get coordinates by right-clicking on Google Maps</em></p>
+                        </div>
+                    </div>
+
+                    <div class="event-template">
+                        <h3>3. Guest WiFi QR Code ⭐⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Connects to WiFi instantly (no password typing!)</p>
+                        <p><strong>Perfect for:</strong> Receptions, conferences, trade shows</p>
+                        <div class="example-box">
+                            <strong>Example:</strong> <code>WIFI:T:WPA;S:VenueGuest;P:Welcome2026;;</code>
+                            <p><strong>Use on:</strong> Table cards, badges, signage → Scan → Connected!</p>
+                            <p><em>Guest favorite: No more "What's the WiFi password?"</em></p>
+                        </div>
+                    </div>
+
+                    <div class="event-template">
+                        <h3>4. Event Website/RSVP QR Code ⭐⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Links to event website, RSVP form, photo gallery, or registry</p>
+                        <p><strong>Perfect for:</strong> Wedding websites, registration pages, photo sharing</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <ul>
+                                <li>Wedding website: <code>https://sarahandmike.wedding</code></li>
+                                <li>Event registration: <code>https://eventbrite.com/your-event</code></li>
+                                <li>Photo gallery: <code>https://photos.google.com/share/event</code></li>
+                            </ul>
+                            <p><strong>Pro tip:</strong> Update website content anytime without reprinting QR codes!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template">
+                        <h3>5. SMS RSVP QR Code ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Opens text message with pre-filled RSVP</p>
+                        <p><strong>Perfect for:</strong> Birthday parties, casual events, quick headcount</p>
+                        <div class="example-box">
+                            <strong>Example:</strong> <code>sms:+15551234567?body=I'd like to RSVP for Emma's party</code>
+                            <p><strong>Use on:</strong> Invitations, social media → Easier than email or phone calls</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template">
+                        <h3>6. Contact Card QR Code ⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Saves your contact info to guest's phone</p>
+                        <p><strong>Perfect for:</strong> Event coordinator contact, vendor contacts, networking</p>
+                        <div class="example-box">
+                            <strong>Use cases:</strong>
+                            <ul>
+                                <li>Your business card (event planner contact)</li>
+                                <li>Day-of coordinator emergency contact</li>
+                                <li>Vendor contact sheets for clients</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="info-section">
+                    <h2>🎯 Real Event Setup Examples</h2>
+                    
+                    <div class="event-setup">
+                        <h3>💍 Wedding Invitation Suite</h3>
+                        <ul>
+                            <li><strong>Save the Date:</strong> Event QR (ceremony date) + Website QR</li>
+                            <li><strong>Formal Invitation:</strong> Event QR (full schedule) + RSVP QR + Location QR</li>
+                            <li><strong>Details Card:</strong> WiFi QR + Photo sharing QR + Hotel QR</li>
+                            <li><strong>Table Cards:</strong> WiFi QR on every table</li>
+                        </ul>
+                    </div>
+
+                    <div class="event-setup">
+                        <h3>🏢 Corporate Conference</h3>
+                        <ul>
+                            <li><strong>Registration Email:</strong> Event registration URL QR</li>
+                            <li><strong>Program:</strong> Each session = Calendar QR + Room location QR</li>
+                            <li><strong>Name Badge:</strong> Attendee contact vCard QR</li>
+                            <li><strong>Venue WiFi:</strong> WiFi QR throughout venue</li>
+                            <li><strong>Sponsor Booth:</strong> Website QR + Contact QR</li>
+                        </ul>
+                    </div>
+
+                    <div class="event-setup">
+                        <h3>🎂 Birthday Party</h3>
+                        <ul>
+                            <li><strong>Invitation:</strong> Event QR (party date/time) + SMS RSVP QR</li>
+                            <li><strong>Venue Signage:</strong> WiFi QR + Photo sharing QR + Coordinator phone QR</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="info-section">
+                    <h2>💡 Event Planner Pro Tips</h2>
+                    <ul>
+                        <li><strong>Use Artistic Mode:</strong> Match QR codes to event theme (rustic, modern, elegant)</li>
+                        <li><strong>Add Event Logos:</strong> Couple's monogram, company logo, birthday person's photo</li>
+                        <li><strong>Use the Bucket:</strong> Create all event QR codes, add to bucket, batch download</li>
+                        <li><strong>Label Everything:</strong> "Scan to Add to Calendar", "Scan for WiFi", "Scan for Directions"</li>
+                        <li><strong>Test First:</strong> Always test with multiple phones before printing</li>
+                        <li><strong>Minimum Size:</strong> 1 inch × 1 inch for reliable scanning</li>
+                        <li><strong>High Error Correction:</strong> Use "High (H)" setting when adding logos/backgrounds</li>
+                    </ul>
+                </section>
+
+                <section class="info-section">
+                    <h2>📏 Printing Guidelines</h2>
+                    <ul>
+                        <li><strong>Minimum Print Size:</strong> 1" × 1" (2.5cm × 2.5cm)</li>
+                        <li><strong>Resolution:</strong> 300 DPI minimum for printed materials</li>
+                        <li><strong>Format:</strong> Use PNG/SVG for print, JPG for digital</li>
+                        <li><strong>Test Distance:</strong> QR codes should scan from 10× their size (1" QR = scan from 10" away)</li>
+                    </ul>
+                </section>
+
+                <section class="info-section">
+                    <h2>⏱️ Time Savings</h2>
+                    <ul>
+                        <li><strong>No more:</strong> "What's the WiFi password?" × 100 guests</li>
+                        <li><strong>No more:</strong> "How do I get there?" phone calls</li>
+                        <li><strong>No more:</strong> Manually typing website URLs</li>
+                        <li><strong>No more:</strong> Guests forgetting event dates</li>
+                        <li><strong>Result:</strong> Professional, efficient events that guests love!</li>
+                    </ul>
+                </section>
+            </div>
+            <!-- End Event Planning Tab -->
+
+            <!-- Business Tab (Placeholder) -->
+            <div class="tab-content" id="business-tab">
+                <section class="info-section">
+                    <h2>💼 QR Codes for Business</h2>
+                    <p>Coming soon: Business card optimization, networking events, trade shows, and corporate branding.</p>
+                </section>
+            </div>
+
+            <!-- Hospitality Tab (Placeholder) -->
+            <div class="tab-content" id="hospitality-tab">
+                <section class="info-section">
+                    <h2>🏨 QR Codes for Hospitality</h2>
+                    <p>Coming soon: Hotels, vacation rentals, guest services, and property management.</p>
+                </section>
+            </div>
+
+            <!-- Restaurant Tab (Placeholder) -->
+            <div class="tab-content" id="restaurant-tab">
+                <section class="info-section">
+                    <h2>🍽️ QR Codes for Restaurants</h2>
+                    <p>Coming soon: Digital menus, Google reviews, table ordering, and allergen information.</p>
+                </section>
+            </div>
         </div>
     </div>
 
