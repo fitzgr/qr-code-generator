@@ -1279,7 +1279,7 @@ input[type="range"]::-moz-range-thumb {
         margin: 0.4in 0.4in 0.6in 0.4in; /* top, right, bottom, left - minimal margins */
         @bottom-center {
             content: "Page " counter(page) " | https://fitzgr.github.io/qr-code-generator/";
-            font-size: 11px;
+            font-size: 13px;
             color: #666;
         }
     }
