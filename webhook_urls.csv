@@ -1,0 +1,10 @@
+name,url
+Pull Config from GitHub,http://192.168.2.146:8123/api/webhook/pull_config_and_restart_4f9a2e
+Kaladar Wind Manual Test,http://192.168.2.146:8123/api/webhook/kaladar_wind_manual_9c3f2b1a6f
+Storm Mode ON,http://192.168.2.146:8123/api/webhook/storm_mode_on_7b2f1a
+Storm Mode OFF,http://192.168.2.146:8123/api/webhook/storm_mode_off_7b2f1a
+Quick Reload Config from GitHub (YAML Only),http://192.168.2.146:8123/api/webhook/pull_config_and_quick_reload_7e2b3c
+
+
+http://192.168.2.146:8123/api/webhook/storm_mode_on_7b2f1a
+http://192.168.2.146:8123/api/webhook/pull_config_and_restart_4f9a2e

@@ -5332,6 +5332,51 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Industry Tab Navigation
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and contents
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding content
+            this.classList.add('active');
+            document.getElementById(`${targetTab}-tab`).classList.add('active');
+            
+            // Analytics: Track tab view
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'industry_tab_viewed', {
+                    'tab_name': targetTab
+                });
+            }
+        });
+    });
+});
+
+// Print Industry Guide Function
+function printIndustryGuide() {
+    // Get the active tab name
+    const activeTab = document.querySelector('.tab-btn.active');
+    const tabName = activeTab ? activeTab.getAttribute('data-tab') : 'documentation';
+    
+    // Analytics: Track print
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'guide_printed', {
+            'tab_name': tabName
+        });
+    }
+    
+    // Trigger browser print dialog
+    window.print();
+}
+
+
 // ===== INITIALIZATION =====
 // Load history from localStorage on page load
 loadHistoryFromLocalStorage();
