@@ -1238,6 +1238,19 @@ input[type="range"]::-moz-range-thumb {
     box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 
+.template-item.inactive {
+    opacity: 0.4;
+    filter: grayscale(100%);
+}
+
+.template-item.active {
+    cursor: pointer;
+}
+
+.event-template.use-case-hidden {
+    display: none;
+}
+
 .template-icon {
     font-size: 2em;
 }

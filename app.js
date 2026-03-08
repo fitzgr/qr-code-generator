@@ -5376,6 +5376,53 @@ function printIndustryGuide() {
     window.print();
 }
 
+// Template Filter Function for Industry Guides
+function toggleTemplate(templateElement, tabName) {
+    // Toggle active state on clicked template
+    templateElement.classList.toggle('active');
+    templateElement.classList.toggle('inactive');
+    
+    // Get all active templates for this tab
+    const activeTemplates = [];
+    const allTemplates = document.querySelectorAll(`[data-tab="${tabName}"] .template-item`);
+    
+    allTemplates.forEach(template => {
+        if (template.classList.contains('active')) {
+            activeTemplates.push(template.getAttribute('data-template-type'));
+        }
+    });
+    
+    // If no templates are active, show all
+    const showAll = activeTemplates.length === 0;
+    
+    // Get all use cases for this tab
+    const tabContent = document.getElementById(`${tabName}-tab`);
+    const useCases = tabContent.querySelectorAll('.event-template[data-templates]');
+    
+    useCases.forEach(useCase => {
+        const useCaseTemplates = useCase.getAttribute('data-templates').split(',');
+        
+        // Check if this use case matches any active template
+        const matches = showAll || useCaseTemplates.some(t => activeTemplates.includes(t.trim()));
+        
+        if (matches) {
+            useCase.classList.remove('use-case-hidden');
+        } else {
+            useCase.classList.add('use-case-hidden');
+        }
+    });
+    
+    // Analytics: Track template filter
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'template_filter_toggled', {
+            'tab_name': tabName,
+            'template_type': templateElement.getAttribute('data-template-type'),
+            'is_active': templateElement.classList.contains('active'),
+            'active_count': activeTemplates.length
+        });
+    }
+}
+
 
 // ===== INITIALIZATION =====
 // Load history from localStorage on page load

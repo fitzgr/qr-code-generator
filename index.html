@@ -742,58 +742,58 @@
                     <p>Transform your events with QR codes! From weddings to corporate conferences, QR codes make your event planning more efficient and your guests' experience more seamless.</p>
                 </section>
 
-                <div class="template-chart">
+                <div class="template-chart" data-tab="events">
                     <h3>📋 Quick Template Reference</h3>
-                    <p class="chart-subtitle">QR Code templates available in this tool that work for Event Planning:</p>
+                    <p class="chart-subtitle">QR Code templates available in this tool that work for Event Planning (click to filter use cases):</p>
                     <div class="template-grid">
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="calendar" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">📅</span>
                             <span class="template-name">Calendar Event</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="location" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">📍</span>
                             <span class="template-name">Location (Geo)</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="vcard" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">📱</span>
                             <span class="template-name">Contact (vCard)</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="url" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">🌐</span>
                             <span class="template-name">Website/URL</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="wifi" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">📶</span>
                             <span class="template-name">WiFi Network</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="sms" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">💬</span>
                             <span class="template-name">SMS/Text</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="email" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">✉️</span>
                             <span class="template-name">Email</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="phone" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">☎️</span>
                             <span class="template-name">Phone</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
                     </div>
-                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for most events | ⭐⭐⭐⭐ = Very useful | ⭐⭐⭐ = Helpful for specific scenarios</p>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for most events | ⭐⭐⭐⭐ = Very useful | ⭐⭐⭐ = Helpful for specific scenarios<br><em>💡 Click any template above to show only use cases for that template type</em></p>
                 </div>
 
                 <section class="info-section">
                     <h2>📅 Essential Event Templates</h2>
                     
-                    <div class="event-template">
+                    <div class="event-template" data-templates="calendar">
                         <h3>1. Event Calendar QR Code ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Guests scan and the event automatically adds to their phone calendar</p>
                         <p><strong>Perfect for:</strong> Weddings, birthday parties, conferences, corporate galas, concerts</p>
@@ -808,7 +808,7 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="location">
                         <h3>2. Venue Location QR Code ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Opens GPS navigation directly to venue</p>
                         <p><strong>Format:</strong> <code>geo:latitude,longitude</code></p>
@@ -820,7 +820,7 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="wifi">
                         <h3>3. Guest WiFi QR Code ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Connects to WiFi instantly (no password typing!)</p>
                         <p><strong>Perfect for:</strong> Receptions, conferences, trade shows</p>
@@ -831,7 +831,7 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>4. Event Website/RSVP QR Code ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Links to event website, RSVP form, photo gallery, or registry</p>
                         <p><strong>Perfect for:</strong> Wedding websites, registration pages, photo sharing</p>
@@ -846,7 +846,7 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="sms">
                         <h3>5. SMS RSVP QR Code ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Opens text message with pre-filled RSVP</p>
                         <p><strong>Perfect for:</strong> Birthday parties, casual events, quick headcount</p>
@@ -856,7 +856,7 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="vcard">
                         <h3>6. Contact Card QR Code ⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Saves your contact info to guest's phone</p>
                         <p><strong>Perfect for:</strong> Event coordinator contact, vendor contacts, networking</p>
@@ -948,48 +948,53 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                     <p>Modern restaurants use QR codes to enhance customer experience, streamline operations, and boost reviews. From contactless menus to payment systems, QR codes are now essential restaurant technology.</p>
                 </section>
 
-                <div class="template-chart">
+                <div class="template-chart" data-tab="restaurants">
                     <h3>📋 Quick Template Reference</h3>
-                    <p class="chart-subtitle">QR Code templates available in this tool that work for Restaurants:</p>
+                    <p class="chart-subtitle">QR Code templates available in this tool that work for Restaurants (click to filter use cases):</p>
                     <div class="template-grid">
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="url" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">🌐</span>
                             <span class="template-name">Website/URL</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="review" onclick="toggleTemplate(this, 'restaurants')">
+                            <span class="template-icon">⭐</span>
+                            <span class="template-name">Google Review</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value active" data-template-type="wifi" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">📶</span>
                             <span class="template-name">WiFi Network</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="sms" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">💬</span>
                             <span class="template-name">SMS/Text</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="phone" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">☎️</span>
                             <span class="template-name">Phone</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="location" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">📍</span>
                             <span class="template-name">Location (Geo)</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="email" onclick="toggleTemplate(this, 'restaurants')">
                             <span class="template-icon">✉️</span>
                             <span class="template-name">Email</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
                     </div>
-                    <p class="chart-note">⭐⭐⭐⭐⭐ = Must-have for modern restaurants | ⭐⭐⭐⭐ = Highly recommended | ⭐⭐⭐ = Helpful for specific needs</p>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Must-have for modern restaurants | ⭐⭐⭐⭐ = Highly recommended | ⭐⭐⭐ = Helpful for specific needs<br><em>💡 Click any template above to show only use cases for that template type</em></p>
                 </div>
 
                 <section class="info-section">
                     <h2>🍴 Essential Restaurant Use Cases</h2>
                     
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>1. Digital Menus ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Customers scan to view your menu on their phone - contactless and always up-to-date</p>
                         <p><strong>Perfect for:</strong> Table tents, window displays, takeout menus, delivery packaging</p>
@@ -1003,7 +1008,7 @@ Label: "Scan for Menu"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="review">
                         <h3>2. Google Reviews Request ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Get more 5-star reviews by making it dead simple for happy customers</p>
                         <p><strong>Perfect for:</strong> Receipts, table tents, thank-you cards, takeout bags</p>
@@ -1021,7 +1026,7 @@ Label: "Loved your meal? Leave us a review! ⭐"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="wifi">
                         <h3>3. Guest WiFi Access ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Customers scan and auto-connect to WiFi - no typing passwords</p>
                         <p><strong>Perfect for:</strong> Table tents, bathroom mirrors, waiting areas, bar tops</p>
@@ -1036,7 +1041,7 @@ Label: "Free WiFi - Just Scan!"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>4. Allergen & Nutrition Info ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Link to detailed allergen info, nutritional data, ingredient sources</p>
                         <p><strong>Perfect for:</strong> Menu pages, dietary restriction sections, kids menus</p>
@@ -1049,7 +1054,7 @@ Label: "Allergen & Nutrition Info"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>5. Online Ordering & Delivery ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Direct customers to your ordering system (avoid delivery app fees!)</p>
                         <p><strong>Perfect for:</strong> Window signage, takeout menus, business cards, flyers</p>
@@ -1062,7 +1067,7 @@ Label: "Order Online - Save on Delivery Fees!"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="sms,url">
                         <h3>6. Loyalty Program Signup ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Enroll customers in text club or loyalty app with one scan</p>
                         <p><strong>Perfect for:</strong> Receipts, table tents, front counter signage</p>
@@ -1135,42 +1140,47 @@ Label: "Join VIP Club - Text Deals & Rewards!"</pre>
                     <p>Elevate your guest experience with QR codes throughout your property. From seamless WiFi access to contactless check-in, QR codes create a modern, convenient stay that guests remember.</p>
                 </section>
 
-                <div class="template-chart">
+                <div class="template-chart" data-tab="hotels">
                     <h3>📋 Quick Template Reference</h3>
-                    <p class="chart-subtitle">QR Code templates available in this tool that work for Hotels:</p>
+                    <p class="chart-subtitle">QR Code templates available in this tool that work for Hotels (click to filter use cases):</p>
                     <div class="template-grid">
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="wifi" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">📶</span>
                             <span class="template-name">WiFi Network</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="url" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">🌐</span>
                             <span class="template-name">Website/URL</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="review" onclick="toggleTemplate(this, 'hotels')">
+                            <span class="template-icon">⭐</span>
+                            <span class="template-name">Google Review</span>
+                            <span class="value-badge">⭐⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value active" data-template-type="phone" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">☎️</span>
                             <span class="template-name">Phone</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="location" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">📍</span>
                             <span class="template-name">Location (Geo)</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="vcard" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">📱</span>
                             <span class="template-name">Contact (vCard)</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="sms" onclick="toggleTemplate(this, 'hotels')">
                             <span class="template-icon">💬</span>
                             <span class="template-name">SMS/Text</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
                     </div>
-                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for guest satisfaction | ⭐⭐⭐⭐ = Highly recommended | ⭐⭐⭐ = Nice to have</p>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for guest satisfaction | ⭐⭐⭐⭐ = Highly recommended | ⭐⭐⭐ = Nice to have<br><em>💡 Click any template above to show only use cases for that template type</em></p>
                 </div>
 
                 <section class="info-section">
@@ -1191,7 +1201,7 @@ Label: "Free WiFi - Scan to Connect"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>2. Digital Room Service Menu ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Browse menu, see HD food photos, place orders directly from phone</p>
                         <p><strong>Perfect for:</strong> Room service menus, nightstand cards, in-room tablets</p>
@@ -1204,7 +1214,7 @@ Label: "Room Service Menu & Ordering"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>3. Local Area Guide ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Interactive map of nearby restaurants, attractions, transportation, hidden gems</p>
                         <p><strong>Perfect for:</strong> Room welcome cards, front desk, lobby kiosks</p>
@@ -1217,7 +1227,7 @@ Label: "Explore Local Attractions & Restaurants"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="phone,vcard">
                         <h3>4. Concierge/Front Desk Contact ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> One-tap calling or texting to front desk, concierge, maintenance</p>
                         <p><strong>Perfect for:</strong> Room placards, bathroom signs, emergency info cards</p>
@@ -1234,7 +1244,7 @@ Label: "Save Hotel Contacts"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>5. Mobile Check-In/Check-Out ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Skip the front desk line - check in/out from your phone</p>
                         <p><strong>Perfect for:</strong> Parking lot signs, elevator lobbies, confirmation emails</p>
@@ -1247,7 +1257,7 @@ Label: "Skip the Line - Mobile Check-In"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="review,url">
                         <h3>6. Feedback & Reviews ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Capture guest feedback while experience is fresh, direct happy guests to review sites</p>
                         <p><strong>Perfect for:</strong> Check-out desk, room key return, thank you cards</p>
@@ -1323,48 +1333,53 @@ Label: "How Was Your Stay?"</pre>
                     <p>Stand out in networking situations, streamline client communication, and create memorable brand touchpoints. From business cards to trade shows, QR codes are the modern professional's secret weapon.</p>
                 </section>
 
-                <div class="template-chart">
+                <div class="template-chart" data-tab="business">
                     <h3>📋 Quick Template Reference</h3>
-                    <p class="chart-subtitle">QR Code templates available in this tool that work for Business:</p>
+                    <p class="chart-subtitle">QR Code templates available in this tool that work for Business (click to filter use cases):</p>
                     <div class="template-grid">
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="vcard" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">📱</span>
                             <span class="template-name">Contact (vCard)</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="url" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">🌐</span>
                             <span class="template-name">Website/URL</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="review" onclick="toggleTemplate(this, 'business')">
+                            <span class="template-icon">⭐</span>
+                            <span class="template-name">Google Review</span>
+                            <span class="value-badge">⭐⭐⭐⭐</span>
+                        </div>
+                        <div class="template-item high-value active" data-template-type="email" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">✉️</span>
                             <span class="template-name">Email</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value">
+                        <div class="template-item high-value active" data-template-type="phone" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">☎️</span>
                             <span class="template-name">Phone</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="calendar" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">📅</span>
                             <span class="template-name">Calendar Event</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value">
+                        <div class="template-item medium-value active" data-template-type="location" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">📍</span>
                             <span class="template-name">Location (Geo)</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
                     </div>
-                    <p class="chart-note">⭐⭐⭐⭐⭐ = Business essential | ⭐⭐⭐⭐ = Highly professional | ⭐⭐⭐ = Specialized uses</p>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Business essential | ⭐⭐⭐⭐ = Highly professional | ⭐⭐⭐ = Specialized uses<br><em>💡 Click any template above to show only use cases for that template type</em></p>
                 </div>
 
                 <section class="info-section">
                     <h2>🤝 Essential Business Use Cases</h2>
                     
-                    <div class="event-template">
+                    <div class="event-template" data-templates="vcard">
                         <h3>1. Digital Business Card ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> One scan adds your complete contact info to their phone - no typing required</p>
                         <p><strong>Perfect for:</strong> Physical business cards, email signatures, LinkedIn profiles, conference badges</p>
@@ -1382,7 +1397,7 @@ Label: "Save My Contact"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>2. Portfolio/Case Study Links ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Instantly share your best work, testimonials, project galleries</p>
                         <p><strong>Perfect for:</strong> Proposals, pitch decks, leave-behinds, office wall displays</p>
@@ -1395,7 +1410,7 @@ Label: "View Our Recent Work"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>3. Trade Show Booth Engagement ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Capture leads, share product info, drive booth traffic with contests</p>
                         <p><strong>Perfect for:</strong> Booth banners, table displays, giveaway items, badge holders</p>
@@ -1412,7 +1427,7 @@ Label: "Watch 2-Minute Demo"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url,calendar">
                         <h3>4. Appointment Scheduling ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Let clients book meetings directly into your calendar with one scan</p>
                         <p><strong>Perfect for:</strong> Email signatures, business cards, office signage, proposal cover pages</p>
@@ -1425,7 +1440,7 @@ Label: "Schedule a Free Consultation"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>5. LinkedIn Connection Request ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Instant LinkedIn connection - no searching, no typing names</p>
                         <p><strong>Perfect for:</strong> Conference materials, business cards, email signatures, Zoom backgrounds</p>
@@ -1438,7 +1453,7 @@ Label: "Connect on LinkedIn"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url,email">
                         <h3>6. Email Newsletter Signup ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Grow your email list from in-person interactions</p>
                         <p><strong>Perfect for:</strong> Events, receipts, packaging, office waiting rooms</p>
@@ -1451,7 +1466,7 @@ Label: "Get Monthly Industry Insights"</pre>
                         </div>
                     </div>
 
-                    <div class="event-template">
+                    <div class="event-template" data-templates="url">
                         <h3>7. Video Testimonials & Social Proof ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Show (not tell) your credibility with client video testimonials</p>
                         <p><strong>Perfect for:</strong> Proposals, sales presentations, office walls, pitch decks</p>
