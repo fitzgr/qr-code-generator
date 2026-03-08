@@ -268,6 +268,10 @@ function applyCroppedImage() {
             // Regenerate QR code if one exists
             if (currentQRDataURL) {
                 saveCurrentState('Added logo');
+                // Analytics: Track logo added
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'logo_selected');
+                }
                 generateQRCode();
             }
         };
@@ -285,6 +289,11 @@ function applyCroppedImage() {
 
             // Suggest High error correction when background is added
             suggestErrorCorrectionLevel();
+
+            // Analytics: Track background upload
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_background_uploaded');
+            }
 
             if (currentQRDataURL) {
                 saveCurrentState('Added artistic background');
@@ -531,6 +540,13 @@ templateBtns.forEach(btn => {
         textInput.value = templateText;
         textInput.focus();
         
+        // Analytics: Track template selection
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'input_template_selected', {
+                'template': template
+            });
+        }
+        
         // Select the template text for easy editing
         if (template === 'url') {
             textInput.setSelectionRange(8, 8); // Place cursor after https://
@@ -563,7 +579,7 @@ colorPresets.forEach(btn => {
         
         // Track color preset selection
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'color_preset_selected', {
+            gtag('event', 'colors_preset_selected', {
                 'dark_color': darkColor,
                 'light_color': lightColor
             });
@@ -580,6 +596,13 @@ darkColorPicker.addEventListener('input', (e) => {
     darkColorText.value = color;
     currentDarkColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
+    // Analytics: Track dark color changed via picker
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'colors_dark_changed', {
+            'method': 'picker',
+            'value': color
+        });
+    }
     if (currentQRDataURL) {
         saveCurrentState('Changed dark color');
         generateQRCode();
@@ -591,6 +614,13 @@ lightColorPicker.addEventListener('input', (e) => {
     lightColorText.value = color;
     currentLightColor = color;
     colorPresets.forEach(b => b.classList.remove('active'));
+    // Analytics: Track light color changed via picker
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'colors_light_changed', {
+            'method': 'picker',
+            'value': color
+        });
+    }
     if (currentQRDataURL) {
         saveCurrentState('Changed light color');
         generateQRCode();
@@ -603,6 +633,13 @@ darkColorText.addEventListener('input', (e) => {
         darkColorPicker.value = color;
         currentDarkColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
+        // Analytics: Track dark color changed via text input
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'colors_dark_changed', {
+                'method': 'text_input',
+                'value': color
+            });
+        }
         if (currentQRDataURL) {
             saveCurrentState('Changed dark color');
             generateQRCode();
@@ -616,6 +653,13 @@ lightColorText.addEventListener('input', (e) => {
         lightColorPicker.value = color;
         currentLightColor = color;
         colorPresets.forEach(b => b.classList.remove('active'));
+        // Analytics: Track light color changed via text input
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'colors_light_changed', {
+                'method': 'text_input',
+                'value': color
+            });
+        }
         if (currentQRDataURL) {
             saveCurrentState('Changed light color');
             generateQRCode();
@@ -627,6 +671,13 @@ labelColorPicker.addEventListener('input', (e) => {
     const color = e.target.value;
     labelColorText.value = color;
     currentLabelColor = color;
+    // Analytics: Track label color changed via picker
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'colors_label_changed', {
+            'method': 'picker',
+            'value': color
+        });
+    }
     if (currentQRDataURL) {
         saveCurrentState('Changed label color');
         generateQRCode();
@@ -638,6 +689,13 @@ labelColorText.addEventListener('input', (e) => {
     if (/^#[0-9A-F]{6}$/i.test(color)) {
         labelColorPicker.value = color;
         currentLabelColor = color;
+        // Analytics: Track label color changed via text input
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'colors_label_changed', {
+                'method': 'text_input',
+                'value': color
+            });
+        }
         if (currentQRDataURL) {
             saveCurrentState('Changed label color');
             generateQRCode();
@@ -665,8 +723,8 @@ styleBtns.forEach(btn => {
         
         // Track style selection
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'style_selected', {
-                'style': currentQRStyle
+            gtag('event', 'style_pattern_selected', {
+                'pattern': currentQRStyle
             });
         }
     });
@@ -678,7 +736,7 @@ errorCorrectionLevel.addEventListener('change', (e) => {
     
     // Track error correction selection
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'error_correction_selected', {
+        gtag('event', 'error_correction_level_changed', {
             'level': currentErrorCorrectionLevel
         });
     }
@@ -957,6 +1015,13 @@ function undo() {
         restoreState(stateHistory[currentStateIndex]);
         updateUndoRedoButtons();
         historyDropdown.classList.add('hidden');
+        // Analytics: Track undo action
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'history_undo_clicked', {
+                'from_position': `${currentStateIndex + 2}/${stateHistory.length}`,
+                'to_position': `${currentStateIndex + 1}/${stateHistory.length}`
+            });
+        }
     }
 }
 
@@ -967,6 +1032,13 @@ function redo() {
         restoreState(stateHistory[currentStateIndex]);
         updateUndoRedoButtons();
         historyDropdown.classList.add('hidden');
+        // Analytics: Track redo action
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'history_redo_clicked', {
+                'from_position': `${currentStateIndex}/${stateHistory.length}`,
+                'to_position': `${currentStateIndex + 1}/${stateHistory.length}`
+            });
+        }
     }
 }
 
@@ -1053,9 +1125,22 @@ function jumpToHistoryState(index) {
         return;
     }
     
+    const fromPos = currentStateIndex + 1;
+    const toPos = index + 1;
+    const statesJumped = Math.abs(toPos - fromPos);
+    
     currentStateIndex = index;
     restoreState(stateHistory[index]);
     updateUndoRedoButtons();
+    
+    // Analytics: Track history jump from dropdown
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'history_jump_selected', {
+            'from_position': `${fromPos}/${stateHistory.length}`,
+            'to_position': `${toPos}/${stateHistory.length}`,
+            'states_jumped': statesJumped
+        });
+    }
 }
 
 // Save history to localStorage
@@ -1164,6 +1249,12 @@ labelSizeRange.addEventListener('input', (e) => {
 sizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
         saveCurrentState(`Changed size to ${e.target.value}`);
+        // Analytics: Track QR size adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'size_qr_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -1171,6 +1262,12 @@ sizeRange.addEventListener('change', (e) => {
 borderRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
         saveCurrentState(`Changed border to ${e.target.value}`);
+        // Analytics: Track border adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'size_border_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -1178,6 +1275,12 @@ borderRange.addEventListener('change', (e) => {
 logoSizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
         saveCurrentState(`Changed logo size to ${e.target.value}%`);
+        // Analytics: Track logo size adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'size_logo_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -1185,6 +1288,12 @@ logoSizeRange.addEventListener('change', (e) => {
 labelSizeRange.addEventListener('change', (e) => {
     if (currentQRDataURL) {
         saveCurrentState(`Changed label size to ${e.target.value}%`);
+        // Analytics: Track label size adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'size_label_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -1193,6 +1302,12 @@ labelSizeRange.addEventListener('change', (e) => {
 labelInput.addEventListener('input', (e) => {
     if (currentQRDataURL) {
         saveCurrentState('Modified label text');
+        // Analytics: Track label addition
+        if (typeof gtag !== 'undefined' && e.target.value.length > 0) {
+            gtag('event', 'input_label_added', {
+                'label_length': e.target.value.length
+            });
+        }
         generateQRCode();
     }
 });
@@ -1228,6 +1343,10 @@ clearBgBtn.addEventListener('click', () => {
     bgImageInput.value = '';
     aiPromptInput.value = '';
     updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+    // Analytics: Track background removal
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'artistic_background_cleared');
+    }
     if (currentQRDataURL) {
         generateQRCode();
     }
@@ -1334,6 +1453,13 @@ generateAiImageBtn.addEventListener('click', async () => {
 
     if (isGeneratingAI) {
         return;
+    }
+
+    // Analytics: Track AI image generation request
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'artistic_ai_requested', {
+            'prompt_length': prompt.length
+        });
     }
 
     generateAIImageWithRetry(prompt, 1);
@@ -1540,6 +1666,11 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         backgroundImage = img;
         aiImageStatus.innerHTML = 'Vision rendered successfully! ✨ <small style="color: #666;">(If you see a rate limit message, click "Try Backup Renderer")</small>';
         aiImageStatus.style.color = '#4CAF50';
+        
+        // Analytics: Track successful AI image generation
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'artistic_ai_success');
+        }
         
         // Play notification sound
         playNotificationSound();
@@ -1849,6 +1980,12 @@ blendModeSelect.addEventListener('change', (e) => {
     currentBlendMode = e.target.value;
     if (currentQRDataURL && backgroundImage) {
         saveCurrentState(`Changed blend mode to ${e.target.value}`);
+        // Analytics: Track blend mode change
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'artistic_blend_mode_changed', {
+                'mode': e.target.value
+            });
+        }
         generateQRCode();
     }
 });
@@ -1861,6 +1998,12 @@ bgOpacityRange.addEventListener('change', (e) => {
     currentBgOpacity = parseInt(e.target.value);
     if (currentQRDataURL && backgroundImage) {
         saveCurrentState(`Changed background opacity to ${e.target.value}%`);
+        // Analytics: Track opacity adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'artistic_opacity_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -1873,6 +2016,12 @@ qrStrengthRange.addEventListener('change', (e) => {
     currentQrStrength = parseInt(e.target.value);
     if (currentQRDataURL && backgroundImage) {
         saveCurrentState(`Changed QR strength to ${e.target.value}%`);
+        // Analytics: Track QR strength adjustment
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'artistic_qr_strength_adjusted', {
+                'value': parseInt(e.target.value)
+            });
+        }
         generateQRCode();
     }
 });
@@ -2313,6 +2462,10 @@ clearLogoBtn.addEventListener('click', () => {
     // Regenerate QR code if one exists
     if (currentQRDataURL) {
         saveCurrentState('Removed logo');
+        // Analytics: Track logo removed
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'logo_removed');
+        }
         generateQRCode();
     }
 });
@@ -2338,6 +2491,12 @@ function addQRToBucket() {
     
     if (qrBucket.length >= MAX_BUCKET_SIZE_OTHER) {
         alert(`Maximum ${MAX_BUCKET_SIZE_OTHER} QR codes allowed in bucket!`);
+        // Analytics: Track bucket limit reached
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'bucket_limit_reached', {
+                'max_size': MAX_BUCKET_SIZE_OTHER
+            });
+        }
         return;
     }
     
@@ -2424,6 +2583,18 @@ function addQRToBucket() {
     
     qrBucket.push(qrData);
     qrMetadataHistory.push(metadata);
+    
+    // Analytics: Track QR added to bucket
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'bucket_qr_added', {
+            'bucket_count': qrBucket.length,
+            'has_logo': metadata.logo.hasLogo,
+            'has_label': metadata.label !== '',
+            'has_artistic': metadata.artistic.hasBackground,
+            'style': metadata.style
+        });
+    }
+    
     updateBucketUI();
     showNotification(`Added to bucket! (${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`);
     
@@ -2526,6 +2697,12 @@ function toggleBucketSelection(index) {
 
 function removeFromBucket(index) {
     qrBucket.splice(index, 1);
+    // Analytics: Track QR removed from bucket
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'bucket_qr_removed', {
+            'bucket_count': qrBucket.length
+        });
+    }
     updateBucketUI();
     showNotification('Removed from bucket');
 }
@@ -2534,7 +2711,14 @@ function clearBucket() {
     if (qrBucket.length === 0) return;
     
     if (confirm(`Clear all ${qrBucket.length} QR codes from bucket?`)) {
+        const previousCount = qrBucket.length;
         qrBucket = [];
+        // Analytics: Track bucket cleared
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'bucket_cleared', {
+                'count': previousCount
+            });
+        }
         updateBucketUI();
         showNotification('Bucket cleared');
     }
@@ -2553,7 +2737,15 @@ redoBtn.addEventListener('click', redo);
 // History dropdown toggle
 historyDropdownBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    const wasHidden = historyDropdown.classList.contains('hidden');
     historyDropdown.classList.toggle('hidden');
+    // Analytics: Track dropdown open
+    if (typeof gtag !== 'undefined' && wasHidden) {
+        gtag('event', 'history_dropdown_opened', {
+            'history_count': stateHistory.length,
+            'current_position': `${currentStateIndex + 1}/${stateHistory.length}`
+        });
+    }
 });
 
 // Close dropdown when clicking outside
@@ -2576,11 +2768,19 @@ document.addEventListener('keydown', (e) => {
     // Ctrl+Z or Cmd+Z for undo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
+        // Analytics: Track keyboard undo
+        if (typeof gtag !== 'undefined' && currentStateIndex > 0) {
+            gtag('event', 'history_keyboard_undo');
+        }
         undo();
     }
     // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z for redo
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
+        // Analytics: Track keyboard redo
+        if (typeof gtag !== 'undefined' && currentStateIndex < stateHistory.length - 1) {
+            gtag('event', 'history_keyboard_redo');
+        }
         redo();
     }
 });
@@ -3987,7 +4187,7 @@ downloadPngBtn.addEventListener('click', async () => {
         }
         
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'download', {
+            gtag('event', 'download_batch_png', {
                 'format': 'PNG',
                 'count': selectedQRs.length,
                 'from_bucket': 'yes'
@@ -4049,7 +4249,7 @@ downloadPngBtn.addEventListener('click', async () => {
     
     // Track download
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'download', {
+        gtag('event', 'download_single_png', {
             'format': 'PNG',
             'has_label': label ? 'yes' : 'no'
         });
@@ -4102,7 +4302,7 @@ downloadSvgBtn.addEventListener('click', async () => {
         }
         
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'download', {
+            gtag('event', 'download_batch_svg', {
                 'format': 'SVG',
                 'count': selectedQRs.length,
                 'from_bucket': 'yes'
@@ -4131,7 +4331,7 @@ downloadSvgBtn.addEventListener('click', async () => {
     
     // Track download
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'download', {
+        gtag('event', 'download_single_svg', {
             'format': 'SVG'
         });
     }
@@ -4232,7 +4432,7 @@ downloadJpgBtn.addEventListener('click', async () => {
     
     // Track download
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'download', {
+        gtag('event', 'download_single_jpg', {
             'format': 'JPG',
             'has_label': label ? 'yes' : 'no'
         });
@@ -4298,7 +4498,7 @@ downloadPdfBtn.addEventListener('click', () => {
         showNotification(`${selectedQRs.length} QR Codes downloaded as PDF!`);
         
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'download', {
+            gtag('event', 'download_batch_pdf', {
                 'format': 'PDF',
                 'count': selectedQRs.length,
                 'from_bucket': 'yes'
@@ -4358,7 +4558,7 @@ downloadPdfBtn.addEventListener('click', () => {
     
     // Track download
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'download', {
+        gtag('event', 'download_single_pdf', {
             'format': 'PDF',
             'has_label': label ? 'yes' : 'no'
         });
@@ -4432,7 +4632,7 @@ downloadBucketPdfBtn.addEventListener('click', () => {
     showNotification(`${selectedQRs.length} QR codes downloaded as PDF grid!`);
 
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'batch_download', {
+        gtag('event', 'download_batch_pdf', {
             'format': 'PDF',
             'count': selectedQRs.length
         });
@@ -4500,7 +4700,7 @@ downloadBucketPngBtn.addEventListener('click', async () => {
     showNotification(`${selectedQRs.length} PNG files downloaded as ZIP!`);
     
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'batch_download', {
+        gtag('event', 'download_batch_png', {
             'format': 'PNG_ZIP',
             'count': selectedQRs.length
         });
@@ -4592,7 +4792,7 @@ downloadBucketJpgBtn.addEventListener('click', async () => {
     showNotification(`${selectedQRs.length} JPG files downloaded as ZIP!`);
     
     if (typeof gtag !== 'undefined') {
-        gtag('event', 'batch_download', {
+        gtag('event', 'download_batch_jpg', {
             'format': 'JPG_ZIP',
             'count': selectedQRs.length
         });
@@ -4820,7 +5020,7 @@ if (downloadMetadataPdfBtn) {
         showNotification(`Metadata PDF with ${qrBucket.length} QR codes downloaded!`);
         
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'metadata_pdf_download', {
+            gtag('event', 'download_metadata_pdf', {
                 'count': qrBucket.length
             });
         }
@@ -4975,7 +5175,7 @@ if (downloadPrintablePdfBtn) {
         showNotification(`Printable PDF with ${qrBucket.length} QR codes downloaded!`);
         
         if (typeof gtag !== 'undefined') {
-            gtag('event', 'printable_pdf_download', {
+            gtag('event', 'download_printable_pdf', {
                 'count': qrBucket.length
             });
         }
