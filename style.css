@@ -1275,10 +1275,13 @@ input[type="range"]::-moz-range-thumb {
 
 /* Print Styles */
 @media print {
+    @page {
+        margin: 0.75in 0.75in 1in 0.75in; /* top, right, bottom, left - extra space at bottom for page number */
+    }
+    
     body {
         background: white;
         padding: 0;
-        counter-reset: page;
     }
     
     .container,
@@ -1290,17 +1293,33 @@ input[type="range"]::-moz-range-thumb {
     
     .tab-content.active {
         display: block !important;
+        position: relative;
     }
     
     .seo-content {
         background: white;
         padding: 20px;
+        position: relative;
+    }
+    
+    /* Page numbers at bottom of every page */
+    .seo-content::after {
+        content: "Page " counter(page) " | Created with https://fitzgr.github.io/qr-code-generator/";
+        position: fixed;
+        bottom: 0.5in;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 10px;
+        color: #666;
+        padding: 10px 0;
+        border-top: 1px solid #ddd;
+        background: white;
     }
     
     .info-section {
         page-break-inside: avoid;
         margin-bottom: 30px;
-        counter-increment: page;
     }
     
     .event-template,
@@ -1309,9 +1328,9 @@ input[type="range"]::-moz-range-thumb {
         border: 1px solid #ddd;
     }
     
-    /* Print header */
+    /* Print header - first page only */
     .seo-content::before {
-        content: "QR Code Generator Guide - https://fitzgr.github.io/qr-code-generator/ | Page " counter(page);
+        content: "QR Code Generator Guide - https://fitzgr.github.io/qr-code-generator/";
         display: block;
         text-align: center;
         font-size: 14px;
@@ -1320,18 +1339,6 @@ input[type="range"]::-moz-range-thumb {
         padding: 20px;
         border-bottom: 2px solid #667eea;
         margin-bottom: 30px;
-    }
-    
-    /* Print footer on every page */
-    .seo-content::after {
-        content: "Created with https://fitzgr.github.io/qr-code-generator/";
-        display: block;
-        text-align: center;
-        font-size: 12px;
-        color: #666;
-        padding: 20px;
-        border-top: 1px solid #ddd;
-        margin-top: 30px;
     }
     
     /* Template chart print styles */
