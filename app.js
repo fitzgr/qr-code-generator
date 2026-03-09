@@ -483,6 +483,12 @@ templateBtns.forEach(btn => {
         const template = btn.dataset.template;
         let templateText = '';
         
+        // Toggle filter state
+        btn.classList.toggle('active-filter');
+        
+        // Filter use cases based on active filters
+        filterUseCases();
+        
         switch(template) {
             case 'google-review':
                 templateText = 'https://search.google.com/local/writereview?placeid=your place id';
@@ -559,6 +565,341 @@ templateBtns.forEach(btn => {
         }
     });
 });
+
+// ===== USE CASE EXAMPLES SECTION =====
+
+// Use case examples data
+const useCaseExamples = [
+    // Google Review examples
+    {
+        type: 'google-review',
+        icon: '⭐',
+        title: 'Restaurant Review',
+        description: 'Table tent or receipt QR for customer feedback',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Love your meal? Leave us a review!'
+    },
+    {
+        type: 'google-review',
+        icon: '🏥',
+        title: 'Medical Office Review',
+        description: 'Reception desk QR for patient reviews',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Share your experience'
+    },
+    {
+        type: 'google-review',
+        icon: '🏪',
+        title: 'Retail Store Review',
+        description: 'Point of sale QR for customer feedback',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Rate your shopping experience'
+    },
+    
+    // URL examples
+    {
+        type: 'url',
+        icon: '🌐',
+        title: 'Website Link',
+        description: 'Business card or flyer link to website',
+        content: 'https://www.yourcompany.com',
+        label: 'Visit our website'
+    },
+    {
+        type: 'url',
+        icon: '📱',
+        title: 'Social Media Profile',
+        description: 'Instagram/Facebook/LinkedIn profile link',
+        content: 'https://www.instagram.com/yourcompany',
+        label: 'Follow us on Instagram'
+    },
+    {
+        type: 'url',
+        icon: '📄',
+        title: 'Product Manual',
+        description: 'Link to PDF manual or documentation',
+        content: 'https://www.yourcompany.com/manual.pdf',
+        label: 'View Product Manual'
+    },
+    {
+        type: 'url',
+        icon: '🎥',
+        title: 'Video Tutorial',
+        description: 'YouTube or video hosting link',
+        content: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        label: 'Watch Tutorial'
+    },
+    
+    // Email examples
+    {
+        type: 'email',
+        icon: '📧',
+        title: 'Contact Email',
+        description: 'Business card email link',
+        content: 'mailto:contact@yourcompany.com',
+        label: 'Email us'
+    },
+    {
+        type: 'email',
+        icon: '💼',
+        title: 'Sales Inquiry',
+        description: 'Pre-filled subject for sales questions',
+        content: 'mailto:sales@yourcompany.com?subject=Product%20Inquiry',
+        label: 'Contact Sales'
+    },
+    {
+        type: 'email',
+        icon: '🛠️',
+        title: 'Support Request',
+        description: 'Pre-filled support email',
+        content: 'mailto:support@yourcompany.com?subject=Support%20Request&body=Please%20describe%20your%20issue',
+        label: 'Get Support'
+    },
+    
+    // Phone examples
+    {
+        type: 'phone',
+        icon: '📞',
+        title: 'Business Phone',
+        description: 'One-tap call to business number',
+        content: 'tel:+15555551234',
+        label: 'Call us'
+    },
+    {
+        type: 'phone',
+        icon: '🚑',
+        title: 'Emergency Contact',
+        description: 'Quick dial emergency number',
+        content: 'tel:+15555559999',
+        label: 'Emergency Line'
+    },
+    
+    // SMS examples
+    {
+        type: 'sms',
+        icon: '💬',
+        title: 'Text to Join',
+        description: 'SMS opt-in for marketing',
+        content: 'sms:+15555551234?body=JOIN',
+        label: 'Text JOIN to subscribe'
+    },
+    {
+        type: 'sms',
+        icon: '📲',
+        title: 'Reservation Request',
+        description: 'Pre-filled text for reservations',
+        content: 'sms:+15555551234?body=I\'d%20like%20to%20make%20a%20reservation%20for',
+        label: 'Text to reserve'
+    },
+    
+    // WiFi examples
+    {
+        type: 'wifi',
+        icon: '📶',
+        title: 'Guest WiFi',
+        description: 'Restaurant or office guest network',
+        content: 'WIFI:T:WPA;S:GuestNetwork;P:Welcome123;;',
+        label: 'Connect to WiFi'
+    },
+    {
+        type: 'wifi',
+        icon: '🏨',
+        title: 'Hotel WiFi',
+        description: 'Room card or information sheet',
+        content: 'WIFI:T:WPA;S:HotelWiFi;P:SecurePass456;;',
+        label: 'Hotel WiFi Access'
+    },
+    
+    // vCard examples
+    {
+        type: 'vcard',
+        icon: '👤',
+        title: 'Business Card',
+        description: 'Save contact info to phone',
+        content: 'BEGIN:VCARD\nVERSION:3.0\nFN:John Smith\nTEL:+15555551234\nEMAIL:john@company.com\nORG:Acme Corp\nTITLE:Sales Director\nEND:VCARD',
+        label: 'Save Contact'
+    },
+    {
+        type: 'vcard',
+        icon: '💼',
+        title: 'Team Member Card',
+        description: 'Employee directory or trade show',
+        content: 'BEGIN:VCARD\nVERSION:3.0\nFN:Jane Doe\nTEL:+15555555678\nEMAIL:jane@company.com\nORG:Acme Corp\nTITLE:Marketing Manager\nURL:https://linkedin.com/in/janedoe\nEND:VCARD',
+        label: 'Connect with me'
+    },
+    
+    // MECARD examples
+    {
+        type: 'mecard',
+        icon: '📇',
+        title: 'Simple Contact',
+        description: 'Compact contact format (Japanese)',
+        content: 'MECARD:N:Tanaka,Yuki;TEL:+81901234567;EMAIL:yuki@example.jp;URL:https://example.jp;;',
+        label: 'Add Contact'
+    },
+    
+    // Event examples
+    {
+        type: 'event',
+        icon: '📅',
+        title: 'Conference Event',
+        description: 'Add event to calendar',
+        content: 'BEGIN:VEVENT\nSUMMARY:Tech Conference 2026\nDTSTART:20260315T090000Z\nDTEND:20260315T170000Z\nLOCATION:Convention Center\nDESCRIPTION:Annual technology conference\nEND:VEVENT',
+        label: 'Add to Calendar'
+    },
+    {
+        type: 'event',
+        icon: '🎉',
+        title: 'Party Invitation',
+        description: 'Event invitation with details',
+        content: 'BEGIN:VEVENT\nSUMMARY:Office Holiday Party\nDTSTART:20261220T180000Z\nDTEND:20261220T220000Z\nLOCATION:Downtown Plaza\nDESCRIPTION:Join us for our annual celebration!\nEND:VEVENT',
+        label: 'Save the Date'
+    },
+    {
+        type: 'event',
+        icon: '🏃',
+        title: 'Fitness Class',
+        description: 'Recurring class schedule',
+        content: 'BEGIN:VEVENT\nSUMMARY:Yoga Class\nDTSTART:20260310T180000Z\nDTEND:20260310T190000Z\nLOCATION:Studio B\nDESCRIPTION:Beginner-friendly yoga session\nEND:VEVENT',
+        label: 'Join Class'
+    },
+    
+    // Location examples
+    {
+        type: 'geo',
+        icon: '📍',
+        title: 'Store Location',
+        description: 'Open maps to business address',
+        content: 'geo:37.7749,-122.4194',
+        label: 'Get Directions'
+    },
+    {
+        type: 'geo',
+        icon: '🅿️',
+        title: 'Parking Location',
+        description: 'Find parking garage or lot',
+        content: 'geo:40.7128,-74.0060',
+        label: 'Find Parking'
+    },
+    {
+        type: 'geo',
+        icon: '🏛️',
+        title: 'Tourist Attraction',
+        description: 'Navigate to landmark or attraction',
+        content: 'geo:48.8584,2.2945,100',
+        label: 'Visit Eiffel Tower'
+    }
+];
+
+// Toggle use cases section
+function toggleUseCases() {
+    const container = document.getElementById('use-cases-container');
+    const icon = document.getElementById('use-cases-toggle-icon');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        icon.classList.add('expanded');
+        renderUseCases(); // Render on first open
+    } else {
+        container.style.display = 'none';
+        icon.classList.remove('expanded');
+    }
+}
+
+// Render use case cards
+function renderUseCases() {
+    const grid = document.getElementById('use-case-grid');
+    const noExamplesMsg = document.getElementById('no-examples-message');
+    
+    // Get active filters
+    const activeFilters = Array.from(document.querySelectorAll('.template-btn.active-filter'))
+        .map(btn => btn.dataset.template);
+    
+    // Filter examples
+    let filteredExamples = useCaseExamples;
+    if (activeFilters.length > 0) {
+        filteredExamples = useCaseExamples.filter(example => 
+            activeFilters.includes(example.type)
+        );
+    }
+    
+    // Show/hide no examples message
+    if (filteredExamples.length === 0) {
+        grid.innerHTML = '';
+        noExamplesMsg.style.display = 'block';
+        return;
+    } else {
+        noExamplesMsg.style.display = 'none';
+    }
+    
+    // Render cards
+    grid.innerHTML = filteredExamples.map(example => `
+        <div class="use-case-card" onclick="applyUseCase('${example.type}', '${escapeHtml(example.content)}', '${escapeHtml(example.label)}')">
+            <div class="use-case-icon">${example.icon}</div>
+            <div class="use-case-title">${example.title}</div>
+            <div class="use-case-description">${example.description}</div>
+            <div class="use-case-preview">${example.content.substring(0, 50)}${example.content.length > 50 ? '...' : ''}</div>
+        </div>
+    `).join('');
+}
+
+// Filter use cases based on active template filters
+function filterUseCases() {
+    const container = document.getElementById('use-cases-container');
+    if (container.style.display !== 'none') {
+        renderUseCases();
+    }
+}
+
+// Apply use case to form
+function applyUseCase(type, content, label) {
+    textInput.value = unescapeHtml(content);
+    labelInput.value = unescapeHtml(label);
+    
+    // Handle Google review specific settings
+    if (type === 'google-review') {
+        isGoogleReviewMode = true;
+        document.getElementById('googleColorToggle').style.display = 'block';
+    } else {
+        isGoogleReviewMode = false;
+        document.getElementById('googleColorToggle').style.display = 'none';
+    }
+    
+    // Flash the textarea to show it changed
+    textInput.style.background = '#e7f3ff';
+    setTimeout(() => {
+        textInput.style.background = '';
+    }, 500);
+    
+    // Focus the textarea
+    textInput.focus();
+    
+    // Analytics
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'use_case_applied', {
+            'use_case_type': type
+        });
+    }
+}
+
+// HTML escape/unescape helpers
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function unescapeHtml(text) {
+    return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'");
+}
 
 // Color preset buttons
 colorPresets.forEach(btn => {

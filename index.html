@@ -90,6 +90,23 @@
                         🔍 Find your Place ID, for Google Review
                     </a>
                 </div>
+                
+                <!-- Use Case Examples Section -->
+                <div class="use-cases-section" style="margin-top: 20px;">
+                    <button class="use-cases-toggle" onclick="toggleUseCases()">
+                        <span id="use-cases-toggle-icon">▶</span>
+                        <strong>Use Case Examples</strong>
+                        <span style="font-size: 11px; color: #666; margin-left: 8px;">(Click template buttons above to filter)</span>
+                    </button>
+                    <div id="use-cases-container" style="display: none; margin-top: 12px; max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; background: #fafafa;">
+                        <div class="use-case-grid" id="use-case-grid">
+                            <!-- Use cases will be dynamically filtered here -->
+                        </div>
+                        <div id="no-examples-message" style="display: none; text-align: center; padding: 20px; color: #666;">
+                            No examples for this template yet.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="section">
