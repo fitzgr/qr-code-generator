@@ -308,6 +308,12 @@ class QRCodeJSAdapter {
     static generate(container, options) {
         return new Promise((resolve, reject) => {
             try {
+                // Check if QRCode is available
+                if (typeof QRCode === 'undefined') {
+                    reject(new Error('QRCode library not loaded'));
+                    return;
+                }
+                
                 // Clear container
                 container.innerHTML = '';
                 
@@ -336,8 +342,14 @@ class QRCodeJSAdapter {
     }
     
     static mapErrorCorrection(level) {
-        const map = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
-        return map[level] || QRCode.CorrectLevel.M;
+        // QRCode.js uses CorrectLevel enum: L=1, M=0, Q=3, H=2
+        if (typeof QRCode !== 'undefined' && QRCode.CorrectLevel) {
+            const map = { L: QRCode.CorrectLevel.L, M: QRCode.CorrectLevel.M, Q: QRCode.CorrectLevel.Q, H: QRCode.CorrectLevel.H };
+            return map[level] || QRCode.CorrectLevel.M;
+        }
+        // Fallback to numeric values
+        const numericMap = { L: 1, M: 0, Q: 3, H: 2 };
+        return numericMap[level] || 0;
     }
 }
 
@@ -345,6 +357,12 @@ class QRCodeStylingAdapter {
     static async generate(container, options) {
         return new Promise((resolve, reject) => {
             try {
+                // Check if QRCodeStyling is available
+                if (typeof QRCodeStyling === 'undefined') {
+                    reject(new Error('QRCodeStyling library not loaded'));
+                    return;
+                }
+                
                 const config = {
                     width: options.width,
                     height: options.height,
@@ -406,6 +424,15 @@ class NodeQRCodeAdapter {
     static async generate(container, options) {
         return new Promise((resolve, reject) => {
             try {
+                // node-qrcode exposes as window.QRCode but we need to handle conflict
+                // Access it as window.QRCode or check for toDataURL method
+                const QRCodeLib = window.QRCode;
+                
+                if (!QRCodeLib || typeof QRCodeLib.toDataURL !== 'function') {
+                    reject(new Error('node-qrcode library not loaded or conflicts with qrcodejs'));
+                    return;
+                }
+                
                 const config = {
                     errorCorrectionLevel: options.errorCorrectionLevel,
                     type: options.format === 'svg' ? 'svg' : 'image/png',
@@ -419,7 +446,7 @@ class NodeQRCodeAdapter {
                 };
                 
                 if (options.format === 'svg') {
-                    QRCode.toString(options.text, { ...config, type: 'svg' }, (err, svg) => {
+                    QRCodeLib.toString(options.text, { ...config, type: 'svg' }, (err, svg) => {
                         if (err) {
                             reject(err);
                         } else {
@@ -428,7 +455,7 @@ class NodeQRCodeAdapter {
                         }
                     });
                 } else {
-                    QRCode.toDataURL(options.text, config, (err, url) => {
+                    QRCodeLib.toDataURL(options.text, config, (err, url) => {
                         if (err) {
                             reject(err);
                         } else {
@@ -451,6 +478,12 @@ class KjuaAdapter {
     static generate(container, options) {
         return new Promise((resolve, reject) => {
             try {
+                // Check if kjua is available
+                if (typeof kjua === 'undefined') {
+                    reject(new Error('kjua library not loaded'));
+                    return;
+                }
+                
                 const config = {
                     text: options.text,
                     size: options.width,
@@ -488,6 +521,12 @@ class QRLibraryManager {
         this.loader = new LibraryLoader();
         this.currentLibrary = null;
         this.preferredLibrary = null;
+        
+        // Mark qrcodejs as already loaded if QRCode exists globally
+        if (typeof QRCode !== 'undefined') {
+            this.loader.loadedLibraries.add('qrcodejs');
+            console.log('✅ QRCode.js already loaded from HTML');
+        }
     }
     
     async generate(container, options) {
