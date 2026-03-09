@@ -299,6 +299,8 @@
                 document.getElementById('badge-basic').textContent = result1.library;
             } catch (error) {
                 console.error('Failed to generate basic QR:', error);
+                document.getElementById('badge-basic').textContent = 'Error: ' + error.message;
+                document.getElementById('badge-basic').style.background = '#ef4444';
             }
             
             // Example 2: QR with Logo (will auto-load QR Code Styling)
@@ -317,6 +319,8 @@
                 document.getElementById('badge-logo').textContent = result2.library;
             } catch (error) {
                 console.error('Failed to generate logo QR:', error);
+                document.getElementById('badge-logo').textContent = 'Error: ' + error.message;
+                document.getElementById('badge-logo').style.background = '#ef4444';
             }
             
             // Example 3: Artistic QR with gradient
@@ -344,9 +348,11 @@
                 document.getElementById('badge-artistic').textContent = result3.library;
             } catch (error) {
                 console.error('Failed to generate artistic QR:', error);
+                document.getElementById('badge-artistic').textContent = 'Error: ' + error.message;
+                document.getElementById('badge-artistic').style.background = '#ef4444';
             }
             
-            // Example 4: SVG Export
+            // Example 4: SVG Export (with rounded dots for visual distinction)
             try {
                 const result4 = await qrManager.generate(document.getElementById('qr-svg'), {
                     text: 'https://example.com/svg',
@@ -354,11 +360,17 @@
                     height: 200,
                     format: 'svg',
                     colorDark: '#4ade80',
-                    colorLight: '#f0fdf4'
+                    colorLight: '#f0fdf4',
+                    dotsOptions: {
+                        type: 'dots',
+                        color: '#4ade80'
+                    }
                 });
                 document.getElementById('badge-svg').textContent = result4.library;
             } catch (error) {
                 console.error('Failed to generate SVG QR:', error);
+                document.getElementById('badge-svg').textContent = 'Error: ' + error.message;
+                document.getElementById('badge-svg').style.background = '#ef4444';
             }
             
             console.log('✅ All examples generated!');
