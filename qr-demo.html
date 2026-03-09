@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Library Manager - Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .demo-section {
+            background: white;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .demo-section h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        
+        .qr-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .qr-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        
+        .qr-box h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #555;
+        }
+        
+        .qr-output {
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        .library-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .controls {
+            background: white;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .control-group {
+            margin: 15px 0;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        input, select, button {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        
+        input[type="text"], input[type="color"] {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 12px 24px;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        .libraries-status {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .library-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .library-item:last-child {
+            border-bottom: none;
+        }
+        
+        .loaded {
+            color: #4ade80;
+            font-weight: 600;
+        }
+        
+        .not-loaded {
+            color: #94a3b8;
+        }
+        
+        .console-log {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .console-log div {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 QR Library Manager - Multi-API Demo</h1>
+    
+    <!-- Quick Examples -->
+    <div class="demo-section">
+        <h2>Quick Examples</h2>
+        <p>Different QR styles automatically generated using the best library for each use case:</p>
+        
+        <div class="qr-container">
+            <div class="qr-box">
+                <h3>Basic QR Code</h3>
+                <div id="qr-basic" class="qr-output"></div>
+                <div class="library-badge" id="badge-basic">Loading...</div>
+            </div>
+            
+            <div class="qr-box">
+                <h3>QR with Logo</h3>
+                <div id="qr-logo" class="qr-output"></div>
+                <div class="library-badge" id="badge-logo">Loading...</div>
+            </div>
+            
+            <div class="qr-box">
+                <h3>Artistic Gradient</h3>
+                <div id="qr-artistic" class="qr-output"></div>
+                <div class="library-badge" id="badge-artistic">Loading...</div>
+            </div>
+            
+            <div class="qr-box">
+                <h3>SVG Export</h3>
+                <div id="qr-svg" class="qr-output"></div>
+                <div class="library-badge" id="badge-svg">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Generator -->
+    <div class="controls">
+        <h2>Custom QR Generator</h2>
+        
+        <div class="control-group">
+            <label for="custom-text">QR Code Content:</label>
+            <input type="text" id="custom-text" value="https://github.com" placeholder="Enter URL or text">
+        </div>
+        
+        <div class="control-group">
+            <label for="custom-size">Size:</label>
+            <input type="number" id="custom-size" value="400" min="100" max="2000" step="50">
+        </div>
+        
+        <div class="control-group">
+            <label for="custom-color">Color:</label>
+            <input type="color" id="custom-color" value="#000000">
+        </div>
+        
+        <div class="control-group">
+            <label for="custom-bg">Background:</label>
+            <input type="color" id="custom-bg" value="#ffffff">
+        </div>
+        
+        <div class="control-group">
+            <label for="custom-format">Format:</label>
+            <select id="custom-format">
+                <option value="canvas">Canvas</option>
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+            </select>
+        </div>
+        
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="custom-gradient">
+                Enable Gradient
+            </label>
+        </div>
+        
+        <div class="control-group">
+            <label>
+                <input type="checkbox" id="custom-artistic">
+                Artistic Style (Rounded Dots)
+            </label>
+        </div>
+        
+        <button onclick="generateCustomQR()">Generate QR Code</button>
+        
+        <div id="custom-output" class="qr-output" style="margin-top: 20px; border: 2px dashed #ddd; min-height: 400px;"></div>
+        <div class="library-badge" id="badge-custom" style="display: none;">Library: None</div>
+    </div>
+    
+    <!-- Library Status -->
+    <div class="demo-section">
+        <h2>Library Status</h2>
+        <div class="libraries-status" id="libraries-status">
+            <p>Loading library information...</p>
+        </div>
+    </div>
+    
+    <!-- Console Log -->
+    <div class="demo-section">
+        <h2>Console Output</h2>
+        <div class="console-log" id="console-log">
+            <div>Ready to generate QR codes...</div>
+        </div>
+    </div>
+    
+    <!-- Load Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="qr-library-manager.js"></script>
+    
+    <script>
+        // Console logging
+        const consoleLog = document.getElementById('console-log');
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const logDiv = document.createElement('div');
+            logDiv.textContent = args.join(' ');
+            consoleLog.appendChild(logDiv);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        };
+        
+        // Initialize manager
+        const qrManager = new QRLibraryManager();
+        
+        // Generate examples
+        async function generateExamples() {
+            console.log('🚀 Generating example QR codes...');
+            
+            // Example 1: Basic QR
+            try {
+                const result1 = await qrManager.generate(document.getElementById('qr-basic'), {
+                    text: 'https://example.com',
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff'
+                });
+                document.getElementById('badge-basic').textContent = result1.library;
+            } catch (error) {
+                console.error('Failed to generate basic QR:', error);
+            }
+            
+            // Example 2: QR with Logo (will auto-load QR Code Styling)
+            try {
+                const result2 = await qrManager.generate(document.getElementById('qr-logo'), {
+                    text: 'https://github.com',
+                    width: 200,
+                    height: 200,
+                    logo: {
+                        src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="40" fill="%23667eea"/%3E%3C/svg%3E',
+                        width: 40,
+                        height: 40
+                    },
+                    errorCorrectionLevel: 'H'
+                });
+                document.getElementById('badge-logo').textContent = result2.library;
+            } catch (error) {
+                console.error('Failed to generate logo QR:', error);
+            }
+            
+            // Example 3: Artistic QR with gradient
+            try {
+                const result3 = await qrManager.generate(document.getElementById('qr-artistic'), {
+                    text: 'https://example.com/art',
+                    width: 200,
+                    height: 200,
+                    gradient: {
+                        type: 'linear',
+                        rotation: 45,
+                        colorStops: [
+                            { offset: 0, color: '#667eea' },
+                            { offset: 1, color: '#764ba2' }
+                        ]
+                    },
+                    dotsOptions: {
+                        type: 'rounded'
+                    },
+                    cornersSquareOptions: {
+                        type: 'extra-rounded'
+                    },
+                    artistic: true
+                });
+                document.getElementById('badge-artistic').textContent = result3.library;
+            } catch (error) {
+                console.error('Failed to generate artistic QR:', error);
+            }
+            
+            // Example 4: SVG Export
+            try {
+                const result4 = await qrManager.generate(document.getElementById('qr-svg'), {
+                    text: 'https://example.com/svg',
+                    width: 200,
+                    height: 200,
+                    format: 'svg',
+                    colorDark: '#4ade80',
+                    colorLight: '#f0fdf4'
+                });
+                document.getElementById('badge-svg').textContent = result4.library;
+            } catch (error) {
+                console.error('Failed to generate SVG QR:', error);
+            }
+            
+            console.log('✅ All examples generated!');
+        }
+        
+        // Custom QR Generator
+        async function generateCustomQR() {
+            const text = document.getElementById('custom-text').value;
+            const size = parseInt(document.getElementById('custom-size').value);
+            const color = document.getElementById('custom-color').value;
+            const bg = document.getElementById('custom-bg').value;
+            const format = document.getElementById('custom-format').value;
+            const useGradient = document.getElementById('custom-gradient').checked;
+            const artistic = document.getElementById('custom-artistic').checked;
+            
+            if (!text) {
+                alert('Please enter text or URL');
+                return;
+            }
+            
+            const options = {
+                text,
+                width: size,
+                height: size,
+                colorDark: color,
+                colorLight: bg,
+                format,
+                errorCorrectionLevel: 'M'
+            };
+            
+            if (useGradient) {
+                options.gradient = {
+                    type: 'linear',
+                    rotation: 45,
+                    colorStops: [
+                        { offset: 0, color: color },
+                        { offset: 1, color: '#764ba2' }
+                    ]
+                };
+            }
+            
+            if (artistic) {
+                options.dotsOptions = { type: 'rounded' };
+                options.cornersSquareOptions = { type: 'extra-rounded' };
+                options.artistic = true;
+            }
+            
+            console.log('🎨 Generating custom QR with options:', options);
+            
+            try {
+                const container = document.getElementById('custom-output');
+                const result = await qrManager.generate(container, options);
+                document.getElementById('badge-custom').textContent = `Library: ${result.library}`;
+                document.getElementById('badge-custom').style.display = 'inline-block';
+                console.log('✅ Custom QR generated successfully!');
+            } catch (error) {
+                console.error('❌ Failed to generate custom QR:', error);
+                alert('Failed to generate QR code: ' + error.message);
+            }
+        }
+        
+        // Update library status
+        function updateLibraryStatus() {
+            const libraries = qrManager.getAvailableLibraries();
+            const statusDiv = document.getElementById('libraries-status');
+            
+            statusDiv.innerHTML = libraries.map(lib => `
+                <div class="library-item">
+                    <span><strong>${lib.name}</strong> (Priority: ${lib.priority})</span>
+                    <span class="${lib.loaded ? 'loaded' : 'not-loaded'}">
+                        ${lib.loaded ? '✅ Loaded' : '⏸️ Not Loaded'}
+                    </span>
+                </div>
+            `).join('');
+        }
+        
+        // Initialize
+        window.addEventListener('load', async () => {
+            console.log('🎨 QR Library Manager Demo');
+            console.log('Available libraries:', qrManager.getAvailableLibraries().length);
+            
+            updateLibraryStatus();
+            
+            // Generate examples
+            await generateExamples();
+            
+            // Update status after loading
+            updateLibraryStatus();
+            
+            console.log('📊 Demo ready! Try the custom generator below.');
+        });
+    </script>
+</body>
+</html>
