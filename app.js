@@ -615,6 +615,14 @@ const useCaseExamples = [
     },
     {
         type: 'url',
+        icon: '🍽️',
+        title: 'Restaurant Menu',
+        description: 'Link to online menu or ordering',
+        content: 'https://www.yourrestaurant.com/menu',
+        label: 'View Our Menu'
+    },
+    {
+        type: 'url',
         icon: '📄',
         title: 'Product Manual',
         description: 'Link to PDF manual or documentation',
@@ -630,7 +638,7 @@ const useCaseExamples = [
         label: 'Watch Tutorial'
     },
     
-    // Email examples
+    // Email examples - General
     {
         type: 'email',
         icon: '📧',
@@ -656,7 +664,59 @@ const useCaseExamples = [
         label: 'Get Support'
     },
     
-    // Phone examples
+    // Email examples - Restaurant specific
+    {
+        type: 'email',
+        icon: '🍴',
+        title: 'Restaurant Reservations',
+        description: 'Email for table bookings',
+        content: 'mailto:reservations@restaurant.com?subject=Table%20Reservation%20Request',
+        label: 'Email for Reservations'
+    },
+    {
+        type: 'email',
+        icon: '🎉',
+        title: 'Catering Inquiry',
+        description: 'Request catering services',
+        content: 'mailto:catering@restaurant.com?subject=Catering%20Request',
+        label: 'Catering Services'
+    },
+    {
+        type: 'email',
+        icon: '👨‍🍳',
+        title: 'Chef Feedback',
+        description: 'Direct line to chef or manager',
+        content: 'mailto:chef@restaurant.com?subject=Compliments%20and%20Suggestions',
+        label: 'Message the Chef'
+    },
+    
+    // Email examples - Event specific
+    {
+        type: 'email',
+        icon: '🎫',
+        title: 'Event Inquiries',
+        description: 'Questions about event details',
+        content: 'mailto:info@events.com?subject=Event%20Question',
+        label: 'Ask About Event'
+    },
+    {
+        type: 'email',
+        icon: '🎤',
+        title: 'Speaker Contact',
+        description: 'Contact event speaker or organizer',
+        content: 'mailto:speaker@conference.com?subject=Speaker%20Inquiry',
+        label: 'Contact Speaker'
+    },
+    {
+        type: 'email',
+        icon: '📋',
+        title: 'RSVP via Email',
+        description: 'Email RSVP for event',
+        content: 'mailto:rsvp@party.com?subject=RSVP%20for%20Event&body=Number%20of%20guests:',
+        label: 'RSVP Now'
+    },
+    
+    // Phone examples - General
     {
         type: 'phone',
         icon: '📞',
@@ -672,6 +732,50 @@ const useCaseExamples = [
         description: 'Quick dial emergency number',
         content: 'tel:+15555559999',
         label: 'Emergency Line'
+    },
+    
+    // Phone examples - Restaurant specific
+    {
+        type: 'phone',
+        icon: '🍕',
+        title: 'Restaurant Takeout',
+        description: 'Call to place takeout order',
+        content: 'tel:+15555551234',
+        label: 'Call for Takeout'
+    },
+    {
+        type: 'phone',
+        icon: '🪑',
+        title: 'Reservation Hotline',
+        description: 'Call to book a table',
+        content: 'tel:+15555555678',
+        label: 'Call to Reserve'
+    },
+    {
+        type: 'phone',
+        icon: '🚗',
+        title: 'Delivery Hotline',
+        description: 'Order delivery by phone',
+        content: 'tel:+15555559876',
+        label: 'Call for Delivery'
+    },
+    
+    // Phone examples - Event specific
+    {
+        type: 'phone',
+        icon: '🎟️',
+        title: 'Event Box Office',
+        description: 'Call for tickets or information',
+        content: 'tel:+15555556789',
+        label: 'Call Box Office'
+    },
+    {
+        type: 'phone',
+        icon: '🎪',
+        title: 'Event Coordinator',
+        description: 'Speak with event planner',
+        content: 'tel:+15555557890',
+        label: 'Contact Coordinator'
     },
     
     // SMS examples
@@ -763,8 +867,24 @@ const useCaseExamples = [
         content: 'BEGIN:VEVENT\nSUMMARY:Yoga Class\nDTSTART:20260310T180000Z\nDTEND:20260310T190000Z\nLOCATION:Studio B\nDESCRIPTION:Beginner-friendly yoga session\nEND:VEVENT',
         label: 'Join Class'
     },
+    {
+        type: 'event',
+        icon: '🎭',
+        title: 'Theater Show',
+        description: 'Add show to calendar',
+        content: 'BEGIN:VEVENT\nSUMMARY:Broadway Musical\nDTSTART:20260420T193000Z\nDTEND:20260420T223000Z\nLOCATION:Main Theater\nDESCRIPTION:Evening performance\nEND:VEVENT',
+        label: 'Save Show Date'
+    },
+    {
+        type: 'event',
+        icon: '🎓',
+        title: 'Webinar/Workshop',
+        description: 'Online event invitation',
+        content: 'BEGIN:VEVENT\nSUMMARY:Marketing Webinar\nDTSTART:20260510T140000Z\nDTEND:20260510T150000Z\nLOCATION:Zoom Meeting\nDESCRIPTION:Learn digital marketing strategies\nEND:VEVENT',
+        label: 'Register for Webinar'
+    },
     
-    // Location examples
+    // Location examples - General
     {
         type: 'geo',
         icon: '📍',
@@ -788,8 +908,195 @@ const useCaseExamples = [
         description: 'Navigate to landmark or attraction',
         content: 'geo:48.8584,2.2945,100',
         label: 'Visit Eiffel Tower'
+    },
+    
+    // Location examples - Restaurant specific
+    {
+        type: 'geo',
+        icon: '🍔',
+        title: 'Restaurant Location',
+        description: 'Navigate to restaurant',
+        content: 'geo:34.0522,-118.2437',
+        label: 'Get Directions to Restaurant'
+    },
+    {
+        type: 'geo',
+        icon: '🚪',
+        title: 'Back Entrance',
+        description: 'Delivery or special entrance',
+        content: 'geo:34.0523,-118.2438',
+        label: 'Delivery Entrance'
+    },
+    
+    // Location examples - Event specific
+    {
+        type: 'geo',
+        icon: '🎪',
+        title: 'Event Venue',
+        description: 'Navigate to event location',
+        content: 'geo:40.7580,-73.9855',
+        label: 'Get Directions to Venue'
+    },
+    {
+        type: 'geo',
+        icon: '🚗',
+        title: 'Event Parking',
+        description: 'Designated parking for event',
+        content: 'geo:40.7582,-73.9857',
+        label: 'Event Parking Location'
+    },
+    
+    // Location examples - Hotel specific
+    {
+        type: 'geo',
+        icon: '🏨',
+        title: 'Hotel Location',
+        description: 'Navigate to hotel property',
+        content: 'geo:36.1147,-115.1728',
+        label: 'Directions to Hotel'
+    },
+    {
+        type: 'geo',
+        icon: '🏊',
+        title: 'Hotel Amenity Location',
+        description: 'Pool, spa, or fitness center',
+        content: 'geo:36.1148,-115.1729',
+        label: 'Find Pool & Spa'
+    },
+    {
+        type: 'geo',
+        icon: '🎡',
+        title: 'Nearby Attractions',
+        description: 'Local points of interest',
+        content: 'geo:36.1150,-115.1730',
+        label: 'Explore Nearby'
+    },
+    
+    // Location examples - Business specific
+    {
+        type: 'geo',
+        icon: '🏢',
+        title: 'Office Location',
+        description: 'Navigate to business address',
+        content: 'geo:37.7833,-122.4167',
+        label: 'Get Directions to Office'
+    },
+    {
+        type: 'geo',
+        icon: '🚪',
+        title: 'Meeting Room Entrance',
+        description: 'Conference room or suite location',
+        content: 'geo:37.7834,-122.4168',
+        label: 'Conference Room C'
+    },
+    
+    // Google Review examples - Hotel specific
+    {
+        type: 'google-review',
+        icon: '🛏️',
+        title: 'Hotel Stay Review',
+        description: 'Room card or checkout QR for reviews',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Enjoyed your stay? Leave a review!'
+    },
+    
+    // Google Review examples - Business specific
+    {
+        type: 'google-review',
+        icon: '💼',
+        title: 'Professional Service Review',
+        description: 'Law office, accounting, consulting',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Share your experience'
+    },
+    {
+        type: 'google-review',
+        icon: '🏪',
+        title: 'Business Location Review',
+        description: 'Office, shop, or service location',
+        content: 'https://search.google.com/local/writereview?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4',
+        label: 'Rate your visit'
+    },
+    
+    // Phone examples - Hotel specific
+    {
+        type: 'phone',
+        icon: '🏨',
+        title: 'Hotel Front Desk',
+        description: 'Call reception or concierge',
+        content: 'tel:+15555551234',
+        label: 'Contact Front Desk'
+    },
+    {
+        type: 'phone',
+        icon: '🛎️',
+        title: 'Room Service',
+        description: 'Order food or amenities',
+        content: 'tel:+15555555555',
+        label: 'Call Room Service'
+    },
+    {
+        type: 'phone',
+        icon: '🅿️',
+        title: 'Valet Service',
+        description: 'Request vehicle or assistance',
+        content: 'tel:+15555556666',
+        label: 'Call Valet'
+    },
+    
+    // Phone examples - Business specific
+    {
+        type: 'phone',
+        icon: '📞',
+        title: 'Main Office Line',
+        description: 'Primary business contact',
+        content: 'tel:+15555551111',
+        label: 'Call Main Office'
+    },
+    {
+        type: 'phone',
+        icon: '💼',
+        title: 'Sales Department',
+        description: 'Dedicated sales inquiry line',
+        content: 'tel:+15555552222',
+        label: 'Contact Sales'
+    },
+    {
+        type: 'phone',
+        icon: '📅',
+        title: 'Appointment Scheduling',
+        description: 'Book consultation or meeting',
+        content: 'tel:+15555553333',
+        label: 'Schedule Appointment'
+    },
+    
+    // URL examples - Hotel specific
+    {
+        type: 'url',
+        icon: '🛏️',
+        title: 'Room Booking',
+        description: 'Direct booking link (no commission!)',
+        content: 'https://www.yourhotel.com/book-now',
+        label: 'Book Your Stay'
+    },
+    {
+        type: 'url',
+        icon: '🍽️',
+        title: 'Hotel Restaurant Menu',
+        description: 'In-room dining or restaurant menu',
+        content: 'https://www.yourhotel.com/dining',
+        label: 'View Dining Menu'
+    },
+    {
+        type: 'url',
+        icon: '🎯',
+        title: 'Guest Services Guide',
+        description: 'Amenities, activities, local attractions',
+        content: 'https://www.yourhotel.com/guest-services',
+        label: 'Explore Guest Services'
     }
 ];
+
 
 // Toggle use cases section
 function toggleUseCases() {
@@ -815,13 +1122,17 @@ function renderUseCases() {
     const activeFilters = Array.from(document.querySelectorAll('.template-btn.active-filter'))
         .map(btn => btn.dataset.template);
     
-    // Filter examples
-    let filteredExamples = useCaseExamples;
-    if (activeFilters.length > 0) {
-        filteredExamples = useCaseExamples.filter(example => 
-            activeFilters.includes(example.type)
-        );
+    // If no filters selected, show nothing (blank state)
+    if (activeFilters.length === 0) {
+        grid.innerHTML = '';
+        noExamplesMsg.style.display = 'none';
+        return;
     }
+    
+    // Filter examples by selected templates
+    const filteredExamples = useCaseExamples.filter(example => 
+        activeFilters.includes(example.type)
+    );
     
     // Show/hide no examples message
     if (filteredExamples.length === 0) {
@@ -5736,7 +6047,7 @@ function toggleTemplate(templateElement, tabName) {
     // If no templates are active, show all
     const showAll = activeTemplates.length === 0;
     
-    // Get all use cases for this tab
+    // Get all use cases for this tab (static content)
     const tabContent = document.getElementById(`${tabName}-tab`);
     const useCases = tabContent.querySelectorAll('.event-template[data-templates]');
     
@@ -5753,13 +6064,49 @@ function toggleTemplate(templateElement, tabName) {
         }
     });
     
+    // ALSO filter the Use Case Examples section (the global examples grid)
+    // Map data-template-type to use case example types
+    const templateTypeMapping = {
+        'calendar': 'event',
+        'location': 'geo',
+        'review': 'google-review',
+        'email': 'email',
+        'phone': 'phone',
+        'url': 'url',
+        'wifi': 'wifi',
+        'vcard': 'vcard',
+        'mecard': 'mecard',
+        'sms': 'sms'
+    };
+    
+    // Map active template types to example types and set as active filters
+    const mappedTypes = activeTemplates.map(t => templateTypeMapping[t] || t);
+    
+    // Clear all existing filters on global template buttons
+    document.querySelectorAll('.template-btn').forEach(btn => {
+        btn.classList.remove('active-filter');
+    });
+    
+    // Set active filters on global template buttons based on industry tab selection
+    if (mappedTypes.length > 0) {
+        document.querySelectorAll('.template-btn').forEach(btn => {
+            if (mappedTypes.includes(btn.dataset.template)) {
+                btn.classList.add('active-filter');
+            }
+        });
+    }
+    
+    // Trigger use case filtering
+    filterUseCases();
+    
     // Analytics: Track template filter
     if (typeof gtag !== 'undefined') {
         gtag('event', 'template_filter_toggled', {
-            'tab_name': tabName,
-            'template_type': templateElement.getAttribute('data-template-type'),
-            'is_active': templateElement.classList.contains('active'),
-            'active_count': activeTemplates.length
+            event_action: 'toggle_template',
+            tab_name: tabName,
+            template_type: templateElement.getAttribute('data-template-type'),
+            is_active: templateElement.classList.contains('active'),
+            active_count: activeTemplates.length
         });
     }
 }

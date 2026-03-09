@@ -886,6 +886,40 @@ DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                             </ul>
                         </div>
                     </div>
+
+                    <div class="event-template" data-templates="email">
+                        <h3>7. Event Email Contact ⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Opens email with pre-filled subject for event inquiries, RSVPs, vendor coordination</p>
+                        <p><strong>Perfect for:</strong> Invitations, vendor coordination, speaker contact, post-event surveys</p>
+                        <div class="example-box">
+                            <strong>Example Uses:</strong>
+                            <pre>Template: Email
+Email: rsvp@yourwedding.com
+Subject: RSVP for Wedding
+Label: "Email Your RSVP"</pre>
+                            <pre>Template: Email
+Email: speaker@conference.com
+Subject: Speaker Question
+Label: "Contact Speaker"</pre>
+                            <p><strong>💡 Pro Tip:</strong> Pre-fill subject lines to help organize incoming emails automatically!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="phone">
+                        <h3>8. Event Phone Contact ⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> One-tap calling for event inquiries, box office, coordinator contact</p>
+                        <p><strong>Perfect for:</strong> Event signage, tickets, programs, emergency contact cards</p>
+                        <div class="example-box">
+                            <strong>Example Uses:</strong>
+                            <pre>Template: Phone
+Number: +1-555-TICKETS
+Label: "Call Box Office"</pre>
+                            <pre>Template: Phone
+Number: +1-555-EVENTS-1
+Label: "Event Coordinator (24/7)"</pre>
+                            <p><strong>🎫 Use Case:</strong> Put on event tickets for lost & found, venue questions, last-minute changes</p>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="info-section">
@@ -1097,6 +1131,53 @@ Label: "Join VIP Club - Text Deals & Rewards!"</pre>
                             <p><strong>📈 Retention:</strong> Loyalty members visit 2-3x more often and spend 20% more per visit!</p>
                         </div>
                     </div>
+
+                    <div class="event-template" data-templates="phone">
+                        <h3>7. Call for Takeout & Reservations ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> One-tap calling for orders, reservations, delivery</p>
+                        <p><strong>Perfect for:</strong> Takeout menus, table tents, window signage, business cards</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <pre>Template: Phone
+Number: +1-555-PIZZA-01
+Label: "Call for Takeout"</pre>
+                            <pre>Template: Phone
+Number: +1-555-RESERV-1
+Label: "Call for Reservations"</pre>
+                            <p><strong>📞 Strategy:</strong> Different QR codes for different lines (takeout vs. reservations). Reduces confusion!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="location">
+                        <h3>8. Restaurant Location & Directions ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Opens GPS navigation directly to your restaurant or delivery entrance</p>
+                        <p><strong>Perfect for:</strong> Takeout bags, business cards, social media, delivery driver instructions</p>
+                        <div class="example-box">
+                            <strong>Example:</strong>
+                            <pre>Template: Location (Geo)
+Coordinates: geo:40.7589,-73.9851
+Label: "Get Directions to Restaurant"</pre>
+                            <p><strong>🚗 Pro Tip:</strong> Right-click on Google Maps → "What's here?" to get exact coordinates. Create separate QR for delivery entrance!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="email">
+                        <h3>9. Email for Catering & Private Events ⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Pre-filled email for catering inquiries, private dining, event bookings</p>
+                        <p><strong>Perfect for:</strong> Menus, business cards, website, event spaces</p>
+                        <div class="example-box">
+                            <strong>Example:</strong>
+                            <pre>Template: Email
+Email: catering@restaurant.com
+Subject: Catering Request
+Label: "Email for Catering Services"</pre>
+                            <pre>Template: Email
+Email: events@restaurant.com
+Subject: Private Dining Inquiry
+Label: "Book Private Event"</pre>
+                            <p><strong>💰 Revenue:</strong> Catering and private events can be 30-40% profit margins vs. 10-15% for regular service!</p>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="info-section">
@@ -1191,19 +1272,14 @@ Label: "Join VIP Club - Text Deals & Rewards!"</pre>
                             <span class="template-name">Contact (vCard)</span>
                             <span class="value-badge">⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item medium-value active" data-template-type="sms" onclick="toggleTemplate(this, 'hotels')">
-                            <span class="template-icon">💬</span>
-                            <span class="template-name">SMS/Text</span>
-                            <span class="value-badge">⭐⭐⭐</span>
-                        </div>
                     </div>
-                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for guest satisfaction | ⭐⭐⭐⭐ = Highly recommended | ⭐⭐⭐ = Nice to have<br><em>💡 Click any template above to show only use cases for that template type</em></p>
+                    <p class="chart-note">⭐⭐⭐⭐⭐ = Essential for guest satisfaction | ⭐⭐⭐⭐ = Highly recommended<br><em>💡 Click any template above to show only use cases for that template type</em></p>
                 </div>
 
                 <section class="info-section">
                     <h2>🛏️ Essential Hotel Use Cases</h2>
                     
-                    <div class="event-template">
+                    <div class="event-template" data-templates="wifi">
                         <h3>1. In-Room WiFi Access ⭐⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Guests scan and instantly connect to WiFi - no login screens or passwords to type</p>
                         <p><strong>Perfect for:</strong> Nightstands, desk placards, room key sleeves, welcome packets</p>
@@ -1287,6 +1363,22 @@ then directs to TripAdvisor/Google if positive,
 or private feedback form if negative)
 Label: "How Was Your Stay?"</pre>
                             <p><strong>🎯 Strategy:</strong> Catch issues privately before they become public bad reviews!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="location">
+                        <h3>7. Hotel Location & Local Area ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> GPS directions to hotel, parking entrances, shuttle pickup spots, nearby attractions</p>
+                        <p><strong>Perfect for:</strong> Confirmation emails, lobby signage, parking maps, guest guides</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <pre>Template: Location (Geo)
+Coordinates: geo:36.1147,-115.1728
+Label: "Navigate to Hotel Main Entrance"</pre>
+                            <pre>Template: Location (Geo)
+Coordinates: geo:36.1148,-115.1730
+Label: "Valet & Parking Garage"</pre>
+                            <p><strong>🗺️ Guest Win:</strong> No more circling the block! Direct navigation to the right entrance.</p>
                         </div>
                     </div>
                 </section>
@@ -1470,8 +1562,26 @@ Label: "Connect on LinkedIn"</pre>
                         </div>
                     </div>
 
+                    <div class="event-template" data-templates="email">
+                        <h3>6. Business Email Contact ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Pre-filled email for sales inquiries, support requests, general contact</p>
+                        <p><strong>Perfect for:</strong> Business cards, office signage, proposals, website</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <pre>Template: Email
+Email: sales@yourcompany.com
+Subject: Sales Inquiry
+Label: "Contact Sales Team"</pre>
+                            <pre>Template: Email
+Email: info@yourcompany.com
+Subject: General Inquiry
+Label: "Email Us"</pre>
+                            <p><strong>📧 Pro Tip:</strong> Pre-filled subjects help route emails to right department automatically!</p>
+                        </div>
+                    </div>
+
                     <div class="event-template" data-templates="url,email">
-                        <h3>6. Email Newsletter Signup ⭐⭐⭐⭐</h3>
+                        <h3>7. Email Newsletter Signup ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Grow your email list from in-person interactions</p>
                         <p><strong>Perfect for:</strong> Events, receipts, packaging, office waiting rooms</p>
                         <div class="example-box">
@@ -1484,7 +1594,7 @@ Label: "Get Monthly Industry Insights"</pre>
                     </div>
 
                     <div class="event-template" data-templates="url">
-                        <h3>7. Video Testimonials & Social Proof ⭐⭐⭐⭐</h3>
+                        <h3>8. Video Testimonials & Social Proof ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Show (not tell) your credibility with client video testimonials</p>
                         <p><strong>Perfect for:</strong> Proposals, sales presentations, office walls, pitch decks</p>
                         <div class="example-box">
@@ -1493,6 +1603,51 @@ Label: "Get Monthly Industry Insights"</pre>
 Content: https://yoursite.com/testimonials
 Label: "Hear From Our Clients"</pre>
                             <p><strong>🎥 Format:</strong> Link to YouTube playlist or custom testimonials page with multiple videos.</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="review">
+                        <h3>9. Google Reviews for Professional Services ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Build trust and credibility with client reviews on Google</p>
+                        <p><strong>Perfect for:</strong> Receipt/invoice printouts, follow-up emails, office signage, thank you cards</p>
+                        <div class="example-box">
+                            <strong>Example:</strong>
+                            <pre>Template: Google Review (or URL)
+Content: (Your Google review link from Google Business Profile)
+Label: "Share Your Experience"</pre>
+                            <p><strong>💼 Impact:</strong> Law firms, accountants, consultants with 20+ reviews get 3x more inquiries!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="phone">
+                        <h3>10. Office Phone & Department Lines ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> One-tap calling to main office, sales, support, or specific departments</p>
+                        <p><strong>Perfect for:</strong> Business cards, office directories, signage, customer communications</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <pre>Template: Phone
+Number: +1-555-COMPANY
+Label: "Call Main Office"</pre>
+                            <pre>Template: Phone
+Number: +1-555-SALES-01
+Label: "Call Sales Department"</pre>
+                            <p><strong>📞 Strategy:</strong> Separate QR codes for different departments. Reduces phone tag and transfers!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="location">
+                        <h3>11. Office Location & Meeting Rooms ⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> GPS navigation to office building, parking, specific conference rooms</p>
+                        <p><strong>Perfect for:</strong> Meeting invitations, business cards, office building signage, email signatures</p>
+                        <div class="example-box">
+                            <strong>Examples:</strong>
+                            <pre>Template: Location (Geo)
+Coordinates: geo:37.7833,-122.4167
+Label: "Navigate to Our Office"</pre>
+                            <pre>Template: Location (Geo)
+Coordinates: geo:37.7834,-122.4168
+Label: "Conference Room Entrance"</pre>
+                            <p><strong>🏢 Client Win:</strong> No more "I can't find your building!" calls before important meetings.</p>
                         </div>
                     </div>
                 </section>
