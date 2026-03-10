@@ -411,6 +411,7 @@ const labelColorText = document.getElementById('labelColorText');
 const colorPresets = document.querySelectorAll('.color-preset');
 const styleBtns = document.querySelectorAll('.style-btn');
 const errorCorrectionLevel = document.getElementById('errorCorrectionLevel');
+const qrModeRadios = document.querySelectorAll('input[name="qrMode"]');
 
 // Quick template buttons
 const templateBtns = document.querySelectorAll('.template-btn');
@@ -1114,6 +1115,20 @@ function toggleUseCases() {
     }
 }
 
+// Toggle artistic controls section
+function toggleArtisticControls() {
+    const content = document.getElementById('artisticControlsContent');
+    const icon = document.getElementById('artistic-toggle-icon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('expanded');
+    }
+}
+
 // Render use case cards
 function renderUseCases() {
     const grid = document.getElementById('use-case-grid');
@@ -1400,6 +1415,35 @@ errorCorrectionLevel.addEventListener('change', (e) => {
         saveCurrentState(`Changed error correction to ${errorCorrectionLabels[e.target.value]}`);
         generateQRCode();
     }
+});
+
+// QR Mode selector (Standard vs Artistic)
+qrModeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const selectedMode = e.target.value;
+        const artisticControls = document.getElementById('artisticControls');
+        
+        // Show/hide artistic controls based on mode
+        if (selectedMode === 'artistic') {
+            artisticControls.style.display = 'block';
+        } else {
+            artisticControls.style.display = 'none';
+        }
+        
+        // Track mode selection
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'qr_mode_changed', {
+                'mode': selectedMode
+            });
+        }
+        
+        // Regenerate QR code if one exists
+        if (currentQRDataURL) {
+            const modeLabels = { 'standard': 'Standard', 'artistic': 'Artistic' };
+            saveCurrentState(`Changed mode to ${modeLabels[selectedMode]}`);
+            generateQRCode();
+        }
+    });
 });
 
 // Helper function to auto-suggest error correction level based on logo presence
@@ -1995,6 +2039,82 @@ labelSizeRange.addEventListener('change', (e) => {
         generateQRCode();
     }
 });
+
+// Artistic mode controls event listeners
+const dotStyleSelect = document.getElementById('dotStyle');
+const cornerSquareStyleSelect = document.getElementById('cornerSquareStyle');
+const cornerDotStyleSelect = document.getElementById('cornerDotStyle');
+const enableGradientCheckbox = document.getElementById('enableGradient');
+const gradientRotationRange = document.getElementById('gradientRotation');
+const gradientRotationValue = document.getElementById('gradientRotationValue');
+
+if (dotStyleSelect) {
+    dotStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed dot style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_dot_style_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (cornerSquareStyleSelect) {
+    cornerSquareStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed corner square style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_corner_square_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (cornerDotStyleSelect) {
+    cornerDotStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed corner dot style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_corner_dot_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (enableGradientCheckbox) {
+    enableGradientCheckbox.addEventListener('change', (e) => {
+        const gradientGroup = document.getElementById('gradientRotationGroup');
+        if (gradientGroup) {
+            gradientGroup.style.display = e.target.checked ? 'block' : 'none';
+        }
+        if (currentQRDataURL) {
+            saveCurrentState(`${e.target.checked ? 'Enabled' : 'Disabled'} gradient`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_gradient_toggled', { 'enabled': e.target.checked });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (gradientRotationRange && gradientRotationValue) {
+    gradientRotationRange.addEventListener('input', (e) => {
+        gradientRotationValue.textContent = e.target.value;
+    });
+    
+    gradientRotationRange.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed gradient rotation to ${e.target.value}°`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_gradient_rotation_changed', { 'rotation': parseInt(e.target.value) });
+            }
+            generateQRCode();
+        }
+    });
+}
 
 // Label input change - regenerate QR code when label is modified
 labelInput.addEventListener('input', (e) => {
@@ -3521,6 +3641,21 @@ function generateQRCode() {
         alert(`⚠️ Color Contrast Too Low!\n\nThe colors you selected don't have enough contrast for QR codes to scan reliably.\n\nContrast ratio: ${contrastCheck.ratio}:1 (minimum: 3.0:1)\n\nPlease choose colors with more contrast:\n• Dark QR code on light background\n• Light QR code on dark background\n• Use the color presets for safe combinations`);
         return;
     }
+    
+    // Check which mode is selected
+    const selectedMode = document.querySelector('input[name="qrMode"]:checked')?.value || 'standard';
+    
+    if (selectedMode === 'artistic') {
+        // Use artistic QR generation
+        generateArtisticMode(text);
+    } else {
+        // Use standard QR generation (original QRCode.js)
+        generateStandardMode(text);
+    }
+}
+
+// Standard QR generation (original QRCode.js logic)
+function generateStandardMode(text) {
     try {
         qrCanvas.getContext('2d').clearRect(0, 0, qrCanvas.width, qrCanvas.height);
         const size = parseInt(sizeRange.value);
@@ -3558,6 +3693,26 @@ function generateQRCode() {
         }, 100);
     } catch (error) {
         alert('Failed to generate QR code: ' + error.message);
+        console.error(error);
+    }
+}
+
+// Artistic QR generation wrapper
+function generateArtisticMode(text) {
+    try {
+        qrCanvas.getContext('2d').clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        const size = parseInt(sizeRange.value);
+        const qrSize = size * 32;
+        
+        generateArtisticQR(text, qrSize).then(artisticCanvas => {
+            // Draw the artistic QR with logo and label
+            drawQRWithLogoFromCanvas(artisticCanvas, qrSize);
+        }).catch(error => {
+            alert('Failed to generate artistic QR code: ' + error.message);
+            console.error(error);
+        });
+    } catch (error) {
+        alert('Failed to generate artistic QR code: ' + error.message);
         console.error(error);
     }
 }
@@ -3737,6 +3892,118 @@ function downloadMultiQRAsPDF(pairs) {
         }, 100);
     }
     processQR(0);
+}
+
+// --- Artistic QR Code Generation (using qr-code-styling) ---
+function generateArtisticQR(text, qrSize) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get artistic mode settings from UI controls
+            const dotStyle = document.getElementById('dotStyle')?.value || 'rounded';
+            const cornerSquareStyle = document.getElementById('cornerSquareStyle')?.value || 'extra-rounded';
+            const cornerDotStyle = document.getElementById('cornerDotStyle')?.value || 'dot';
+            const enableGradient = document.getElementById('enableGradient')?.checked || false;
+            const gradientRotation = parseInt(document.getElementById('gradientRotation')?.value || '45');
+            
+            // Create gradient for artistic effect (if enabled)
+            const dotsColor = enableGradient ? {
+                type: 'linear',
+                rotation: (gradientRotation * Math.PI) / 180, // Convert degrees to radians
+                colorStops: [
+                    { offset: 0, color: currentDarkColor },
+                    { offset: 1, color: adjustColorBrightness(currentDarkColor, 20) }
+                ]
+            } : currentDarkColor;
+            
+            // Configure qr-code-styling options
+            const qrCode = new QRCodeStyling({
+                width: qrSize,
+                height: qrSize,
+                data: text,
+                margin: 0,
+                qrOptions: {
+                    typeNumber: 0,
+                    mode: 'Byte',
+                    errorCorrectionLevel: currentErrorCorrectionLevel
+                },
+                imageOptions: {
+                    hideBackgroundDots: true,
+                    imageSize: 0.4,
+                    margin: 10
+                },
+                dotsOptions: {
+                    type: dotStyle,
+                    ...(enableGradient ? { gradient: dotsColor } : { color: dotsColor })
+                },
+                backgroundOptions: {
+                    color: currentLightColor
+                },
+                cornersSquareOptions: {
+                    type: cornerSquareStyle,
+                    color: currentDarkColor
+                },
+                cornersDotOptions: {
+                    type: cornerDotStyle,
+                    color: currentDarkColor
+                }
+            });
+            
+            // If logo is selected, add it
+            if (window.uploadedLogoDataURL) {
+                qrCode.update({
+                    image: window.uploadedLogoDataURL,
+                    imageOptions: {
+                        hideBackgroundDots: true,
+                        imageSize: parseInt(logoSizeRange.value) / 100,
+                        margin: 10
+                    }
+                });
+            }
+            
+            // Generate canvas and return it
+            qrCode.getRawData('png').then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = qrSize;
+                        canvas.height = qrSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas);
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(blob);
+            }).catch(reject);
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Helper function to adjust color brightness for gradients
+function adjustColorBrightness(hex, percent) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Convert to RGB
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+    
+    // Adjust brightness
+    r = Math.min(255, Math.max(0, r + (r * percent / 100)));
+    g = Math.min(255, Math.max(0, g + (g * percent / 100)));
+    b = Math.min(255, Math.max(0, b + (b * percent / 100)));
+    
+    // Convert back to hex
+    const rr = Math.round(r).toString(16).padStart(2, '0');
+    const gg = Math.round(g).toString(16).padStart(2, '0');
+    const bb = Math.round(b).toString(16).padStart(2, '0');
+    
+    return '#' + rr + gg + bb;
 }
 
 function drawQRWithLogo(qrImage, qrSize) {
