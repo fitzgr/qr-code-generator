@@ -444,6 +444,43 @@ input[type="range"]::-moz-range-thumb {
     color: #1976D2;
 }
 
+.history-dropdown-footer {
+    padding: 8px;
+    border-top: 1px solid #ddd;
+    background: #f8f9fa;
+}
+
+.btn-clear-history {
+    width: 100%;
+    padding: 8px 16px;
+    border: 1px solid #e57373;
+    border-radius: 6px;
+    background: white;
+    color: #d32f2f;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-clear-history:hover {
+    background: #ffebee;
+    border-color: #d32f2f;
+}
+
+.btn-clear-history:active {
+    background: #ffcdd2;
+}
+
+.btn-clear-history:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .btn {
     padding: 12px 24px;
     border: none;

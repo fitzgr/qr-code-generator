@@ -330,6 +330,7 @@ const historyPosition = document.getElementById('historyPosition');
 const historyDropdownBtn = document.getElementById('historyDropdownBtn');
 const historyDropdown = document.getElementById('historyDropdown');
 const historyList = document.getElementById('historyList');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
 const downloadPngBtn = document.getElementById('downloadPngBtn');
 const downloadSvgBtn = document.getElementById('downloadSvgBtn');
 const downloadJpgBtn = document.getElementById('downloadJpgBtn');
@@ -1732,7 +1733,15 @@ function populateHistoryDropdown() {
     
     if (stateHistory.length === 0) {
         historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">No history yet</div>';
+        if (clearHistoryBtn) {
+            clearHistoryBtn.disabled = true;
+        }
         return;
+    }
+    
+    // Enable clear button when there's history
+    if (clearHistoryBtn) {
+        clearHistoryBtn.disabled = false;
     }
     
     // Add items in reverse order (newest first)
@@ -1840,6 +1849,43 @@ function loadHistoryFromLocalStorage() {
     } catch (error) {
         console.error('Error loading history from localStorage:', error);
         localStorage.removeItem('qr_history'); // Clear corrupted data
+    }
+}
+
+// Clear all history
+function clearHistory() {
+    const confirmed = confirm('Are you sure you want to clear all history? This cannot be undone.');
+    if (!confirmed) return;
+    
+    const historyCount = stateHistory.length;
+    
+    // Clear history arrays and index
+    stateHistory = [];
+    currentStateIndex = -1;
+    
+    // Clear localStorage
+    try {
+        localStorage.removeItem('qr_history');
+    } catch (error) {
+        console.error('Error clearing history from localStorage:', error);
+    }
+    
+    // Update UI
+    updateUndoRedoButtons();
+    
+    // Close the dropdown
+    if (historyDropdown) {
+        historyDropdown.classList.add('hidden');
+    }
+    
+    // Show notification
+    showNotification(`🗑️ Cleared ${historyCount} history item${historyCount !== 1 ? 's' : ''}`, 'success');
+    
+    // Analytics: Track history clear
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'history_cleared', {
+            'items_cleared': historyCount
+        });
     }
 }
 
@@ -3398,6 +3444,12 @@ historyDropdownBtn.addEventListener('click', (e) => {
             'current_position': `${currentStateIndex + 1}/${stateHistory.length}`
         });
     }
+});
+
+// Clear history button
+clearHistoryBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearHistory();
 });
 
 // Close dropdown when clicking outside
