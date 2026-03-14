@@ -13,7 +13,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Content Security Policy: Allow required scripts for QRCode.js library -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai; font-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai https://maps.googleapis.com https://places.googleapis.com https://stablehorde.net; font-src 'self' data:;">
     <title>Free QR Code Generator with Logo | No Sign Up Required</title>
 
     <!-- Color Thief for dominant color extraction -->
@@ -85,10 +85,26 @@
                     <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
                 <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
-                <div style="margin-top: 8px;">
-                    <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" rel="noopener noreferrer" style="font-size: 12px; color: #1976d2; text-decoration: none;">
-                        🔍 Find your Place ID, for Google Review
-                    </a>
+                <!-- Place ID Search Panel (shown when Google Review template is active) -->
+                <div id="placeIdPanel" style="display: none; margin-top: 8px;">
+                    <div class="place-search-panel">
+                        <label class="place-search-label">🔍 Search for your business to get its Google Place ID</label>
+                        <div class="place-search-row">
+                            <input type="text" id="placeSearchInput" class="place-search-input"
+                                   placeholder="e.g. Joe's Pizza, Sydney NSW">
+                            <button id="placeSearchBtn" class="btn btn-secondary">Search</button>
+                        </div>
+                        <p id="placeSearchStatus" class="place-search-status"></p>
+                        <div id="placeSearchResults"></div>
+                        <div id="placeApiKeyHint" class="place-api-hint" style="display: none;">
+                            <strong>⚙️ Setup needed:</strong> To enable business search, add a
+                            <strong>Google Maps API key</strong> (with the Places API enabled) to
+                            <code>GOOGLE_MAPS_API_KEY</code> in <code>app.js</code>.
+                            <br>
+                            <a href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                               target="_blank" rel="noopener noreferrer">↗ Or use the Place ID Finder tool directly</a>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Use Case Examples Section -->
@@ -185,6 +201,7 @@
                         <button id="cancelAiImageBtn" class="btn" style="display: none; background: #757575; color: white;">Cancel</button>
                         <button id="tryBackupRendererBtn" class="btn" style="display: none; background: #FF9800; color: white;">🔄 Try Backup Renderer</button>
                     </div>
+                    <p id="aiModelStatus" class="ai-model-status">AI model: Loading...</p>
                     <p id="aiImageStatus" class="status-text">Describe the context to generate an image</p>
                     <div id="aiProgressContainer" style="display: none; margin-top: 10px;">
                         <div style="background: #e0e0e0; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
@@ -354,6 +371,76 @@
                                 <button id="clearHistoryBtn" class="btn-clear-history" title="Clear all history">🗑️ Clear History</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>QR Code Mode</h3>
+                <div class="mode-selector">
+                    <label class="mode-option">
+                        <input type="radio" name="qrMode" value="standard" checked>
+                        <span class="mode-label">
+                            <strong>Standard</strong>
+                            <small>Classic QR codes (reliable, fast)</small>
+                        </span>
+                    </label>
+                    <label class="mode-option">
+                        <input type="radio" name="qrMode" value="artistic">
+                        <span class="mode-label">
+                            <strong>Artistic</strong>
+                            <small>Gradients, rounded dots, custom styles</small>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Artistic Mode Controls (collapsible, shown only in artistic mode) -->
+            <div id="artisticControls" class="section" style="display: none;">
+                <button class="artistic-toggle" onclick="toggleArtisticControls()">
+                    <span id="artistic-toggle-icon">▶</span>
+                    <strong>Artistic Style Options</strong>
+                </button>
+                <div id="artisticControlsContent" class="artistic-controls-content" style="display: none;">
+                    <div class="option-group">
+                        <label for="dotStyle">Dot Style:</label>
+                        <select id="dotStyle" class="styled-select">
+                            <option value="square">Square</option>
+                            <option value="dots">Dots</option>
+                            <option value="rounded" selected>Rounded</option>
+                            <option value="extra-rounded">Extra Rounded</option>
+                            <option value="classy">Classy</option>
+                            <option value="classy-rounded">Classy Rounded</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label for="cornerSquareStyle">Corner Square Style:</label>
+                        <select id="cornerSquareStyle" class="styled-select">
+                            <option value="square">Square</option>
+                            <option value="dot">Dot</option>
+                            <option value="extra-rounded" selected>Extra Rounded</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label for="cornerDotStyle">Corner Dot Style:</label>
+                        <select id="cornerDotStyle" class="styled-select">
+                            <option value="square">Square</option>
+                            <option value="dot" selected>Dot</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label>
+                            <input type="checkbox" id="enableGradient" checked>
+                            Enable Gradient Effect
+                        </label>
+                    </div>
+                    
+                    <div class="option-group" id="gradientRotationGroup">
+                        <label for="gradientRotation">Gradient Rotation: <span id="gradientRotationValue">45</span>°</label>
+                        <input type="range" id="gradientRotation" min="0" max="360" value="45" step="15">
                     </div>
                 </div>
             </div>
@@ -1740,6 +1827,8 @@ Label: "Conference Room Entrance"</pre>
 
     <!-- Include QRCode.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Include qr-code-styling library for artistic QR codes -->
+    <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
     <!-- Include jsPDF library for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <!-- Include JSZip library for creating zip files -->

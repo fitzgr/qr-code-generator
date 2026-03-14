@@ -2,15 +2,28 @@
 
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
-const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
-// Models to try in order (using -latest suffix for stable versions)
+const GEMINI_API_KEY = 'AIzaSyBEI6qU_1KTUDxTq6hWskFaYaJ933i3vKM';
+// Google Maps API Key for inline Place ID search.
+// Requires: Maps JavaScript API + Places API (New) enabled in Google Cloud Console.
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBEI6qU_1KTUDxTq6hWskFaYaJ933i3vKM';
+// Models to try in order (newest stable model first)
 const GEMINI_MODELS = [
-    'gemini-1.5-flash-latest',  // Latest stable flash model
-    'gemini-1.5-flash',         // Stable flash model
-    'gemini-1.5-pro-latest',    // Latest stable pro model
-    'gemini-pro'                // Legacy fallback
+    'gemini-2.0-flash',         // Current stable flash model
+    'gemini-2.0-flash-lite',    // Faster/lower-cost flash fallback
+    'gemini-1.5-flash',         // Backward-compatible fallback
+    'gemini-1.5-flash-latest'   // Legacy flash fallback
 ];
-let workingGeminiModel = GEMINI_MODELS[0]; // Cache the working model
+const GEMINI_API_BASES = [
+    'https://generativelanguage.googleapis.com/v1',
+    'https://generativelanguage.googleapis.com/v1beta'
+];
+const GEMINI_WORKING_MODEL_CACHE_KEY = 'geminiWorkingModelV1';
+const GEMINI_WORKING_MODEL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const GEMINI_DISCOVERY_REFRESH_MS = 6 * 60 * 60 * 1000; // 6 hours
+const GEMINI_DISCOVERY_TIMEOUT_MS = 6000;
+let discoveredGeminiModels = [];
+let lastGeminiDiscoveryAt = 0;
+let workingGeminiModel = loadCachedGeminiModel() || GEMINI_MODELS[0];
 // =========================
 
 let selectedLogo = null;
@@ -28,6 +41,9 @@ let stateHistory = [];
 let currentStateIndex = -1;
 const MAX_HISTORY = 50;
 let isRestoringState = false; // Prevent saving during undo/redo
+let historySaveTimer = null;
+let hasWarnedHistoryStorageSize = false;
+const MAX_HISTORY_STORAGE_CHARS = 900000; // ~0.9MB JSON budget to avoid main-thread stalls
 
 // Artistic QR Code variables
 let backgroundImage = null;
@@ -400,6 +416,18 @@ const contextInput = document.getElementById('contextInput');
 const generatePromptBtn = document.getElementById('generatePromptBtn');
 const retryPromptBtn = document.getElementById('retryPromptBtn');
 const promptSuggestions = document.getElementById('promptSuggestions');
+const aiModelStatus = document.getElementById('aiModelStatus');
+
+if (aiModelStatus) {
+    aiModelStatus.textContent = `AI model: ${workingGeminiModel}`;
+}
+
+// Place ID Search elements (Google Review mode)
+const placeIdPanel = document.getElementById('placeIdPanel');
+const placeSearchInput = document.getElementById('placeSearchInput');
+const placeSearchBtn = document.getElementById('placeSearchBtn');
+const placeSearchStatus = document.getElementById('placeSearchStatus');
+const placeSearchResults = document.getElementById('placeSearchResults');
 
 // Color inputs
 const darkColorPicker = document.getElementById('darkColorPicker');
@@ -411,6 +439,7 @@ const labelColorText = document.getElementById('labelColorText');
 const colorPresets = document.querySelectorAll('.color-preset');
 const styleBtns = document.querySelectorAll('.style-btn');
 const errorCorrectionLevel = document.getElementById('errorCorrectionLevel');
+const qrModeRadios = document.querySelectorAll('input[name="qrMode"]');
 
 // Quick template buttons
 const templateBtns = document.querySelectorAll('.template-btn');
@@ -490,12 +519,19 @@ templateBtns.forEach(btn => {
         // Filter use cases based on active filters
         filterUseCases();
         
+        if (placeIdPanel) placeIdPanel.style.display = 'none';
+        
         switch(template) {
             case 'google-review':
                 templateText = 'https://search.google.com/local/writereview?placeid=your place id';
                 labelInput.value = 'Leave us a Google Review!';
                 isGoogleReviewMode = true;
                 document.getElementById('googleColorToggle').style.display = 'block';
+                if (placeIdPanel) {
+                    placeIdPanel.style.display = 'block';
+                    const hint = document.getElementById('placeApiKeyHint');
+                    if (hint) hint.style.display = GOOGLE_MAPS_API_KEY ? 'none' : 'block';
+                }
                 break;
             case 'url':
                 templateText = 'https://';
@@ -1114,6 +1150,20 @@ function toggleUseCases() {
     }
 }
 
+// Toggle artistic controls section
+function toggleArtisticControls() {
+    const content = document.getElementById('artisticControlsContent');
+    const icon = document.getElementById('artistic-toggle-icon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('expanded');
+    }
+}
+
 // Render use case cards
 function renderUseCases() {
     const grid = document.getElementById('use-case-grid');
@@ -1402,6 +1452,35 @@ errorCorrectionLevel.addEventListener('change', (e) => {
     }
 });
 
+// QR Mode selector (Standard vs Artistic)
+qrModeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        const selectedMode = e.target.value;
+        const artisticControls = document.getElementById('artisticControls');
+        
+        // Show/hide artistic controls based on mode
+        if (selectedMode === 'artistic') {
+            artisticControls.style.display = 'block';
+        } else {
+            artisticControls.style.display = 'none';
+        }
+        
+        // Track mode selection
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'qr_mode_changed', {
+                'mode': selectedMode
+            });
+        }
+        
+        // Regenerate QR code if one exists
+        if (currentQRDataURL) {
+            const modeLabels = { 'standard': 'Standard', 'artistic': 'Artistic' };
+            saveCurrentState(`Changed mode to ${modeLabels[selectedMode]}`);
+            generateQRCode();
+        }
+    });
+});
+
 // Helper function to auto-suggest error correction level based on logo presence
 function suggestErrorCorrectionLevel() {
     // Only auto-suggest if user hasn't explicitly changed from High
@@ -1540,11 +1619,22 @@ function saveCurrentState(actionLabel = 'Change') {
         }
         
         updateUndoRedoButtons();
-        saveHistoryToLocalStorage();
+        queueHistorySaveToLocalStorage();
         
     } catch (error) {
         console.error('Error saving state:', error);
     }
+}
+
+function queueHistorySaveToLocalStorage() {
+    if (historySaveTimer) {
+        clearTimeout(historySaveTimer);
+    }
+
+    // Debounce to avoid synchronous localStorage writes on rapid UI changes.
+    historySaveTimer = setTimeout(() => {
+        saveHistoryToLocalStorage();
+    }, 300);
 }
 
 // Restore a specific state from history
@@ -1813,7 +1903,18 @@ function saveHistoryToLocalStorage() {
             history: stateHistory,
             index: currentStateIndex
         };
-        localStorage.setItem('qr_history', JSON.stringify(historyData));
+        const serialized = JSON.stringify(historyData);
+
+        // Skip very large writes; huge image snapshots can freeze the UI during setItem.
+        if (serialized.length > MAX_HISTORY_STORAGE_CHARS) {
+            if (!hasWarnedHistoryStorageSize) {
+                showNotification('History is getting large, so disk persistence was temporarily reduced to keep editing smooth.', 'warning');
+                hasWarnedHistoryStorageSize = true;
+            }
+            return;
+        }
+
+        localStorage.setItem('qr_history', serialized);
     } catch (error) {
         if (error.name === 'QuotaExceededError') {
             // Storage quota exceeded - remove oldest states
@@ -1995,6 +2096,82 @@ labelSizeRange.addEventListener('change', (e) => {
         generateQRCode();
     }
 });
+
+// Artistic mode controls event listeners
+const dotStyleSelect = document.getElementById('dotStyle');
+const cornerSquareStyleSelect = document.getElementById('cornerSquareStyle');
+const cornerDotStyleSelect = document.getElementById('cornerDotStyle');
+const enableGradientCheckbox = document.getElementById('enableGradient');
+const gradientRotationRange = document.getElementById('gradientRotation');
+const gradientRotationValue = document.getElementById('gradientRotationValue');
+
+if (dotStyleSelect) {
+    dotStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed dot style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_dot_style_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (cornerSquareStyleSelect) {
+    cornerSquareStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed corner square style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_corner_square_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (cornerDotStyleSelect) {
+    cornerDotStyleSelect.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed corner dot style to ${e.target.value}`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_corner_dot_changed', { 'style': e.target.value });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (enableGradientCheckbox) {
+    enableGradientCheckbox.addEventListener('change', (e) => {
+        const gradientGroup = document.getElementById('gradientRotationGroup');
+        if (gradientGroup) {
+            gradientGroup.style.display = e.target.checked ? 'block' : 'none';
+        }
+        if (currentQRDataURL) {
+            saveCurrentState(`${e.target.checked ? 'Enabled' : 'Disabled'} gradient`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_gradient_toggled', { 'enabled': e.target.checked });
+            }
+            generateQRCode();
+        }
+    });
+}
+
+if (gradientRotationRange && gradientRotationValue) {
+    gradientRotationRange.addEventListener('input', (e) => {
+        gradientRotationValue.textContent = e.target.value;
+    });
+    
+    gradientRotationRange.addEventListener('change', (e) => {
+        if (currentQRDataURL) {
+            saveCurrentState(`Changed gradient rotation to ${e.target.value}°`);
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'artistic_gradient_rotation_changed', { 'rotation': parseInt(e.target.value) });
+            }
+            generateQRCode();
+        }
+    });
+}
 
 // Label input change - regenerate QR code when label is modified
 labelInput.addEventListener('input', (e) => {
@@ -2327,7 +2504,11 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
                 
                 const timeoutId = setTimeout(() => {
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.error('⏱️ Timeout after', elapsed, 'seconds');
+                    if (attempt < maxAttempts) {
+                        console.warn('⏱️ Timeout after', elapsed, 'seconds (will retry)');
+                    } else {
+                        console.error('⏱️ Timeout after', elapsed, 'seconds');
+                    }
                     reject(new Error('Image generation timed out after 60 seconds'));
                 }, timeoutMs);
                 
@@ -2342,14 +2523,18 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
                 img.onerror = (error) => {
                     clearTimeout(timeoutId);
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.error('❌ Image load failed after', elapsed, 'seconds');
-                    console.error('❌ Error event:', error);
-                    console.error('🔍 Check Network tab for details (F12 → Network)');
-                    console.error('🔍 Common issues:');
-                    console.error('   - Browser extension blocking (disable ad blockers)');
-                    console.error('   - CORS policy error');
-                    console.error('   - Firewall/antivirus blocking');
-                    console.error('   - DNS/network issue');
+                    if (attempt < maxAttempts) {
+                        console.warn(`❌ Image load failed after ${elapsed} seconds (attempt ${attempt}/${maxAttempts}, retrying)`);
+                    } else {
+                        console.error('❌ Image load failed after', elapsed, 'seconds');
+                        console.error('❌ Error event:', error);
+                        console.error('🔍 Check Network tab for details (F12 → Network)');
+                        console.error('🔍 Common issues:');
+                        console.error('   - Browser extension blocking (disable ad blockers)');
+                        console.error('   - CORS policy error');
+                        console.error('   - Firewall/antivirus blocking');
+                        console.error('   - DNS/network issue');
+                    }
                     reject(new Error('Failed to load generated image'));
                 };
                 
@@ -2402,7 +2587,11 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         }
         
     } catch (error) {
-        console.error('AI image generation error (attempt ' + attempt + '):', error);
+        if (attempt < maxAttempts) {
+            console.warn('AI image generation error (attempt ' + attempt + ' of ' + maxAttempts + ', retrying):', error.message);
+        } else {
+            console.error('AI image generation error (attempt ' + attempt + '):', error);
+        }
         
         // Check if cancelled
         if (cancelAIGeneration) {
@@ -2762,6 +2951,17 @@ function generatePromptSuggestions() {
     promptSuggestions.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;"><div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div><br>Generating creative ideas with AI...</div>';
     promptSuggestions.style.display = 'block';
     retryPromptBtn.style.display = 'none';
+    setGeminiModelStatus(`AI model: Selecting best option (current ${workingGeminiModel})...`, '#1565C0');
+
+    if (!GEMINI_API_KEY) {
+        promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+            <strong>Gemini API key missing.</strong><br>
+            <span style="font-size: 0.9em; color: #666;">Add your active key to <code>GEMINI_API_KEY</code> in app.js.</span>
+        </div>`;
+        retryPromptBtn.style.display = 'block';
+        setGeminiModelStatus('AI model: unavailable (missing API key)', '#f44336');
+        return;
+    }
     
     // Call Gemini API to generate image prompts
     generatePromptWithGemini(context)
@@ -2771,6 +2971,16 @@ function generatePromptSuggestions() {
         .catch(error => {
             console.error('Failed to generate prompts:', error);
             console.error('Error details:', error.message);
+
+            if (error.message.includes('GEMINI_API_KEY_LEAKED')) {
+                promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+                    <strong>API key blocked by Google.</strong><br>
+                    <span style="font-size: 0.9em; color: #666;">This key was flagged as leaked. Create a new key and replace <code>GEMINI_API_KEY</code> in app.js.</span>
+                </div>`;
+                retryPromptBtn.style.display = 'block';
+                setGeminiModelStatus('AI model: blocked key (rotate Gemini API key)', '#f44336');
+                return;
+            }
             
             // Check if it's a rate limit error (429)
             if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
@@ -2818,7 +3028,274 @@ function generatePromptSuggestions() {
         });
 }
 
+// ============================================
+// PLACE ID SEARCH (Google Review mode)
+// ============================================
+
+let mapsApiLoaded = false;
+let mapsApiLoading = false;
+let mapsApiCallbacks = [];
+
+function loadGoogleMapsAPI() {
+    return new Promise((resolve, reject) => {
+        if (mapsApiLoaded && window.google && window.google.maps && window.google.maps.places) {
+            resolve();
+            return;
+        }
+        mapsApiCallbacks.push({ resolve, reject });
+        if (mapsApiLoading) return;
+        mapsApiLoading = true;
+
+        window.__googleMapsApiReady = function() {
+            mapsApiLoaded = true;
+            mapsApiLoading = false;
+            mapsApiCallbacks.forEach(cb => cb.resolve());
+            mapsApiCallbacks = [];
+        };
+
+        const script = document.createElement('script');
+        // v=beta enables AutocompleteSuggestion (Places API New)
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&v=beta&loading=async&callback=__googleMapsApiReady`;
+        script.async = true;
+        script.onerror = () => {
+            mapsApiLoading = false;
+            const err = new Error('Failed to load Google Maps API. Check your key and confirm the Places API is enabled.');
+            mapsApiCallbacks.forEach(cb => cb.reject(err));
+            mapsApiCallbacks = [];
+        };
+        document.head.appendChild(script);
+    });
+}
+
+async function searchPlaceId(query) {
+    if (!placeSearchStatus) return;
+    placeSearchResults.innerHTML = '';
+
+    if (!GOOGLE_MAPS_API_KEY) {
+        placeSearchStatus.textContent = 'No Maps API key set — see setup instructions above.';
+        placeSearchStatus.style.color = '#f57c00';
+        return;
+    }
+
+    placeSearchStatus.textContent = 'Searching\u2026';
+    placeSearchStatus.style.color = '#1565C0';
+
+    try {
+        await loadGoogleMapsAPI();
+
+        // Use Places API (New): AutocompleteSuggestion
+        const { suggestions } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            includedPrimaryTypes: ['establishment']
+        });
+
+        if (!suggestions || suggestions.length === 0) {
+            placeSearchStatus.textContent = 'No businesses found. Try a more specific name or include a city.';
+            placeSearchStatus.style.color = '#666';
+            return;
+        }
+
+        placeSearchStatus.textContent = `${suggestions.length} result(s) — click one to populate the Place ID.`;
+        placeSearchStatus.style.color = '#4CAF50';
+
+        suggestions.slice(0, 6).forEach(suggestion => {
+            const pred = suggestion.placePrediction;
+            const placeId = pred.placeId;
+            const name = pred.mainText ? pred.mainText.toString() : pred.text.toString();
+            const address = pred.secondaryText ? pred.secondaryText.toString() : '';
+
+            const card = document.createElement('div');
+            card.className = 'place-result-card';
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'place-result-name';
+            nameEl.textContent = name;
+
+            const addrEl = document.createElement('div');
+            addrEl.className = 'place-result-address';
+            addrEl.textContent = address;
+
+            const idEl = document.createElement('div');
+            idEl.className = 'place-result-id';
+            idEl.textContent = `ID: ${placeId}`;
+
+            card.appendChild(nameEl);
+            card.appendChild(addrEl);
+            card.appendChild(idEl);
+
+            card.addEventListener('click', () => {
+                const url = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+                textInput.value = url;
+                generateQRCode();
+                placeSearchStatus.textContent = `✅ Place ID set for: ${name}`;
+                placeSearchStatus.style.color = '#4CAF50';
+                document.querySelectorAll('.place-result-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'place_id_selected');
+                }
+            });
+            placeSearchResults.appendChild(card);
+        });
+    } catch (error) {
+        placeSearchStatus.textContent = `Search failed: ${error.message}`;
+        placeSearchStatus.style.color = '#f44336';
+        console.error('Place search error:', error);
+    }
+}
+
+if (placeSearchBtn) {
+    placeSearchBtn.addEventListener('click', () => {
+        const q = placeSearchInput ? placeSearchInput.value.trim() : '';
+        if (q) searchPlaceId(q);
+    });
+}
+
+if (placeSearchInput) {
+    placeSearchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const q = placeSearchInput.value.trim();
+            if (q) searchPlaceId(q);
+        }
+    });
+}
+
+function loadCachedGeminiModel() {
+    try {
+        const raw = localStorage.getItem(GEMINI_WORKING_MODEL_CACHE_KEY);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.model !== 'string' || typeof parsed.timestamp !== 'number') {
+            return null;
+        }
+
+        const isFresh = (Date.now() - parsed.timestamp) < GEMINI_WORKING_MODEL_TTL_MS;
+        if (!isFresh) return null;
+
+        return parsed.model;
+    } catch (error) {
+        return null;
+    }
+}
+
+function saveCachedGeminiModel(model) {
+    try {
+        localStorage.setItem(GEMINI_WORKING_MODEL_CACHE_KEY, JSON.stringify({
+            model,
+            timestamp: Date.now()
+        }));
+    } catch (error) {
+        // Ignore storage failures (private mode/quota)
+    }
+}
+
+function setGeminiModelStatus(text, color = '#5f6368') {
+    if (!aiModelStatus) return;
+    aiModelStatus.textContent = text;
+    aiModelStatus.style.color = color;
+}
+
+function isGeminiKeyLeakedError(statusCode, errorText = '') {
+    return statusCode === 403 && /reported as leaked|api key was reported as leaked/i.test(errorText);
+}
+
+function updateGeminiModelStatus(model, source = 'Active') {
+    if (!model) {
+        setGeminiModelStatus('AI model: Waiting for selection...');
+        return;
+    }
+
+    setGeminiModelStatus(`AI model (${source}): ${model}`);
+}
+
+function rankGeminiModel(modelName) {
+    const name = String(modelName || '').toLowerCase();
+
+    if (!name.startsWith('gemini-')) return 1000;
+    if (name.includes('embedding')) return 1000;
+
+    let score = 500;
+
+    if (name.includes('gemini-2.0-flash')) score = 0;
+    else if (name.includes('gemini-2') && name.includes('flash')) score = 10;
+    else if (name.includes('gemini-1.5-flash')) score = 20;
+    else if (name.includes('gemini-1.5-pro')) score = 40;
+    else if (name.includes('flash')) score = 80;
+    else if (name.includes('pro')) score = 120;
+
+    if (name.includes('preview') || name.includes('exp') || name.includes('experimental')) {
+        score += 200;
+    }
+
+    return score;
+}
+
+async function discoverGeminiGenerateContentModels() {
+    if (!GEMINI_API_KEY) return [];
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_DISCOVERY_TIMEOUT_MS);
+
+    try {
+        for (const baseUrl of GEMINI_API_BASES) {
+            const response = await fetch(`${baseUrl}/models?key=${GEMINI_API_KEY}`, {
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                if (response.status !== 403) {
+                    console.warn(`Gemini model discovery failed on ${baseUrl} (${response.status})`);
+                }
+                continue;
+            }
+
+            const data = await response.json();
+            if (!data || !Array.isArray(data.models)) continue;
+
+            const discovered = data.models
+                .filter(model => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+                .map(model => String(model.name || '').replace(/^models\//, ''))
+                .filter(name => name.startsWith('gemini-'));
+
+            if (discovered.length > 0) {
+                return Array.from(new Set(discovered)).sort((a, b) => rankGeminiModel(a) - rankGeminiModel(b));
+            }
+        }
+
+        return [];
+    } catch (error) {
+        console.warn('Gemini model discovery error:', error.message);
+        return [];
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+async function getGeminiModelsToTry() {
+    const now = Date.now();
+    if (!lastGeminiDiscoveryAt || (now - lastGeminiDiscoveryAt) > GEMINI_DISCOVERY_REFRESH_MS) {
+        discoveredGeminiModels = await discoverGeminiGenerateContentModels();
+        lastGeminiDiscoveryAt = now;
+
+        if (discoveredGeminiModels.length > 0) {
+            setGeminiModelStatus(`AI model: ${workingGeminiModel} (${discoveredGeminiModels.length} discovered)`, '#1565C0');
+        }
+    }
+
+    // Preserve known-good + explicit fallbacks, then append discovered models.
+    return Array.from(new Set([
+        workingGeminiModel,
+        ...GEMINI_MODELS,
+        ...discoveredGeminiModels
+    ].filter(Boolean)));
+}
+
 async function generatePromptWithGemini(context) {
+    if (!GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY_MISSING');
+    }
+
     const prompt = `You are a creative AI image prompt expert helping generate descriptions for Stable Diffusion artistic QR code backgrounds.
 
 User's context: "${context}"
@@ -2855,41 +3332,56 @@ Example response format:
 
 Return ONLY valid JSON, no markdown, no other text.`;
 
-    // Try models in order until one works
-    const modelsToTry = [workingGeminiModel, ...GEMINI_MODELS.filter(m => m !== workingGeminiModel)];
+    // Try cached/known models first, then discovered current models.
+    const modelsToTry = await getGeminiModelsToTry();
     let lastError = null;
     
     for (const model of modelsToTry) {
         try {
             console.log(`🔄 Trying Gemini model: ${model}`);
-            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
-            
-            const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 1.0,
-                        maxOutputTokens: 1000
-                    }
-                })
-            });
+            setGeminiModelStatus(`AI model: Trying ${model}...`, '#1565C0');
+            let data = null;
+            let modelWorked = false;
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.warn(`❌ Model ${model} failed (${response.status}):`, errorText.substring(0, 100));
-                lastError = new Error(`${model} returned ${response.status}`);
+            for (const baseUrl of GEMINI_API_BASES) {
+                const apiUrl = `${baseUrl}/models/${model}:generateContent`;
+
+                const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 1.0,
+                            maxOutputTokens: 1000
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    if (isGeminiKeyLeakedError(response.status, errorText)) {
+                        throw new Error('GEMINI_API_KEY_LEAKED');
+                    }
+                    console.warn(`❌ Model ${model} failed on ${baseUrl} (${response.status}):`, errorText.substring(0, 100));
+                    lastError = new Error(`${model} returned ${response.status}`);
+                    continue;
+                }
+
+                data = await response.json();
+                modelWorked = true;
+                break;
+            }
+
+            if (!modelWorked || !data) {
                 continue; // Try next model
             }
-            
-            const data = await response.json();
             
             if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
                 console.warn(`❌ Model ${model} returned invalid structure`);
@@ -2901,8 +3393,12 @@ Return ONLY valid JSON, no markdown, no other text.`;
             if (workingGeminiModel !== model) {
                 console.log(`✅ Found working model: ${model} (updating cache)`);
                 workingGeminiModel = model;
+                saveCachedGeminiModel(model);
+                updateGeminiModelStatus(model, 'Auto-selected');
             } else {
                 console.log(`✅ Model ${model} working`);
+                saveCachedGeminiModel(model);
+                updateGeminiModelStatus(model, 'Active');
             }
             
             const textResponse = data.candidates[0].content.parts[0].text;
@@ -2934,6 +3430,7 @@ Return ONLY valid JSON, no markdown, no other text.`;
     
     // All models failed
     console.error('❌ All Gemini models failed');
+    setGeminiModelStatus('AI model: unavailable (all candidates failed)', '#f44336');
     throw lastError || new Error('All Gemini models unavailable');
 }
 
@@ -3521,6 +4018,21 @@ function generateQRCode() {
         alert(`⚠️ Color Contrast Too Low!\n\nThe colors you selected don't have enough contrast for QR codes to scan reliably.\n\nContrast ratio: ${contrastCheck.ratio}:1 (minimum: 3.0:1)\n\nPlease choose colors with more contrast:\n• Dark QR code on light background\n• Light QR code on dark background\n• Use the color presets for safe combinations`);
         return;
     }
+    
+    // Check which mode is selected
+    const selectedMode = document.querySelector('input[name="qrMode"]:checked')?.value || 'standard';
+    
+    if (selectedMode === 'artistic') {
+        // Use artistic QR generation
+        generateArtisticMode(text);
+    } else {
+        // Use standard QR generation (original QRCode.js)
+        generateStandardMode(text);
+    }
+}
+
+// Standard QR generation (original QRCode.js logic)
+function generateStandardMode(text) {
     try {
         qrCanvas.getContext('2d').clearRect(0, 0, qrCanvas.width, qrCanvas.height);
         const size = parseInt(sizeRange.value);
@@ -3558,6 +4070,26 @@ function generateQRCode() {
         }, 100);
     } catch (error) {
         alert('Failed to generate QR code: ' + error.message);
+        console.error(error);
+    }
+}
+
+// Artistic QR generation wrapper
+function generateArtisticMode(text) {
+    try {
+        qrCanvas.getContext('2d').clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        const size = parseInt(sizeRange.value);
+        const qrSize = size * 32;
+        
+        generateArtisticQR(text, qrSize).then(artisticCanvas => {
+            // Draw the artistic QR with logo and label
+            drawQRWithLogoFromCanvas(artisticCanvas, qrSize);
+        }).catch(error => {
+            alert('Failed to generate artistic QR code: ' + error.message);
+            console.error(error);
+        });
+    } catch (error) {
+        alert('Failed to generate artistic QR code: ' + error.message);
         console.error(error);
     }
 }
@@ -3737,6 +4269,118 @@ function downloadMultiQRAsPDF(pairs) {
         }, 100);
     }
     processQR(0);
+}
+
+// --- Artistic QR Code Generation (using qr-code-styling) ---
+function generateArtisticQR(text, qrSize) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get artistic mode settings from UI controls
+            const dotStyle = document.getElementById('dotStyle')?.value || 'rounded';
+            const cornerSquareStyle = document.getElementById('cornerSquareStyle')?.value || 'extra-rounded';
+            const cornerDotStyle = document.getElementById('cornerDotStyle')?.value || 'dot';
+            const enableGradient = document.getElementById('enableGradient')?.checked || false;
+            const gradientRotation = parseInt(document.getElementById('gradientRotation')?.value || '45');
+            
+            // Create gradient for artistic effect (if enabled)
+            const dotsColor = enableGradient ? {
+                type: 'linear',
+                rotation: (gradientRotation * Math.PI) / 180, // Convert degrees to radians
+                colorStops: [
+                    { offset: 0, color: currentDarkColor },
+                    { offset: 1, color: adjustColorBrightness(currentDarkColor, 20) }
+                ]
+            } : currentDarkColor;
+            
+            // Configure qr-code-styling options
+            const qrCode = new QRCodeStyling({
+                width: qrSize,
+                height: qrSize,
+                data: text,
+                margin: 0,
+                qrOptions: {
+                    typeNumber: 0,
+                    mode: 'Byte',
+                    errorCorrectionLevel: currentErrorCorrectionLevel
+                },
+                imageOptions: {
+                    hideBackgroundDots: true,
+                    imageSize: 0.4,
+                    margin: 10
+                },
+                dotsOptions: {
+                    type: dotStyle,
+                    ...(enableGradient ? { gradient: dotsColor } : { color: dotsColor })
+                },
+                backgroundOptions: {
+                    color: currentLightColor
+                },
+                cornersSquareOptions: {
+                    type: cornerSquareStyle,
+                    color: currentDarkColor
+                },
+                cornersDotOptions: {
+                    type: cornerDotStyle,
+                    color: currentDarkColor
+                }
+            });
+            
+            // If logo is selected, add it
+            if (window.uploadedLogoDataURL) {
+                qrCode.update({
+                    image: window.uploadedLogoDataURL,
+                    imageOptions: {
+                        hideBackgroundDots: true,
+                        imageSize: parseInt(logoSizeRange.value) / 100,
+                        margin: 10
+                    }
+                });
+            }
+            
+            // Generate canvas and return it
+            qrCode.getRawData('png').then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = qrSize;
+                        canvas.height = qrSize;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas);
+                    };
+                    img.src = reader.result;
+                };
+                reader.readAsDataURL(blob);
+            }).catch(reject);
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+// Helper function to adjust color brightness for gradients
+function adjustColorBrightness(hex, percent) {
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Convert to RGB
+    let r = parseInt(hex.substring(0, 2), 16);
+    let g = parseInt(hex.substring(2, 4), 16);
+    let b = parseInt(hex.substring(4, 6), 16);
+    
+    // Adjust brightness
+    r = Math.min(255, Math.max(0, r + (r * percent / 100)));
+    g = Math.min(255, Math.max(0, g + (g * percent / 100)));
+    b = Math.min(255, Math.max(0, b + (b * percent / 100)));
+    
+    // Convert back to hex
+    const rr = Math.round(r).toString(16).padStart(2, '0');
+    const gg = Math.round(g).toString(16).padStart(2, '0');
+    const bb = Math.round(b).toString(16).padStart(2, '0');
+    
+    return '#' + rr + gg + bb;
 }
 
 function drawQRWithLogo(qrImage, qrSize) {
