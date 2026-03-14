@@ -9,9 +9,13 @@ const GOOGLE_MAPS_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
 // Models to try in order (newest stable model first)
 const GEMINI_MODELS = [
     'gemini-2.0-flash',         // Current stable flash model
+    'gemini-2.0-flash-lite',    // Faster/lower-cost flash fallback
     'gemini-1.5-flash',         // Backward-compatible fallback
-    'gemini-1.5-pro-latest',    // Legacy pro fallback
-    'gemini-pro'                // Legacy fallback
+    'gemini-1.5-flash-latest'   // Legacy flash fallback
+];
+const GEMINI_API_BASES = [
+    'https://generativelanguage.googleapis.com/v1beta',
+    'https://generativelanguage.googleapis.com/v1'
 ];
 const GEMINI_WORKING_MODEL_CACHE_KEY = 'geminiWorkingModelV1';
 const GEMINI_WORKING_MODEL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -3171,24 +3175,30 @@ async function discoverGeminiGenerateContentModels() {
     const timeoutId = setTimeout(() => controller.abort(), GEMINI_DISCOVERY_TIMEOUT_MS);
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`, {
-            signal: controller.signal
-        });
+        for (const baseUrl of GEMINI_API_BASES) {
+            const response = await fetch(`${baseUrl}/models?key=${GEMINI_API_KEY}`, {
+                signal: controller.signal
+            });
 
-        if (!response.ok) {
-            console.warn(`Gemini model discovery failed (${response.status})`);
-            return [];
+            if (!response.ok) {
+                console.warn(`Gemini model discovery failed on ${baseUrl} (${response.status})`);
+                continue;
+            }
+
+            const data = await response.json();
+            if (!data || !Array.isArray(data.models)) continue;
+
+            const discovered = data.models
+                .filter(model => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+                .map(model => String(model.name || '').replace(/^models\//, ''))
+                .filter(name => name.startsWith('gemini-'));
+
+            if (discovered.length > 0) {
+                return Array.from(new Set(discovered)).sort((a, b) => rankGeminiModel(a) - rankGeminiModel(b));
+            }
         }
 
-        const data = await response.json();
-        if (!data || !Array.isArray(data.models)) return [];
-
-        const discovered = data.models
-            .filter(model => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
-            .map(model => String(model.name || '').replace(/^models\//, ''))
-            .filter(name => name.startsWith('gemini-'));
-
-        return Array.from(new Set(discovered)).sort((a, b) => rankGeminiModel(a) - rankGeminiModel(b));
+        return [];
     } catch (error) {
         console.warn('Gemini model discovery error:', error.message);
         return [];
@@ -3261,34 +3271,45 @@ Return ONLY valid JSON, no markdown, no other text.`;
         try {
             console.log(`🔄 Trying Gemini model: ${model}`);
             setGeminiModelStatus(`AI model: Trying ${model}...`, '#1565C0');
-            const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
-            
-            const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }],
-                    generationConfig: {
-                        temperature: 1.0,
-                        maxOutputTokens: 1000
-                    }
-                })
-            });
+            let data = null;
+            let modelWorked = false;
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.warn(`❌ Model ${model} failed (${response.status}):`, errorText.substring(0, 100));
-                lastError = new Error(`${model} returned ${response.status}`);
+            for (const baseUrl of GEMINI_API_BASES) {
+                const apiUrl = `${baseUrl}/models/${model}:generateContent`;
+
+                const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: prompt
+                            }]
+                        }],
+                        generationConfig: {
+                            temperature: 1.0,
+                            maxOutputTokens: 1000
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.warn(`❌ Model ${model} failed on ${baseUrl} (${response.status}):`, errorText.substring(0, 100));
+                    lastError = new Error(`${model} returned ${response.status}`);
+                    continue;
+                }
+
+                data = await response.json();
+                modelWorked = true;
+                break;
+            }
+
+            if (!modelWorked || !data) {
                 continue; // Try next model
             }
-            
-            const data = await response.json();
             
             if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
                 console.warn(`❌ Model ${model} returned invalid structure`);
