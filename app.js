@@ -3,14 +3,23 @@
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
 const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
-// Models to try in order (using -latest suffix for stable versions)
+// Google Maps API Key for inline Place ID search.
+// Requires: Maps JavaScript API + Places API (New) enabled in Google Cloud Console.
+const GOOGLE_MAPS_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
+// Models to try in order (newest stable model first)
 const GEMINI_MODELS = [
-    'gemini-1.5-flash-latest',  // Latest stable flash model
-    'gemini-1.5-flash',         // Stable flash model
-    'gemini-1.5-pro-latest',    // Latest stable pro model
+    'gemini-2.0-flash',         // Current stable flash model
+    'gemini-1.5-flash',         // Backward-compatible fallback
+    'gemini-1.5-pro-latest',    // Legacy pro fallback
     'gemini-pro'                // Legacy fallback
 ];
-let workingGeminiModel = GEMINI_MODELS[0]; // Cache the working model
+const GEMINI_WORKING_MODEL_CACHE_KEY = 'geminiWorkingModelV1';
+const GEMINI_WORKING_MODEL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const GEMINI_DISCOVERY_REFRESH_MS = 6 * 60 * 60 * 1000; // 6 hours
+const GEMINI_DISCOVERY_TIMEOUT_MS = 6000;
+let discoveredGeminiModels = [];
+let lastGeminiDiscoveryAt = 0;
+let workingGeminiModel = loadCachedGeminiModel() || GEMINI_MODELS[0];
 // =========================
 
 let selectedLogo = null;
@@ -400,6 +409,18 @@ const contextInput = document.getElementById('contextInput');
 const generatePromptBtn = document.getElementById('generatePromptBtn');
 const retryPromptBtn = document.getElementById('retryPromptBtn');
 const promptSuggestions = document.getElementById('promptSuggestions');
+const aiModelStatus = document.getElementById('aiModelStatus');
+
+if (aiModelStatus) {
+    aiModelStatus.textContent = `AI model: ${workingGeminiModel}`;
+}
+
+// Place ID Search elements (Google Review mode)
+const placeIdPanel = document.getElementById('placeIdPanel');
+const placeSearchInput = document.getElementById('placeSearchInput');
+const placeSearchBtn = document.getElementById('placeSearchBtn');
+const placeSearchStatus = document.getElementById('placeSearchStatus');
+const placeSearchResults = document.getElementById('placeSearchResults');
 
 // Color inputs
 const darkColorPicker = document.getElementById('darkColorPicker');
@@ -491,12 +512,19 @@ templateBtns.forEach(btn => {
         // Filter use cases based on active filters
         filterUseCases();
         
+        if (placeIdPanel) placeIdPanel.style.display = 'none';
+        
         switch(template) {
             case 'google-review':
                 templateText = 'https://search.google.com/local/writereview?placeid=your place id';
                 labelInput.value = 'Leave us a Google Review!';
                 isGoogleReviewMode = true;
                 document.getElementById('googleColorToggle').style.display = 'block';
+                if (placeIdPanel) {
+                    placeIdPanel.style.display = 'block';
+                    const hint = document.getElementById('placeApiKeyHint');
+                    if (hint) hint.style.display = GOOGLE_MAPS_API_KEY ? 'none' : 'block';
+                }
                 break;
             case 'url':
                 templateText = 'https://';
@@ -2882,6 +2910,7 @@ function generatePromptSuggestions() {
     promptSuggestions.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;"><div class="spinner" style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div><br>Generating creative ideas with AI...</div>';
     promptSuggestions.style.display = 'block';
     retryPromptBtn.style.display = 'none';
+    setGeminiModelStatus(`AI model: Selecting best option (current ${workingGeminiModel})...`, '#1565C0');
     
     // Call Gemini API to generate image prompts
     generatePromptWithGemini(context)
@@ -2938,6 +2967,255 @@ function generatePromptSuggestions() {
         });
 }
 
+// ============================================
+// PLACE ID SEARCH (Google Review mode)
+// ============================================
+
+let mapsApiLoaded = false;
+let mapsApiLoading = false;
+let mapsApiCallbacks = [];
+
+function loadGoogleMapsAPI() {
+    return new Promise((resolve, reject) => {
+        if (mapsApiLoaded && window.google && window.google.maps && window.google.maps.places) {
+            resolve();
+            return;
+        }
+        mapsApiCallbacks.push({ resolve, reject });
+        if (mapsApiLoading) return;
+        mapsApiLoading = true;
+
+        window.__googleMapsApiReady = function() {
+            mapsApiLoaded = true;
+            mapsApiLoading = false;
+            mapsApiCallbacks.forEach(cb => cb.resolve());
+            mapsApiCallbacks = [];
+        };
+
+        const script = document.createElement('script');
+        // v=beta enables AutocompleteSuggestion (Places API New)
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&v=beta&callback=__googleMapsApiReady`;
+        script.async = true;
+        script.onerror = () => {
+            mapsApiLoading = false;
+            const err = new Error('Failed to load Google Maps API. Check your key and confirm the Places API is enabled.');
+            mapsApiCallbacks.forEach(cb => cb.reject(err));
+            mapsApiCallbacks = [];
+        };
+        document.head.appendChild(script);
+    });
+}
+
+async function searchPlaceId(query) {
+    if (!placeSearchStatus) return;
+    placeSearchResults.innerHTML = '';
+
+    if (!GOOGLE_MAPS_API_KEY) {
+        placeSearchStatus.textContent = 'No Maps API key set — see setup instructions above.';
+        placeSearchStatus.style.color = '#f57c00';
+        return;
+    }
+
+    placeSearchStatus.textContent = 'Searching\u2026';
+    placeSearchStatus.style.color = '#1565C0';
+
+    try {
+        await loadGoogleMapsAPI();
+
+        // Use Places API (New): AutocompleteSuggestion
+        const { suggestions } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            includedPrimaryTypes: ['establishment']
+        });
+
+        if (!suggestions || suggestions.length === 0) {
+            placeSearchStatus.textContent = 'No businesses found. Try a more specific name or include a city.';
+            placeSearchStatus.style.color = '#666';
+            return;
+        }
+
+        placeSearchStatus.textContent = `${suggestions.length} result(s) — click one to populate the Place ID.`;
+        placeSearchStatus.style.color = '#4CAF50';
+
+        suggestions.slice(0, 6).forEach(suggestion => {
+            const pred = suggestion.placePrediction;
+            const placeId = pred.placeId;
+            const name = pred.mainText ? pred.mainText.toString() : pred.text.toString();
+            const address = pred.secondaryText ? pred.secondaryText.toString() : '';
+
+            const card = document.createElement('div');
+            card.className = 'place-result-card';
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'place-result-name';
+            nameEl.textContent = name;
+
+            const addrEl = document.createElement('div');
+            addrEl.className = 'place-result-address';
+            addrEl.textContent = address;
+
+            const idEl = document.createElement('div');
+            idEl.className = 'place-result-id';
+            idEl.textContent = `ID: ${placeId}`;
+
+            card.appendChild(nameEl);
+            card.appendChild(addrEl);
+            card.appendChild(idEl);
+
+            card.addEventListener('click', () => {
+                const url = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+                textInput.value = url;
+                generateQRCode();
+                placeSearchStatus.textContent = `✅ Place ID set for: ${name}`;
+                placeSearchStatus.style.color = '#4CAF50';
+                document.querySelectorAll('.place-result-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'place_id_selected');
+                }
+            });
+            placeSearchResults.appendChild(card);
+        });
+    } catch (error) {
+        placeSearchStatus.textContent = `Search failed: ${error.message}`;
+        placeSearchStatus.style.color = '#f44336';
+        console.error('Place search error:', error);
+    }
+}
+
+if (placeSearchBtn) {
+    placeSearchBtn.addEventListener('click', () => {
+        const q = placeSearchInput ? placeSearchInput.value.trim() : '';
+        if (q) searchPlaceId(q);
+    });
+}
+
+if (placeSearchInput) {
+    placeSearchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            const q = placeSearchInput.value.trim();
+            if (q) searchPlaceId(q);
+        }
+    });
+}
+
+function loadCachedGeminiModel() {
+    try {
+        const raw = localStorage.getItem(GEMINI_WORKING_MODEL_CACHE_KEY);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.model !== 'string' || typeof parsed.timestamp !== 'number') {
+            return null;
+        }
+
+        const isFresh = (Date.now() - parsed.timestamp) < GEMINI_WORKING_MODEL_TTL_MS;
+        if (!isFresh) return null;
+
+        return parsed.model;
+    } catch (error) {
+        return null;
+    }
+}
+
+function saveCachedGeminiModel(model) {
+    try {
+        localStorage.setItem(GEMINI_WORKING_MODEL_CACHE_KEY, JSON.stringify({
+            model,
+            timestamp: Date.now()
+        }));
+    } catch (error) {
+        // Ignore storage failures (private mode/quota)
+    }
+}
+
+function setGeminiModelStatus(text, color = '#5f6368') {
+    if (!aiModelStatus) return;
+    aiModelStatus.textContent = text;
+    aiModelStatus.style.color = color;
+}
+
+function updateGeminiModelStatus(model, source = 'Active') {
+    if (!model) {
+        setGeminiModelStatus('AI model: Waiting for selection...');
+        return;
+    }
+
+    setGeminiModelStatus(`AI model (${source}): ${model}`);
+}
+
+function rankGeminiModel(modelName) {
+    const name = String(modelName || '').toLowerCase();
+
+    if (!name.startsWith('gemini-')) return 1000;
+    if (name.includes('embedding')) return 1000;
+
+    let score = 500;
+
+    if (name.includes('gemini-2.0-flash')) score = 0;
+    else if (name.includes('gemini-2') && name.includes('flash')) score = 10;
+    else if (name.includes('gemini-1.5-flash')) score = 20;
+    else if (name.includes('gemini-1.5-pro')) score = 40;
+    else if (name.includes('flash')) score = 80;
+    else if (name.includes('pro')) score = 120;
+
+    if (name.includes('preview') || name.includes('exp') || name.includes('experimental')) {
+        score += 200;
+    }
+
+    return score;
+}
+
+async function discoverGeminiGenerateContentModels() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GEMINI_DISCOVERY_TIMEOUT_MS);
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`, {
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            console.warn(`Gemini model discovery failed (${response.status})`);
+            return [];
+        }
+
+        const data = await response.json();
+        if (!data || !Array.isArray(data.models)) return [];
+
+        const discovered = data.models
+            .filter(model => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+            .map(model => String(model.name || '').replace(/^models\//, ''))
+            .filter(name => name.startsWith('gemini-'));
+
+        return Array.from(new Set(discovered)).sort((a, b) => rankGeminiModel(a) - rankGeminiModel(b));
+    } catch (error) {
+        console.warn('Gemini model discovery error:', error.message);
+        return [];
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+async function getGeminiModelsToTry() {
+    const now = Date.now();
+    if (!lastGeminiDiscoveryAt || (now - lastGeminiDiscoveryAt) > GEMINI_DISCOVERY_REFRESH_MS) {
+        discoveredGeminiModels = await discoverGeminiGenerateContentModels();
+        lastGeminiDiscoveryAt = now;
+
+        if (discoveredGeminiModels.length > 0) {
+            setGeminiModelStatus(`AI model: ${workingGeminiModel} (${discoveredGeminiModels.length} discovered)`, '#1565C0');
+        }
+    }
+
+    // Preserve known-good + explicit fallbacks, then append discovered models.
+    return Array.from(new Set([
+        workingGeminiModel,
+        ...GEMINI_MODELS,
+        ...discoveredGeminiModels
+    ].filter(Boolean)));
+}
+
 async function generatePromptWithGemini(context) {
     const prompt = `You are a creative AI image prompt expert helping generate descriptions for Stable Diffusion artistic QR code backgrounds.
 
@@ -2975,13 +3253,14 @@ Example response format:
 
 Return ONLY valid JSON, no markdown, no other text.`;
 
-    // Try models in order until one works
-    const modelsToTry = [workingGeminiModel, ...GEMINI_MODELS.filter(m => m !== workingGeminiModel)];
+    // Try cached/known models first, then discovered current models.
+    const modelsToTry = await getGeminiModelsToTry();
     let lastError = null;
     
     for (const model of modelsToTry) {
         try {
             console.log(`🔄 Trying Gemini model: ${model}`);
+            setGeminiModelStatus(`AI model: Trying ${model}...`, '#1565C0');
             const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
             
             const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
@@ -3021,8 +3300,12 @@ Return ONLY valid JSON, no markdown, no other text.`;
             if (workingGeminiModel !== model) {
                 console.log(`✅ Found working model: ${model} (updating cache)`);
                 workingGeminiModel = model;
+                saveCachedGeminiModel(model);
+                updateGeminiModelStatus(model, 'Auto-selected');
             } else {
                 console.log(`✅ Model ${model} working`);
+                saveCachedGeminiModel(model);
+                updateGeminiModelStatus(model, 'Active');
             }
             
             const textResponse = data.candidates[0].content.parts[0].text;
@@ -3054,6 +3337,7 @@ Return ONLY valid JSON, no markdown, no other text.`;
     
     // All models failed
     console.error('❌ All Gemini models failed');
+    setGeminiModelStatus('AI model: unavailable (all candidates failed)', '#f44336');
     throw lastError || new Error('All Gemini models unavailable');
 }
 
