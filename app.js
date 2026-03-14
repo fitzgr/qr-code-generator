@@ -14,8 +14,8 @@ const GEMINI_MODELS = [
     'gemini-1.5-flash-latest'   // Legacy flash fallback
 ];
 const GEMINI_API_BASES = [
-    'https://generativelanguage.googleapis.com/v1beta',
-    'https://generativelanguage.googleapis.com/v1'
+    'https://generativelanguage.googleapis.com/v1',
+    'https://generativelanguage.googleapis.com/v1beta'
 ];
 const GEMINI_WORKING_MODEL_CACHE_KEY = 'geminiWorkingModelV1';
 const GEMINI_WORKING_MODEL_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -2998,7 +2998,7 @@ function loadGoogleMapsAPI() {
 
         const script = document.createElement('script');
         // v=beta enables AutocompleteSuggestion (Places API New)
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&v=beta&callback=__googleMapsApiReady`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&v=beta&loading=async&callback=__googleMapsApiReady`;
         script.async = true;
         script.onerror = () => {
             mapsApiLoading = false;
