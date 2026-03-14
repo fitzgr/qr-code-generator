@@ -2,10 +2,10 @@
 
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
-const GEMINI_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
+const GEMINI_API_KEY = '';
 // Google Maps API Key for inline Place ID search.
 // Requires: Maps JavaScript API + Places API (New) enabled in Google Cloud Console.
-const GOOGLE_MAPS_API_KEY = 'AIzaSyARF154Yr51iU5n02cf2G-G5HFmJDv-OF4';
+const GOOGLE_MAPS_API_KEY = '';
 // Models to try in order (newest stable model first)
 const GEMINI_MODELS = [
     'gemini-2.0-flash',         // Current stable flash model
@@ -2915,6 +2915,16 @@ function generatePromptSuggestions() {
     promptSuggestions.style.display = 'block';
     retryPromptBtn.style.display = 'none';
     setGeminiModelStatus(`AI model: Selecting best option (current ${workingGeminiModel})...`, '#1565C0');
+
+    if (!GEMINI_API_KEY) {
+        promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+            <strong>Gemini API key missing.</strong><br>
+            <span style="font-size: 0.9em; color: #666;">Add your active key to <code>GEMINI_API_KEY</code> in app.js.</span>
+        </div>`;
+        retryPromptBtn.style.display = 'block';
+        setGeminiModelStatus('AI model: unavailable (missing API key)', '#f44336');
+        return;
+    }
     
     // Call Gemini API to generate image prompts
     generatePromptWithGemini(context)
@@ -2924,6 +2934,16 @@ function generatePromptSuggestions() {
         .catch(error => {
             console.error('Failed to generate prompts:', error);
             console.error('Error details:', error.message);
+
+            if (error.message.includes('GEMINI_API_KEY_LEAKED')) {
+                promptSuggestions.innerHTML = `<div style="text-align: center; padding: 20px; color: #f44336;">
+                    <strong>API key blocked by Google.</strong><br>
+                    <span style="font-size: 0.9em; color: #666;">This key was flagged as leaked. Create a new key and replace <code>GEMINI_API_KEY</code> in app.js.</span>
+                </div>`;
+                retryPromptBtn.style.display = 'block';
+                setGeminiModelStatus('AI model: blocked key (rotate Gemini API key)', '#f44336');
+                return;
+            }
             
             // Check if it's a rate limit error (429)
             if (error.message.includes('429') || error.message.toLowerCase().includes('quota')) {
@@ -3139,6 +3159,10 @@ function setGeminiModelStatus(text, color = '#5f6368') {
     aiModelStatus.style.color = color;
 }
 
+function isGeminiKeyLeakedError(statusCode, errorText = '') {
+    return statusCode === 403 && /reported as leaked|api key was reported as leaked/i.test(errorText);
+}
+
 function updateGeminiModelStatus(model, source = 'Active') {
     if (!model) {
         setGeminiModelStatus('AI model: Waiting for selection...');
@@ -3171,6 +3195,8 @@ function rankGeminiModel(modelName) {
 }
 
 async function discoverGeminiGenerateContentModels() {
+    if (!GEMINI_API_KEY) return [];
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), GEMINI_DISCOVERY_TIMEOUT_MS);
 
@@ -3181,7 +3207,9 @@ async function discoverGeminiGenerateContentModels() {
             });
 
             if (!response.ok) {
-                console.warn(`Gemini model discovery failed on ${baseUrl} (${response.status})`);
+                if (response.status !== 403) {
+                    console.warn(`Gemini model discovery failed on ${baseUrl} (${response.status})`);
+                }
                 continue;
             }
 
@@ -3227,6 +3255,10 @@ async function getGeminiModelsToTry() {
 }
 
 async function generatePromptWithGemini(context) {
+    if (!GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY_MISSING');
+    }
+
     const prompt = `You are a creative AI image prompt expert helping generate descriptions for Stable Diffusion artistic QR code backgrounds.
 
 User's context: "${context}"
@@ -3297,6 +3329,9 @@ Return ONLY valid JSON, no markdown, no other text.`;
 
                 if (!response.ok) {
                     const errorText = await response.text();
+                    if (isGeminiKeyLeakedError(response.status, errorText)) {
+                        throw new Error('GEMINI_API_KEY_LEAKED');
+                    }
                     console.warn(`❌ Model ${model} failed on ${baseUrl} (${response.status}):`, errorText.substring(0, 100));
                     lastError = new Error(`${model} returned ${response.status}`);
                     continue;
