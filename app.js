@@ -2,10 +2,10 @@
 
 // ===== CONFIGURATION =====
 // Google Gemini API Key for dynamic prompt generation
-const GEMINI_API_KEY = '';
+const GEMINI_API_KEY = 'AIzaSyBEI6qU_1KTUDxTq6hWskFaYaJ933i3vKM';
 // Google Maps API Key for inline Place ID search.
 // Requires: Maps JavaScript API + Places API (New) enabled in Google Cloud Console.
-const GOOGLE_MAPS_API_KEY = '';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBEI6qU_1KTUDxTq6hWskFaYaJ933i3vKM';
 // Models to try in order (newest stable model first)
 const GEMINI_MODELS = [
     'gemini-2.0-flash',         // Current stable flash model
@@ -2479,7 +2479,11 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
                 
                 const timeoutId = setTimeout(() => {
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.error('⏱️ Timeout after', elapsed, 'seconds');
+                    if (attempt < maxAttempts) {
+                        console.warn('⏱️ Timeout after', elapsed, 'seconds (will retry)');
+                    } else {
+                        console.error('⏱️ Timeout after', elapsed, 'seconds');
+                    }
                     reject(new Error('Image generation timed out after 60 seconds'));
                 }, timeoutMs);
                 
@@ -2494,14 +2498,18 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
                 img.onerror = (error) => {
                     clearTimeout(timeoutId);
                     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                    console.error('❌ Image load failed after', elapsed, 'seconds');
-                    console.error('❌ Error event:', error);
-                    console.error('🔍 Check Network tab for details (F12 → Network)');
-                    console.error('🔍 Common issues:');
-                    console.error('   - Browser extension blocking (disable ad blockers)');
-                    console.error('   - CORS policy error');
-                    console.error('   - Firewall/antivirus blocking');
-                    console.error('   - DNS/network issue');
+                    if (attempt < maxAttempts) {
+                        console.warn(`❌ Image load failed after ${elapsed} seconds (attempt ${attempt}/${maxAttempts}, retrying)`);
+                    } else {
+                        console.error('❌ Image load failed after', elapsed, 'seconds');
+                        console.error('❌ Error event:', error);
+                        console.error('🔍 Check Network tab for details (F12 → Network)');
+                        console.error('🔍 Common issues:');
+                        console.error('   - Browser extension blocking (disable ad blockers)');
+                        console.error('   - CORS policy error');
+                        console.error('   - Firewall/antivirus blocking');
+                        console.error('   - DNS/network issue');
+                    }
                     reject(new Error('Failed to load generated image'));
                 };
                 
@@ -2554,7 +2562,11 @@ async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
         }
         
     } catch (error) {
-        console.error('AI image generation error (attempt ' + attempt + '):', error);
+        if (attempt < maxAttempts) {
+            console.warn('AI image generation error (attempt ' + attempt + ' of ' + maxAttempts + ', retrying):', error.message);
+        } else {
+            console.error('AI image generation error (attempt ' + attempt + '):', error);
+        }
         
         // Check if cancelled
         if (cancelAIGeneration) {
