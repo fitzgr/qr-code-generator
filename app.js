@@ -41,6 +41,9 @@ let stateHistory = [];
 let currentStateIndex = -1;
 const MAX_HISTORY = 50;
 let isRestoringState = false; // Prevent saving during undo/redo
+let historySaveTimer = null;
+let hasWarnedHistoryStorageSize = false;
+const MAX_HISTORY_STORAGE_CHARS = 900000; // ~0.9MB JSON budget to avoid main-thread stalls
 
 // Artistic QR Code variables
 let backgroundImage = null;
@@ -1616,11 +1619,22 @@ function saveCurrentState(actionLabel = 'Change') {
         }
         
         updateUndoRedoButtons();
-        saveHistoryToLocalStorage();
+        queueHistorySaveToLocalStorage();
         
     } catch (error) {
         console.error('Error saving state:', error);
     }
+}
+
+function queueHistorySaveToLocalStorage() {
+    if (historySaveTimer) {
+        clearTimeout(historySaveTimer);
+    }
+
+    // Debounce to avoid synchronous localStorage writes on rapid UI changes.
+    historySaveTimer = setTimeout(() => {
+        saveHistoryToLocalStorage();
+    }, 300);
 }
 
 // Restore a specific state from history
@@ -1889,7 +1903,18 @@ function saveHistoryToLocalStorage() {
             history: stateHistory,
             index: currentStateIndex
         };
-        localStorage.setItem('qr_history', JSON.stringify(historyData));
+        const serialized = JSON.stringify(historyData);
+
+        // Skip very large writes; huge image snapshots can freeze the UI during setItem.
+        if (serialized.length > MAX_HISTORY_STORAGE_CHARS) {
+            if (!hasWarnedHistoryStorageSize) {
+                showNotification('History is getting large, so disk persistence was temporarily reduced to keep editing smooth.', 'warning');
+                hasWarnedHistoryStorageSize = true;
+            }
+            return;
+        }
+
+        localStorage.setItem('qr_history', serialized);
     } catch (error) {
         if (error.name === 'QuotaExceededError') {
             // Storage quota exceeded - remove oldest states
