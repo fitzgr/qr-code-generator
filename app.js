@@ -518,6 +518,7 @@ const qrModeRadios = document.querySelectorAll('input[name="qrMode"]');
 
 // Quick template buttons
 const templateBtns = document.querySelectorAll('.template-btn');
+const wifiPrivacyNotice = document.getElementById('wifiPrivacyNotice');
 
 // Cropper modal elements
 const cropperModal = document.getElementById('cropperModal');
@@ -596,6 +597,7 @@ templateBtns.forEach(btn => {
         filterUseCases();
         
         if (placeIdPanel) placeIdPanel.style.display = 'none';
+        if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'none';
         
         switch(template) {
             case 'google-review':
@@ -633,6 +635,7 @@ templateBtns.forEach(btn => {
                 templateText = 'WIFI:T:WPA;S:NetworkName;P:Password;;';
                 isGoogleReviewMode = false;
                 document.getElementById('googleColorToggle').style.display = 'none';
+                if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'block';
                 break;
             case 'vcard':
                 templateText = 'BEGIN:VCARD\nVERSION:3.0\nFN:Full Name\nTEL:+1234567890\nEMAIL:email@example.com\nORG:Company Name\nTITLE:Job Title\nEND:VCARD';

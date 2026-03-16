@@ -161,6 +161,18 @@ textarea:focus {
     transform: translateY(0);
 }
 
+.wifi-privacy-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f2f8ff;
+    border: 1px solid #cfe1ff;
+    border-left: 4px solid #1a73e8;
+    border-radius: 8px;
+    color: #1f3b66;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
 .label-controls {
     display: flex;
     gap: 8px;
