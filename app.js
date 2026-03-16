@@ -7186,12 +7186,6 @@ function renderDevelopmentActivity(activity) {
 
         meta.appendChild(author);
 
-        if (isOffHours(entry.committedAt)) {
-            const badge = document.createElement('span');
-            badge.className = 'off-hours-badge';
-            badge.textContent = 'Off-hours';
-            meta.appendChild(badge);
-        }
 
         card.appendChild(meta);
         container.appendChild(card);

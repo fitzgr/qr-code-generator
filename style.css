@@ -1450,14 +1450,6 @@ input[type="range"]::-moz-range-thumb {
     font-size: 12px;
 }
 
-.off-hours-badge {
-    font-size: 11px;
-    background: #e8f5e9;
-    color: #2e7d32;
-    padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid #b9e1bb;
-}
 
 .release-notes-group {
     background: #fff;
