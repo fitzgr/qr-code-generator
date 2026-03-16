@@ -7367,10 +7367,21 @@ function updateHeaderVersionReference(release) {
     dateEl.textContent = `Released ${formatDateOnly(release.releasedAt)}`;
 }
 
+function primeHeaderVersionReference() {
+    const fallbackRelease = Array.isArray(FALLBACK_RELEASE_HISTORY) && FALLBACK_RELEASE_HISTORY.length > 0
+        ? FALLBACK_RELEASE_HISTORY[0]
+        : null;
+    updateHeaderVersionReference(fallbackRelease);
+}
+
 function updateWhatsNewBanner(release) {
     const banner = document.getElementById('whatsNewBanner');
     const summary = document.getElementById('whatsNewSummary');
     const dateLabel = document.getElementById('whatsNewDate');
+    if (release) {
+        updateHeaderVersionReference(release);
+    }
+
     if (!banner || !summary || !dateLabel || !release) return;
 
     const releaseDate = new Date(release.releasedAt);
@@ -7514,6 +7525,9 @@ async function initializeVersionsRoadmapPanel() {
     let releases = [...FALLBACK_RELEASE_HISTORY];
     let commits = [...FALLBACK_DEVELOPMENT_ACTIVITY];
 
+    // Immediately render fallback release metadata so header is never blank.
+    updateHeaderVersionReference(releases[0]);
+
     try {
         const timelineData = await fetchPrivateTimelineData();
 
@@ -7556,6 +7570,9 @@ window.addRoadmapItem = function addRoadmapItem(title, targetVersion = 'TBD', et
 
 // Industry Tab Navigation
 document.addEventListener('DOMContentLoaded', function() {
+    // Prime with fallback before any async timeline fetches.
+    primeHeaderVersionReference();
+
     const tabButtons = document.querySelectorAll('.tab-btn');
     
     tabButtons.forEach(button => {
