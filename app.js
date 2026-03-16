@@ -194,6 +194,7 @@ function showImageCropper(imageDataURL, mode, fileName) {
     
     // Show modal
     cropperModal.style.display = 'flex';
+    document.body.classList.add('cropper-open');
     
     // Prevent body scroll on mobile when modal is open
     document.body.style.overflow = 'hidden';
@@ -203,22 +204,24 @@ function showImageCropper(imageDataURL, mode, fileName) {
         cropperInstance.destroy();
     }
     
-    // Set image source and wait for load before initializing cropper
-    cropperImage.src = imageDataURL;
-    
-    // Wait for image to be fully loaded before initializing cropper
+    // Set onload BEFORE src — data URLs can load synchronously and fire onload
+    // immediately if src is set first, meaning the handler would never be called.
     cropperImage.onload = () => {
         cropperInstance = new Cropper(cropperImage, {
-            aspectRatio: NaN, // Free aspect ratio
+            aspectRatio: 1, // Always square — prevents distortion in QR overlays
             viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 1,
+            // Keep the existing crop box active so dragging adjusts the selection
+            // instead of repeatedly drawing a new one.
+            dragMode: 'none',
+            autoCropArea: 0.72,
             restore: false,
             guides: true,
             center: true,
             highlight: false,
             cropBoxMovable: true,
             cropBoxResizable: true,
+            minCropBoxWidth: 48,
+            minCropBoxHeight: 48,
             toggleDragModeOnDblclick: false,
             responsive: true,
             background: false,
@@ -229,16 +232,41 @@ function showImageCropper(imageDataURL, mode, fileName) {
             zoomOnWheel: true,
             zoomOnTouch: true, // Enable pinch-to-zoom on mobile
             wheelZoomRatio: 0.1,
+            cropend: function() {
+                if (!cropperIsRedrawing) {
+                    return;
+                }
+
+                cropperIsRedrawing = false;
+                requestAnimationFrame(() => {
+                    if (cropperInstance) {
+                        cropperInstance.setDragMode('none');
+                    }
+                });
+            },
             ready: function() {
-                // Cropper is ready and image is loaded
-                console.log('Cropper initialized and ready');
+                // Start slightly inset so edge handles are easy to grab.
+                const data = this.cropper.getContainerData();
+                const insetX = Math.round(data.width * 0.08);
+                const insetY = Math.round(data.height * 0.08);
+                this.cropper.setCropBoxData({
+                    left: insetX,
+                    top: insetY,
+                    width: Math.max(48, data.width - (insetX * 2)),
+                    height: Math.max(48, data.height - (insetY * 2))
+                });
+                this.cropper.setDragMode('none');
             }
         });
     };
+    // Assign src AFTER onload is registered so the handler is always called,
+    // even if the browser resolves the data URL synchronously.
+    cropperImage.src = imageDataURL;
 }
 
 function hideImageCropper() {
     cropperModal.style.display = 'none';
+    document.body.classList.remove('cropper-open');
     
     // Restore body scroll
     document.body.style.overflow = '';
@@ -251,75 +279,95 @@ function hideImageCropper() {
     pendingImageFile = null;
 }
 
+// Tracks the blob URL used for the background preview so it can be freed when replaced.
+let _bgPreviewBlobURL = null;
+// Tracks the active logo blob URL so preview and state save keep working.
+let _logoBlobURL = null;
+
 function applyCroppedImage() {
     if (!cropperInstance) return;
-    
-    // Get cropped canvas
+
+    // Logos need PNG to preserve transparency; backgrounds can use JPEG (much faster).
+    const isLogo = currentCropMode === 'logo';
+    // Capture state now — hideImageCropper() will null these out.
+    const fileName = pendingImageFile;
+
+    // Use native resolution — no downscaling. toBlob() is async so there's no
+    // main-thread freeze risk regardless of image size.
+    // Logos use PNG (lossless + transparency). Backgrounds use high-quality JPEG.
+    const mimeType = isLogo ? 'image/png' : 'image/jpeg';
+    const quality  = isLogo ? undefined : 0.97;
+
     const canvas = cropperInstance.getCroppedCanvas({
-        maxWidth: 4096,
-        maxHeight: 4096,
+        // No maxWidth/maxHeight — let the crop reflect the original pixel density.
         imageSmoothingEnabled: true,
         imageSmoothingQuality: 'high',
+        fillColor: isLogo ? 'transparent' : '#ffffff',
     });
-    
+
     if (!canvas) {
         console.error('Failed to get cropped canvas');
         return;
     }
-    
-    // Convert to data URL
-    const croppedDataURL = canvas.toDataURL('image/png');
-    
-    // Apply based on mode
-    if (currentCropMode === 'logo') {
-        const img = new Image();
-        img.onload = () => {
-            selectedLogo = img;
-            logoStatus.textContent = `Logo: ${pendingImageFile}`;
-            logoStatus.style.color = '#4CAF50';
-            
-            // Suggest High error correction when logo is added
-            suggestErrorCorrectionLevel();
-            
-            // Regenerate QR code if one exists
-            if (currentQRDataURL) {
-                saveCurrentState('Added logo');
-                // Analytics: Track logo added
-                if (typeof gtag !== 'undefined') {
-                    gtag('event', 'logo_selected');
-                }
-                generateQRCode();
-            }
-        };
-        img.src = croppedDataURL;
-    } else if (currentCropMode === 'background') {
-        const img = new Image();
-        img.onload = () => {
-            backgroundImage = img;
-            bgImageStatus.textContent = `Background: ${pendingImageFile}`;
-            bgImageStatus.style.color = '#4CAF50';
-            bgPreviewImage.src = croppedDataURL;
-            bgPreviewSection.style.display = 'block';
-            blendControlsSection.style.display = 'block';
-            updateValidationStatus('idle', 'Click "Generate QR Code" to test');
 
-            // Suggest High error correction when background is added
-            suggestErrorCorrectionLevel();
-
-            // Analytics: Track background upload
-            if (typeof gtag !== 'undefined') {
-                gtag('event', 'artistic_background_uploaded');
-            }
-
-            if (currentQRDataURL) {
-                saveCurrentState('Added artistic background');
-                generateQRCode();
-            }
-        };
-        img.src = croppedDataURL;
-    }
-    
+    // Close the modal right away so the UI feels responsive.
     hideImageCropper();
+
+    // toBlob() is async and won't block the main thread, unlike toDataURL().
+    canvas.toBlob((blob) => {
+        if (!blob) {
+            console.error('Failed to convert cropped canvas to blob');
+            return;
+        }
+        const blobURL = URL.createObjectURL(blob);
+        const img = new Image();
+
+        img.onload = () => {
+            if (isLogo) {
+                // Keep current logo URL alive for preview/history; revoke old one on replace.
+                if (_logoBlobURL) {
+                    URL.revokeObjectURL(_logoBlobURL);
+                }
+                _logoBlobURL = blobURL;
+                selectedLogo = img;
+                logoStatus.textContent = `Logo: ${fileName}`;
+                logoStatus.style.color = '#4CAF50';
+                // Show preview thumbnail
+                const preview = document.getElementById('logoPreview');
+                if (preview) {
+                    preview.src = blobURL;
+                    preview.style.display = 'block';
+                }
+                suggestErrorCorrectionLevel();
+                if (currentQRDataURL) {
+                    saveCurrentState('Added logo');
+                    if (typeof gtag !== 'undefined') gtag('event', 'logo_selected');
+                    generateQRCode();
+                }
+            } else {
+                // Free the previous background blob URL before replacing it.
+                if (_bgPreviewBlobURL) {
+                    URL.revokeObjectURL(_bgPreviewBlobURL);
+                }
+                _bgPreviewBlobURL = blobURL;
+                backgroundImage = img;
+                bgImageStatus.textContent = `Background: ${fileName}`;
+                bgImageStatus.style.color = '#4CAF50';
+                bgPreviewImage.src = blobURL;
+                bgPreviewSection.style.display = 'block';
+                blendControlsSection.style.display = 'block';
+                updateValidationStatus('idle', 'Click "Generate QR Code" to test');
+                suggestErrorCorrectionLevel();
+                if (typeof gtag !== 'undefined') gtag('event', 'artistic_background_uploaded');
+                if (currentQRDataURL) {
+                    saveCurrentState('Added artistic background');
+                    generateQRCode();
+                }
+            }
+        };
+
+        img.src = blobURL;
+    }, mimeType, quality);
 }
 // ---------------------------------------------------------------------
 
@@ -529,12 +577,14 @@ const cropperRotateLeft = document.getElementById('cropperRotateLeft');
 const cropperRotateRight = document.getElementById('cropperRotateRight');
 const cropperFlipH = document.getElementById('cropperFlipH');
 const cropperFlipV = document.getElementById('cropperFlipV');
+const cropperRedraw = document.getElementById('cropperRedraw');
 const cropperReset = document.getElementById('cropperReset');
 
 // Cropper instance and state
 let cropperInstance = null;
 let currentCropMode = null; // 'logo' or 'background'
 let pendingImageFile = null;
+let cropperIsRedrawing = false;
 
 // Cropper control event listeners
 cropperCancel.addEventListener('click', () => {
@@ -571,9 +621,19 @@ cropperFlipV.addEventListener('click', () => {
     }
 });
 
+cropperRedraw.addEventListener('click', () => {
+    if (cropperInstance) {
+        cropperIsRedrawing = true;
+        cropperInstance.clear();
+        cropperInstance.setDragMode('crop');
+    }
+});
+
 cropperReset.addEventListener('click', () => {
     if (cropperInstance) {
+        cropperIsRedrawing = false;
         cropperInstance.reset();
+        cropperInstance.setDragMode('none');
     }
 });
 
@@ -3826,9 +3886,15 @@ logoInput.addEventListener('change', (e) => {
 
 clearLogoBtn.addEventListener('click', () => {
     selectedLogo = null;
+    if (_logoBlobURL) {
+        URL.revokeObjectURL(_logoBlobURL);
+        _logoBlobURL = null;
+    }
     logoInput.value = '';
     logoStatus.textContent = 'No logo selected';
     logoStatus.style.color = '#888';
+    const preview = document.getElementById('logoPreview');
+    if (preview) { preview.style.display = 'none'; preview.src = ''; }
     
     // Regenerate QR code if one exists
     if (currentQRDataURL) {
@@ -6934,6 +7000,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.1.1',
+        releasedAt: '2026-03-16T23:30:00Z',
+        notes: [
+            'Fixed image cropper workflow by locking selection to a 1:1 square to prevent distortion.',
+            'Fixed crop interactions so selected regions can be resized reliably without forcing redraw.',
+            'Added cropped logo preview support and corrected blob URL lifecycle so preview renders consistently.'
+        ]
+    },
+    {
         version: 'v2.1.0',
         releasedAt: '2026-03-16T20:30:00Z',
         notes: [
@@ -7016,6 +7091,16 @@ const FALLBACK_RELEASE_HISTORY = [
 ];
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
+    {
+        message: 'fix: lock cropper to 1:1 and improve crop resize interactions',
+        committedAt: '2026-03-16T23:20:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'fix: preserve cropped logo preview blob lifecycle and apply-crop consistency',
+        committedAt: '2026-03-16T22:55:00Z',
+        author: 'Grant'
+    },
     {
         message: 'ui: add roadmap tab layout',
         committedAt: '2026-03-14T22:14:00Z',
