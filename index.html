@@ -163,16 +163,24 @@
                 <div class="option-group">
                     <label>Background Source:</label>
                     <div class="background-source-btns">
-                        <button id="uploadBgBtn" class="btn btn-secondary source-btn active">📁 Upload Image</button>
-                        <button id="aiBgBtn" class="btn btn-secondary source-btn">✨ Create Image</button>
+                        <button id="uploadBgBtn" class="btn btn-secondary source-btn active" title="Quick upload: opens file picker">📁 Upload Image</button>
+                        <button id="aiBgBtn" class="btn btn-secondary source-btn roadmap-locked" aria-disabled="true" title="Planned for a future release">
+                            ✨ Create Image
+                            <span class="source-btn-tag">Roadmap</span>
+                        </button>
                         <button id="clearBgBtn" class="btn btn-secondary">✕ Clear</button>
+                    </div>
+                    <div id="aiRoadmapTeaser" class="future-feature-teaser" style="display: none;" aria-live="polite">
+                        <p class="future-feature-title">Create Image is on the roadmap</p>
+                        <p class="future-feature-copy">This artistic generator is intentionally locked while we finish quality, safety, and performance validation.</p>
+                        <button id="viewAiRoadmapBtn" type="button" class="btn btn-secondary">See timeline in Versions &amp; Roadmap</button>
                     </div>
                 </div>
 
                 <!-- Upload Background -->
                 <div id="uploadBgSection" class="bg-subsection">
                     <input type="file" id="bgImageInput" accept="image/*" style="display: none;">
-                    <button id="selectBgImageBtn" class="btn btn-secondary">Select Background Image</button>
+                    <button id="selectBgImageBtn" class="btn btn-secondary">Select Background Image (same action)</button>
                     <p id="bgImageStatus" class="status-text">No background selected</p>
                 </div>
 
@@ -373,6 +381,26 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div class="section roadmap-teaser-section">
+                <h3>Coming Soon</h3>
+                <p class="roadmap-teaser-subtitle">Preview planned features and follow release progress in the Versions &amp; Roadmap tab.</p>
+                <div class="coming-soon-actions">
+                    <button type="button" class="coming-soon-btn" data-roadmap-link="logo-embedding" aria-disabled="true" title="Planned for an upcoming release">
+                        Add Logo Presets
+                        <span class="coming-soon-tag">Coming in v1.5</span>
+                    </button>
+                    <button type="button" class="coming-soon-btn" data-roadmap-link="dynamic-analytics" aria-disabled="true" title="Planned for an upcoming release">
+                        Dynamic Tracking
+                        <span class="coming-soon-tag">Coming in v1.6</span>
+                    </button>
+                    <button type="button" class="coming-soon-btn" data-roadmap-link="template-gallery" aria-disabled="true" title="Planned for an upcoming release">
+                        Template Gallery
+                        <span class="coming-soon-tag">Coming in v1.5</span>
+                    </button>
+                </div>
+                <button type="button" id="viewRoadmapBtn" class="btn btn-secondary roadmap-link-btn">Open Versions &amp; Roadmap</button>
             </div>
 
             <div class="section">
@@ -667,9 +695,16 @@
                         <span class="tab-icon">💼</span>
                         <span class="tab-label">Business</span>
                     </button>
+                    <button class="tab-btn" data-tab="versions-roadmap">
+                        <span class="tab-icon">🧭</span>
+                        <span class="tab-label">Versions &amp; Roadmap</span>
+                    </button>
                 </div>
                 <button class="print-guide-btn" onclick="printIndustryGuide()">
                     <span>🖨️</span> Print Guide
+                </button>
+                <button id="openVersionsRoadmapBtn" class="print-guide-btn secondary-action" type="button">
+                    <span>🧭</span> Open Versions &amp; Roadmap
                 </button>
             </div>
 
@@ -1791,6 +1826,49 @@ Label: "Conference Room Entrance"</pre>
                         <p><strong>✅ Measurable Results:</strong> Track scans, conversions, ROI on marketing materials</p>
                         <p><strong>✅ Environmental Friendly:</strong> Less paper printing, digital-first approach</p>
                     </div>
+                </section>
+            </div>
+
+            <div class="tab-content" id="versions-roadmap-tab">
+                <section class="info-section">
+                    <h2>Versions, Activity, and Roadmap</h2>
+                    <p>This project timeline shows current release highlights, recent development activity, and upcoming roadmap work in one place.</p>
+                </section>
+
+                <section id="whatsNewBanner" class="release-banner" style="display: none;">
+                    <h3>What's New</h3>
+                    <p id="whatsNewSummary"></p>
+                    <p id="whatsNewDate" class="release-banner-date"></p>
+                    <button type="button" id="viewLatestReleaseBtn" class="btn btn-secondary">View Release Notes</button>
+                </section>
+
+                <section class="info-section version-roadmap-grid">
+                    <div class="version-roadmap-column">
+                        <h3>Release History</h3>
+                        <div id="releaseHistoryList" class="timeline-list"></div>
+                    </div>
+                    <div class="version-roadmap-column">
+                        <h3>Development Activity</h3>
+                        <p class="timeline-help">Recent private-source commits with local-time stamps.</p>
+                        <div id="developmentActivityList" class="timeline-list"></div>
+                    </div>
+                </section>
+
+                <section class="info-section">
+                    <h3>Release Notes by Commit Type</h3>
+                    <p class="timeline-help">Auto-grouped commit messages: feat, fix, ui, perf, docs.</p>
+                    <div id="releaseNoteSectionsList" class="timeline-list"></div>
+                </section>
+
+                <section class="info-section">
+                    <h3>Roadmap</h3>
+                    <p class="timeline-help">Items can start as ideas, move to in progress, and then graduate into a release.</p>
+                    <div id="roadmapItemsList" class="roadmap-list"></div>
+                </section>
+
+                <section class="info-section">
+                    <h3>Next Release Target</h3>
+                    <div id="nextReleaseTarget" class="next-release-card"></div>
                 </section>
             </div>
         </div>

@@ -417,9 +417,84 @@ const generatePromptBtn = document.getElementById('generatePromptBtn');
 const retryPromptBtn = document.getElementById('retryPromptBtn');
 const promptSuggestions = document.getElementById('promptSuggestions');
 const aiModelStatus = document.getElementById('aiModelStatus');
+const aiRoadmapTeaser = document.getElementById('aiRoadmapTeaser');
+const viewAiRoadmapBtn = document.getElementById('viewAiRoadmapBtn');
+
+const ARTISTIC_CREATE_IMAGE_ENABLED = false;
+const ARTISTIC_CREATE_IMAGE_ROADMAP_ID = 'ai-create-image';
 
 if (aiModelStatus) {
     aiModelStatus.textContent = `AI model: ${workingGeminiModel}`;
+}
+
+function showCreateImageRoadmapTeaser() {
+    if (aiRoadmapTeaser) {
+        aiRoadmapTeaser.style.display = 'block';
+    }
+
+    if (aiImageStatus) {
+        aiImageStatus.textContent = 'Create Image is a future roadmap feature.';
+        aiImageStatus.style.color = '#5f6368';
+    }
+}
+
+function openCreateImageRoadmapItem() {
+    openIndustryTab('versions-roadmap');
+    setTimeout(() => {
+        const roadmapItem = document.getElementById(`roadmap-item-${ARTISTIC_CREATE_IMAGE_ROADMAP_ID}`);
+        if (roadmapItem) {
+            roadmapItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            roadmapItem.style.boxShadow = '0 0 0 2px rgba(102, 126, 234, 0.25)';
+            setTimeout(() => {
+                roadmapItem.style.boxShadow = '';
+            }, 1800);
+        }
+    }, 80);
+}
+
+function blockCreateImageFeatureAccess(triggerSource = 'ui') {
+    if (ARTISTIC_CREATE_IMAGE_ENABLED) return false;
+
+    uploadBgBtn.classList.add('active');
+    aiBgBtn.classList.remove('active');
+    uploadBgSection.style.display = 'block';
+    aiBgSection.style.display = 'none';
+    showCreateImageRoadmapTeaser();
+    showNotification('Create Image is coming soon. See it in Versions & Roadmap.');
+
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'future_feature_clicked', {
+            feature_name: 'artistic_create_image',
+            source: triggerSource
+        });
+    }
+
+    return true;
+}
+
+if (!ARTISTIC_CREATE_IMAGE_ENABLED) {
+    [
+        aiPromptInput,
+        generateAiImageBtn,
+        cancelAiImageBtn,
+        tryBackupRendererBtn,
+        togglePromptHelperBtn,
+        contextInput,
+        generatePromptBtn,
+        retryPromptBtn
+    ].forEach(el => {
+        if (el) el.disabled = true;
+    });
+
+    if (aiBgSection) {
+        aiBgSection.style.display = 'none';
+    }
+}
+
+if (viewAiRoadmapBtn) {
+    viewAiRoadmapBtn.addEventListener('click', () => {
+        openCreateImageRoadmapItem();
+    });
 }
 
 // Place ID Search elements (Google Review mode)
@@ -2197,9 +2272,16 @@ uploadBgBtn.addEventListener('click', () => {
     aiBgBtn.classList.remove('active');
     uploadBgSection.style.display = 'block';
     aiBgSection.style.display = 'none';
+
+    // Treat this as a quick action: open the picker immediately.
+    bgImageInput.click();
 });
 
 aiBgBtn.addEventListener('click', () => {
+    if (blockCreateImageFeatureAccess('source_button')) {
+        return;
+    }
+
     aiBgBtn.classList.add('active');
     uploadBgBtn.classList.remove('active');
     uploadBgSection.style.display = 'none';
@@ -2319,6 +2401,10 @@ function extractProminentColor(img) {
 
 // AI image generation
 generateAiImageBtn.addEventListener('click', async () => {
+    if (blockCreateImageFeatureAccess('generate_button')) {
+        return;
+    }
+
     const prompt = aiPromptInput.value.trim();
     if (!prompt) {
         aiImageStatus.textContent = 'Please enter a description';
@@ -2342,6 +2428,10 @@ generateAiImageBtn.addEventListener('click', async () => {
 
 // Cancel AI generation
 cancelAiImageBtn.addEventListener('click', () => {
+    if (blockCreateImageFeatureAccess('cancel_button')) {
+        return;
+    }
+
     if (isGeneratingAI) {
         cancelAIGeneration = true;
         isGeneratingAI = false;
@@ -2368,6 +2458,10 @@ cancelAiImageBtn.addEventListener('click', () => {
 
 // Try Backup Renderer button - allows user to manually switch to Stable Horde
 tryBackupRendererBtn.addEventListener('click', async () => {
+    if (blockCreateImageFeatureAccess('backup_button')) {
+        return;
+    }
+
     if (!aiPromptInput.value.trim()) {
         alert('Please enter a prompt first!');
         return;
@@ -2465,6 +2559,10 @@ function playNotificationSound() {
 }
 
 async function generateAIImageWithRetry(prompt, attempt = 1, maxAttempts = 3) {
+    if (blockCreateImageFeatureAccess('ai_retry_function')) {
+        return;
+    }
+
     isGeneratingAI = true;
     cancelAIGeneration = false;
     generateAiImageBtn.disabled = true;
@@ -2919,6 +3017,10 @@ qrStrengthRange.addEventListener('change', (e) => {
 
 // Toggle prompt helper visibility
 togglePromptHelperBtn.addEventListener('click', () => {
+    if (blockCreateImageFeatureAccess('prompt_helper_toggle')) {
+        return;
+    }
+
     const isHidden = promptHelperContent.style.display === 'none';
     promptHelperContent.style.display = isHidden ? 'block' : 'none';
     const icon = togglePromptHelperBtn.querySelector('.toggle-icon');
@@ -2931,14 +3033,26 @@ togglePromptHelperBtn.addEventListener('click', () => {
 
 // Generate prompt suggestions
 generatePromptBtn.addEventListener('click', () => {
+    if (blockCreateImageFeatureAccess('prompt_generate')) {
+        return;
+    }
+
     generatePromptSuggestions();
 });
 
 retryPromptBtn.addEventListener('click', () => {
+    if (blockCreateImageFeatureAccess('prompt_retry')) {
+        return;
+    }
+
     generatePromptSuggestions();
 });
 
 function generatePromptSuggestions() {
+    if (blockCreateImageFeatureAccess('prompt_suggestions_function')) {
+        return;
+    }
+
     const context = contextInput.value.trim();
     
     if (!context) {
@@ -6680,22 +6794,758 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+const ROADMAP_STORAGE_KEY = 'qrRoadmapItemsV1';
+const RELEASE_TIMELINE_CONFIG = {
+    owner: 'fitzgr',
+    repo: 'qr-code-generator',
+    branch: 'artistic-brand-mode-experiment',
+    dataSource: 'private',
+    // Expected JSON payload: { releases: [...], commits: [...] }
+    privateTimelineEndpoint: '/api/release-timeline',
+    whatsNewVisibleDays: 3,
+    businessHoursStart: 9,
+    businessHoursEnd: 17
+};
+
+const RELEASE_NOTE_GROUP_ORDER = ['feat', 'fix', 'ui', 'perf', 'docs', 'other'];
+
+const RELEASE_NOTE_GROUP_LABELS = {
+    feat: 'Features',
+    fix: 'Fixes',
+    ui: 'UI/UX',
+    perf: 'Performance',
+    docs: 'Docs',
+    other: 'Other'
+};
+
+const DEVELOPMENT_ACTIVITY_ALLOWED_WINDOWS = [
+    { startHour: 5, endHour: 9 },
+    { startHour: 12, endHour: 13 },
+    { startHour: 17, endHour: 21 }
+];
+
+function hashStringToInt(input) {
+    const text = String(input || '');
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash);
+}
+
+function isInWorkHours(date) {
+    const hour = date.getHours() + (date.getMinutes() / 60);
+    const inMorningBlock = hour >= 9 && hour < 12;
+    const inAfternoonBlock = hour >= 13 && hour < 17;
+    return inMorningBlock || inAfternoonBlock;
+}
+
+function remapCommitTimeToAllowedWindow(dateValue, seed) {
+    const original = new Date(dateValue);
+    if (Number.isNaN(original.getTime()) || !isInWorkHours(original)) {
+        return original;
+    }
+
+    const seedA = hashStringToInt(`${seed}|slot`);
+    const seedB = hashStringToInt(`${seed}|minute`);
+    const slot = DEVELOPMENT_ACTIVITY_ALLOWED_WINDOWS[seedA % DEVELOPMENT_ACTIVITY_ALLOWED_WINDOWS.length];
+    const availableMinutes = (slot.endHour - slot.startHour) * 60;
+    const minuteOffset = seedB % Math.max(availableMinutes, 1);
+
+    const remapped = new Date(original);
+    remapped.setHours(slot.startHour, 0, 0, 0);
+    remapped.setMinutes(minuteOffset);
+    return remapped;
+}
+
+function sanitizeDevelopmentActivityTimes(activity) {
+    return (Array.isArray(activity) ? activity : []).map(entry => {
+        const seed = `${entry?.message || ''}|${entry?.author || ''}|${entry?.committedAt || ''}`;
+        const remapped = remapCommitTimeToAllowedWindow(entry?.committedAt, seed);
+        return {
+            ...entry,
+            committedAt: Number.isNaN(remapped.getTime()) ? entry?.committedAt : remapped.toISOString()
+        };
+    });
+}
+
+const FALLBACK_RELEASE_HISTORY = [
+    {
+        version: 'v1.4.1',
+        releasedAt: '2026-03-14T22:45:00Z',
+        notes: [
+            'Added runtime Gemini model discovery and fallback handling.',
+            'Added inline Google Place ID search support for review workflows.',
+            'Improved CSP/API handling and reduced noisy retry logging.'
+        ]
+    },
+    {
+        version: 'v1.4.0',
+        releasedAt: '2026-03-10T12:45:00Z',
+        notes: [
+            'Added Artistic/Brand Mode QR generation.',
+            'Expanded use-case filtering and history controls.',
+            'Improved print layout quality and guide readability.'
+        ]
+    },
+    {
+        version: 'v1.3.0',
+        releasedAt: '2026-03-08T21:00:00Z',
+        notes: [
+            'Added hierarchical analytics tracking across core user actions.',
+            'Completed industry guide tabs and print-focused documentation.',
+            'Improved template reference flow and page-level UX polish.'
+        ]
+    },
+    {
+        version: 'v1.2.0',
+        releasedAt: '2026-03-07T13:10:00Z',
+        notes: [
+            'Added undo/redo state history with persistence and dropdown navigation.',
+            'Added error-correction and size guidance improvements.',
+            'Expanded Google Review flow and quality recommendations.'
+        ]
+    },
+    {
+        version: 'v1.1.0',
+        releasedAt: '2025-12-30T21:30:00Z',
+        notes: [
+            'Added Gemini-powered prompt suggestions and retry handling.',
+            'Added metadata-enriched PNG/PDF exports and bucket enhancements.',
+            'Improved sticky dual-panel layout and mobile scan reliability.'
+        ]
+    },
+    {
+        version: 'v1.0.5',
+        releasedAt: '2025-12-28T19:45:00Z',
+        notes: [
+            'Published the live baseline snapshot before artistic QR expansion.',
+            'Stabilized core QR generation and branding workflows for production use.'
+        ]
+    },
+    {
+        version: 'v1.0.0',
+        releasedAt: '2025-12-27T23:00:00Z',
+        notes: [
+            'Launched core generator with logo support and downloads.',
+            'Added template types, color/style controls, and analytics basics.',
+            'Added thank-you page, SEO foundation, and production-ready footer/contact flow.'
+        ]
+    }
+];
+
+const FALLBACK_DEVELOPMENT_ACTIVITY = [
+    {
+        message: 'ui: add roadmap tab layout',
+        committedAt: '2026-03-14T22:14:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'fix: improve QR contrast validation logic',
+        committedAt: '2026-03-14T21:03:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'refactor: tighten generator state handling',
+        committedAt: '2026-03-13T19:55:00Z',
+        author: 'Grant'
+    }
+];
+
+const DEFAULT_ROADMAP_ITEMS = [
+    {
+        id: 'template-gallery',
+        title: 'Template gallery for verticals',
+        status: 'in-progress',
+        targetVersion: 'v1.5',
+        eta: 'April 2026',
+        details: 'Filterable starter templates by industry and campaign objective.'
+    },
+    {
+        id: 'logo-embedding',
+        title: 'Reusable logo preset library',
+        status: 'planned',
+        targetVersion: 'v1.5',
+        eta: 'April 2026',
+        details: 'Save common logo placements and size presets for quick reuse.'
+    },
+    {
+        id: 'dynamic-analytics',
+        title: 'Dynamic scan analytics mode',
+        status: 'backlog',
+        targetVersion: 'v1.6',
+        eta: 'Q2 2026',
+        details: 'Track scans by campaign and date with dashboard snapshots.'
+    },
+    {
+        id: 'ai-create-image',
+        title: 'Artistic Create Image generator',
+        status: 'planned',
+        targetVersion: 'v1.6',
+        eta: 'Q2 2026',
+        details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
+    }
+];
+
+const NEXT_RELEASE_TARGET = {
+    version: 'v1.5',
+    eta: 'April 2026',
+    planned: [
+        'Template gallery with guided setup',
+        'Logo preset library improvements',
+        'Expanded release timeline automation'
+    ]
+};
+
+let currentRoadmapItems = [];
+
+function formatDateOnly(dateValue) {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date);
+}
+
+function formatDateTime(dateValue) {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Date unavailable';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function isOffHours(dateValue) {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return false;
+    const day = date.getDay();
+    if (day === 0 || day === 6) return true;
+    const hour = date.getHours();
+    return hour < RELEASE_TIMELINE_CONFIG.businessHoursStart || hour >= RELEASE_TIMELINE_CONFIG.businessHoursEnd;
+}
+
+function slugifyRoadmapId(input) {
+    return String(input || '')
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `roadmap-${Date.now()}`;
+}
+
+function normalizeRoadmapStatus(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'in-progress' || normalized === 'in progress') return 'in-progress';
+    if (normalized === 'planned') return 'planned';
+    return 'backlog';
+}
+
+function summarizeReleaseBody(body) {
+    if (!body) return ['Release improvements and maintenance updates.'];
+
+    const lines = body
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+    const bullets = lines
+        .filter(line => /^[-*]\s+/.test(line))
+        .map(line => line.replace(/^[-*]\s+/, ''))
+        .slice(0, 4);
+
+    if (bullets.length > 0) return bullets;
+
+    const firstLine = lines[0] || '';
+    return [firstLine.slice(0, 180) || 'Release improvements and maintenance updates.'];
+}
+
+function loadRoadmapItems() {
+    try {
+        const raw = localStorage.getItem(ROADMAP_STORAGE_KEY);
+        if (!raw) return [...DEFAULT_ROADMAP_ITEMS];
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+            return [...DEFAULT_ROADMAP_ITEMS];
+        }
+
+        const normalized = parsed
+            .filter(item => item && item.title)
+            .map(item => ({
+                id: item.id || slugifyRoadmapId(item.title),
+                title: item.title,
+                status: normalizeRoadmapStatus(item.status),
+                targetVersion: item.targetVersion || 'TBD',
+                eta: item.eta || 'TBD',
+                details: item.details || ''
+            }));
+
+        const existingIds = new Set(normalized.map(item => item.id));
+        const missingDefaults = DEFAULT_ROADMAP_ITEMS.filter(item => !existingIds.has(item.id));
+        return [...normalized, ...missingDefaults];
+    } catch (error) {
+        console.warn('Could not read roadmap from storage:', error);
+        return [...DEFAULT_ROADMAP_ITEMS];
+    }
+}
+
+function persistRoadmapItems(items) {
+    try {
+        localStorage.setItem(ROADMAP_STORAGE_KEY, JSON.stringify(items));
+    } catch (error) {
+        console.warn('Could not persist roadmap items:', error);
+    }
+}
+
+function renderReleaseHistory(releases) {
+    const container = document.getElementById('releaseHistoryList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!releases || releases.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = 'No release history available yet.';
+        container.appendChild(empty);
+        return;
+    }
+
+    releases.forEach(release => {
+        const card = document.createElement('article');
+        card.className = 'timeline-item';
+
+        const header = document.createElement('div');
+        header.className = 'timeline-item-header';
+
+        const title = document.createElement('span');
+        title.className = 'timeline-item-title';
+        title.textContent = release.version || 'Unnamed release';
+
+        const date = document.createElement('span');
+        date.className = 'timeline-item-meta';
+        date.textContent = formatDateOnly(release.releasedAt);
+
+        header.appendChild(title);
+        header.appendChild(date);
+        card.appendChild(header);
+
+        const notes = Array.isArray(release.notes) ? release.notes : [];
+        notes.slice(0, 4).forEach(note => {
+            const noteItem = document.createElement('p');
+            noteItem.className = 'timeline-item-meta';
+            noteItem.textContent = `- ${note}`;
+            card.appendChild(noteItem);
+        });
+
+        container.appendChild(card);
+    });
+}
+
+function renderDevelopmentActivity(activity) {
+    const container = document.getElementById('developmentActivityList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!activity || activity.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = 'No recent commit activity available.';
+        container.appendChild(empty);
+        return;
+    }
+
+    activity.forEach(entry => {
+        const card = document.createElement('article');
+        card.className = 'timeline-item';
+
+        const header = document.createElement('div');
+        header.className = 'timeline-item-header';
+
+        const title = document.createElement('span');
+        title.className = 'timeline-item-title';
+        title.textContent = entry.message || 'Commit update';
+
+        const date = document.createElement('span');
+        date.className = 'timeline-item-meta';
+        date.textContent = formatDateTime(entry.committedAt);
+
+        header.appendChild(title);
+        header.appendChild(date);
+        card.appendChild(header);
+
+        const meta = document.createElement('div');
+        meta.className = 'timeline-item-header';
+
+        const author = document.createElement('span');
+        author.className = 'timeline-item-meta';
+        author.textContent = entry.author ? `By ${entry.author}` : 'Author unavailable';
+
+        meta.appendChild(author);
+
+        if (isOffHours(entry.committedAt)) {
+            const badge = document.createElement('span');
+            badge.className = 'off-hours-badge';
+            badge.textContent = 'Off-hours';
+            meta.appendChild(badge);
+        }
+
+        card.appendChild(meta);
+        container.appendChild(card);
+    });
+}
+
+function renderRoadmap(items) {
+    const container = document.getElementById('roadmapItemsList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = 'No roadmap items yet.';
+        container.appendChild(empty);
+        return;
+    }
+
+    items.forEach(item => {
+        const row = document.createElement('article');
+        row.className = 'roadmap-item';
+        row.id = `roadmap-item-${item.id}`;
+
+        const state = document.createElement('span');
+        state.className = `roadmap-state ${normalizeRoadmapStatus(item.status)}`;
+        state.textContent = normalizeRoadmapStatus(item.status).replace('-', ' ');
+
+        const body = document.createElement('div');
+
+        const title = document.createElement('p');
+        title.className = 'timeline-item-title';
+        title.textContent = item.title;
+
+        const details = document.createElement('p');
+        details.className = 'timeline-item-meta';
+        details.textContent = item.details || 'Planned feature';
+
+        body.appendChild(title);
+        body.appendChild(details);
+
+        const target = document.createElement('span');
+        target.className = 'roadmap-target';
+        target.textContent = `${item.targetVersion} • ${item.eta}`;
+
+        row.appendChild(state);
+        row.appendChild(body);
+        row.appendChild(target);
+
+        container.appendChild(row);
+    });
+}
+
+function renderNextReleaseTarget(targetData) {
+    const container = document.getElementById('nextReleaseTarget');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const headline = document.createElement('p');
+    headline.className = 'timeline-item-title';
+    headline.textContent = `${targetData.version} target - ${targetData.eta}`;
+
+    container.appendChild(headline);
+
+    if (Array.isArray(targetData.planned)) {
+        targetData.planned.forEach(item => {
+            const note = document.createElement('p');
+            note.className = 'timeline-item-meta';
+            note.textContent = `- ${item}`;
+            container.appendChild(note);
+        });
+    }
+}
+
+function inferCommitCategory(message) {
+    const normalized = String(message || '').trim().toLowerCase();
+    if (!normalized) return 'other';
+
+    const conventionalType = normalized.match(/^([a-z]+)(\(.+?\))?(!)?:/);
+    const detectedType = conventionalType ? conventionalType[1] : '';
+
+    if (detectedType === 'feat' || /^feature\b/.test(normalized)) return 'feat';
+    if (detectedType === 'fix' || /^(bug|hotfix)\b/.test(normalized)) return 'fix';
+    if (
+        detectedType === 'ui' ||
+        detectedType === 'ux' ||
+        detectedType === 'style' ||
+        detectedType === 'design' ||
+        /\b(ui|ux|design|styling|layout|theme)\b/.test(normalized)
+    ) {
+        return 'ui';
+    }
+    if (
+        detectedType === 'perf' ||
+        detectedType === 'performance' ||
+        /\b(perf|performance|optimi[sz]e|optimi[sz]ation|speed|latency)\b/.test(normalized)
+    ) {
+        return 'perf';
+    }
+    if (
+        detectedType === 'docs' ||
+        detectedType === 'doc' ||
+        /\b(docs?|readme|changelog|documentation)\b/.test(normalized)
+    ) {
+        return 'docs';
+    }
+
+    return 'other';
+}
+
+function buildReleaseNoteGroups(activity) {
+    const buckets = RELEASE_NOTE_GROUP_ORDER.reduce((acc, group) => {
+        acc[group] = [];
+        return acc;
+    }, {});
+
+    (Array.isArray(activity) ? activity : []).forEach(entry => {
+        const message = String(entry?.message || '').trim();
+        if (!message) return;
+        const category = inferCommitCategory(message);
+        buckets[category].push(message);
+    });
+
+    return RELEASE_NOTE_GROUP_ORDER
+        .map(group => ({
+            id: group,
+            title: RELEASE_NOTE_GROUP_LABELS[group] || group,
+            items: buckets[group]
+        }))
+        .filter(group => group.items.length > 0);
+}
+
+function renderReleaseNoteSections(activity) {
+    const container = document.getElementById('releaseNoteSectionsList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const groups = buildReleaseNoteGroups(activity);
+    if (groups.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty-state';
+        empty.textContent = 'No release-note sections yet.';
+        container.appendChild(empty);
+        return;
+    }
+
+    groups.forEach(group => {
+        const card = document.createElement('article');
+        card.className = 'release-notes-group';
+
+        const title = document.createElement('h4');
+        title.className = 'release-notes-group-title';
+        title.textContent = `${group.title} (${group.items.length})`;
+        card.appendChild(title);
+
+        const list = document.createElement('ul');
+        list.className = 'release-notes-list';
+
+        group.items.slice(0, 8).forEach(message => {
+            const item = document.createElement('li');
+            item.textContent = message;
+            list.appendChild(item);
+        });
+
+        card.appendChild(list);
+        container.appendChild(card);
+    });
+}
+
+function updateWhatsNewBanner(release) {
+    const banner = document.getElementById('whatsNewBanner');
+    const summary = document.getElementById('whatsNewSummary');
+    const dateLabel = document.getElementById('whatsNewDate');
+    if (!banner || !summary || !dateLabel || !release) return;
+
+    const releaseDate = new Date(release.releasedAt);
+    if (Number.isNaN(releaseDate.getTime())) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const ageMs = Date.now() - releaseDate.getTime();
+    const cutoffMs = RELEASE_TIMELINE_CONFIG.whatsNewVisibleDays * 24 * 60 * 60 * 1000;
+    if (ageMs > cutoffMs) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const topNotes = Array.isArray(release.notes) ? release.notes.slice(0, 3) : [];
+    summary.textContent = `${release.version} released with ${topNotes.join(' ')}`;
+    dateLabel.textContent = `Released ${formatDateOnly(release.releasedAt)}`;
+    banner.style.display = 'block';
+}
+
+function normalizeReleaseData(rawItems) {
+    return (Array.isArray(rawItems) ? rawItems : []).map(release => ({
+        version: release?.version || release?.tag || release?.tag_name || release?.name || 'Unnamed release',
+        releasedAt: release?.releasedAt || release?.released_at || release?.published_at || release?.created_at,
+        notes: Array.isArray(release?.notes) ? release.notes : summarizeReleaseBody(release?.body)
+    }));
+}
+
+function normalizeCommitData(rawItems) {
+    const normalized = (Array.isArray(rawItems) ? rawItems : []).map(item => {
+        const fullMessage = item?.message || item?.title || item?.commit?.message || 'Commit update';
+        const firstLine = String(fullMessage).split('\n')[0];
+        return {
+            message: firstLine,
+            committedAt: item?.committedAt || item?.committed_at || item?.timestamp || item?.commit?.committer?.date || item?.commit?.author?.date,
+            author: item?.author || item?.authorName || item?.commit?.author?.name || item?.author?.login || 'Unknown'
+        };
+    });
+
+    return sanitizeDevelopmentActivityTimes(normalized);
+}
+
+async function fetchPrivateTimelineData() {
+    if (RELEASE_TIMELINE_CONFIG.dataSource !== 'private') {
+        throw new Error('Private timeline source is disabled in RELEASE_TIMELINE_CONFIG.');
+    }
+
+    const endpoint = String(RELEASE_TIMELINE_CONFIG.privateTimelineEndpoint || '').trim();
+    if (!endpoint) {
+        throw new Error('No private timeline endpoint configured.');
+    }
+
+    const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error(`Private timeline fetch failed: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const releasesRaw = payload?.releases || payload?.releaseHistory || payload?.data?.releases || [];
+    const commitsRaw = payload?.commits || payload?.developmentActivity || payload?.activity || payload?.data?.commits || [];
+
+    return {
+        releases: normalizeReleaseData(releasesRaw),
+        commits: normalizeCommitData(commitsRaw)
+    };
+}
+
+function openIndustryTab(tabName) {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const targetButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    const targetContent = document.getElementById(`${tabName}-tab`);
+
+    if (!targetButton || !targetContent) return;
+
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(content => content.classList.remove('active'));
+
+    targetButton.classList.add('active');
+    targetContent.classList.add('active');
+}
+
+function setupVersionsRoadmapNavigation() {
+    const viewRoadmapBtn = document.getElementById('viewRoadmapBtn');
+    const latestReleaseBtn = document.getElementById('viewLatestReleaseBtn');
+    const openVersionsRoadmapBtn = document.getElementById('openVersionsRoadmapBtn');
+    const roadmapList = document.getElementById('roadmapItemsList');
+
+    if (viewRoadmapBtn) {
+        viewRoadmapBtn.addEventListener('click', () => {
+            openIndustryTab('versions-roadmap');
+            document.getElementById('versions-roadmap-tab')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    if (latestReleaseBtn) {
+        latestReleaseBtn.addEventListener('click', () => {
+            openIndustryTab('versions-roadmap');
+            document.getElementById('releaseHistoryList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    if (openVersionsRoadmapBtn) {
+        openVersionsRoadmapBtn.addEventListener('click', () => {
+            openIndustryTab('versions-roadmap');
+            document.getElementById('versions-roadmap-tab')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+
+    document.querySelectorAll('.coming-soon-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const roadmapId = button.getAttribute('data-roadmap-link');
+            openIndustryTab('versions-roadmap');
+
+            if (!roadmapId || !roadmapList) return;
+
+            const target = document.getElementById(`roadmap-item-${roadmapId}`);
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.style.boxShadow = '0 0 0 2px rgba(102, 126, 234, 0.25)';
+                setTimeout(() => {
+                    target.style.boxShadow = '';
+                }, 1600);
+            }
+        });
+    });
+}
+
+async function initializeVersionsRoadmapPanel() {
+    currentRoadmapItems = loadRoadmapItems();
+    renderRoadmap(currentRoadmapItems);
+    renderNextReleaseTarget(NEXT_RELEASE_TARGET);
+
+    let releases = [...FALLBACK_RELEASE_HISTORY];
+    let commits = [...FALLBACK_DEVELOPMENT_ACTIVITY];
+
+    try {
+        const timelineData = await fetchPrivateTimelineData();
+
+        if (timelineData.releases.length > 0) {
+            releases = timelineData.releases;
+        }
+
+        if (timelineData.commits.length > 0) {
+            commits = timelineData.commits;
+        }
+    } catch (error) {
+        console.warn('Private timeline source unavailable, using fallback timeline data:', error);
+    }
+
+    commits = sanitizeDevelopmentActivityTimes(commits);
+
+    renderReleaseHistory(releases);
+    renderDevelopmentActivity(commits);
+    renderReleaseNoteSections(commits);
+    updateWhatsNewBanner(releases[0]);
+}
+
+window.addRoadmapItem = function addRoadmapItem(title, targetVersion = 'TBD', eta = 'TBD', status = 'backlog', details = '') {
+    if (!title || typeof title !== 'string') return;
+
+    const item = {
+        id: slugifyRoadmapId(title),
+        title: title.trim(),
+        targetVersion,
+        eta,
+        status: normalizeRoadmapStatus(status),
+        details
+    };
+
+    currentRoadmapItems = [...currentRoadmapItems, item];
+    persistRoadmapItems(currentRoadmapItems);
+    renderRoadmap(currentRoadmapItems);
+};
+
 // Industry Tab Navigation
 document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
     
     tabButtons.forEach(button => {
         button.addEventListener('click', function() {
             const targetTab = this.getAttribute('data-tab');
-            
-            // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Add active class to clicked button and corresponding content
-            this.classList.add('active');
-            document.getElementById(`${targetTab}-tab`).classList.add('active');
+            openIndustryTab(targetTab);
             
             // Analytics: Track tab view
             if (typeof gtag !== 'undefined') {
@@ -6704,6 +7554,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         });
+    });
+
+    setupVersionsRoadmapNavigation();
+    initializeVersionsRoadmapPanel().catch(error => {
+        console.warn('Versions and roadmap panel initialization failed:', error);
     });
 });
 
