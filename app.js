@@ -1351,6 +1351,7 @@ colorPresets.forEach(btn => {
         lightColorText.value = lightColor;
         currentDarkColor = darkColor;
         currentLightColor = lightColor;
+        syncGradientControlState();
         
         // Update active state
         colorPresets.forEach(b => b.classList.remove('active'));
@@ -1374,6 +1375,7 @@ darkColorPicker.addEventListener('input', (e) => {
     const color = e.target.value;
     darkColorText.value = color;
     currentDarkColor = color;
+    syncGradientControlState();
     colorPresets.forEach(b => b.classList.remove('active'));
     // Analytics: Track dark color changed via picker
     if (typeof gtag !== 'undefined') {
@@ -1411,6 +1413,7 @@ darkColorText.addEventListener('input', (e) => {
     if (/^#[0-9A-F]{6}$/i.test(color)) {
         darkColorPicker.value = color;
         currentDarkColor = color;
+        syncGradientControlState();
         colorPresets.forEach(b => b.classList.remove('active'));
         // Analytics: Track dark color changed via text input
         if (typeof gtag !== 'undefined') {
@@ -2181,8 +2184,61 @@ const enableGradientCheckbox = document.getElementById('enableGradient');
 const gradientRotationRange = document.getElementById('gradientRotation');
 const gradientRotationValue = document.getElementById('gradientRotationValue');
 
+function isGradientEligible() {
+    const dotStyle = dotStyleSelect?.value || 'rounded';
+    if (dotStyle === 'square') {
+        return false;
+    }
+
+    const baseRgb = hexToRgb(currentDarkColor);
+    const shiftedRgb = hexToRgb(adjustColorBrightness(currentDarkColor, 20));
+    if (!baseRgb || !shiftedRgb) {
+        return false;
+    }
+
+    const minChannel = Math.min(baseRgb.r, baseRgb.g, baseRgb.b);
+    const maxChannel = Math.max(baseRgb.r, baseRgb.g, baseRgb.b);
+
+    // Pure black/white (or very near) makes this subtle gradient effectively invisible.
+    if (maxChannel < 30 || minChannel > 225) {
+        return false;
+    }
+
+    const colorDelta = Math.abs(shiftedRgb.r - baseRgb.r) + Math.abs(shiftedRgb.g - baseRgb.g) + Math.abs(shiftedRgb.b - baseRgb.b);
+    return colorDelta >= 12;
+}
+
+function syncGradientControlState() {
+    if (!enableGradientCheckbox) return;
+
+    const gradientGroup = document.getElementById('gradientRotationGroup');
+    const gradientHelpNote = document.getElementById('gradientHelpNote');
+    const eligible = isGradientEligible();
+
+    enableGradientCheckbox.disabled = !eligible;
+
+    if (!eligible) {
+        enableGradientCheckbox.checked = false;
+        if (gradientGroup) {
+            gradientGroup.style.display = 'none';
+        }
+        if (gradientHelpNote) {
+            gradientHelpNote.textContent = 'Gradient is unavailable for square dots or near pure black/white QR colors.';
+        }
+        return;
+    }
+
+    if (gradientGroup) {
+        gradientGroup.style.display = enableGradientCheckbox.checked ? 'block' : 'none';
+    }
+    if (gradientHelpNote) {
+        gradientHelpNote.textContent = 'Gradient blends QR dots from your dark color to a lighter shade; corners remain solid.';
+    }
+}
+
 if (dotStyleSelect) {
     dotStyleSelect.addEventListener('change', (e) => {
+        syncGradientControlState();
         if (currentQRDataURL) {
             saveCurrentState(`Changed dot style to ${e.target.value}`);
             if (typeof gtag !== 'undefined') {
@@ -2232,6 +2288,8 @@ if (enableGradientCheckbox) {
         }
     });
 }
+
+syncGradientControlState();
 
 if (gradientRotationRange && gradientRotationValue) {
     gradientRotationRange.addEventListener('input', (e) => {

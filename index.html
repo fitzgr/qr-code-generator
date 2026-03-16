@@ -467,9 +467,12 @@
                     
                     <div class="option-group">
                         <label>
-                            <input type="checkbox" id="enableGradient" checked>
+                            <input type="checkbox" id="enableGradient">
                             Enable Gradient Effect
                         </label>
+                        <small id="gradientHelpNote" style="display: block; margin-top: 6px; color: #666; line-height: 1.4;">
+                            Gradient blends QR dots from your dark color to a lighter shade.
+                        </small>
                     </div>
                     
                     <div class="option-group" id="gradientRotationGroup">
@@ -869,6 +872,7 @@
                     <ul style="line-height: 1.8; color: #555;">
                         <li><strong>Upload Your Own Images:</strong> Use any photo, illustration, or graphic as your QR code background</li>
                         <li><strong>Create Custom Images:</strong> Generate unique backgrounds by describing what you want to see</li>
+                        <li><strong>Gradient Option (Artistic dots):</strong> Adds a subtle dark-to-light blend to QR dots only. It is automatically disabled for square dots or near pure black/white QR colors where the effect is not visible.</li>
                         <li><strong>Professional Blending:</strong> Choose from 6 blend modes (overlay, multiply, screen, normal, darken, lighten) to perfectly merge your QR code with the background</li>
                         <li><strong>Fine-Tune Appearance:</strong> Adjust background opacity (10-100%) and QR strength (40-100%) for the perfect balance</li>
                         <li><strong>Real-Time Validation:</strong> Instantly test if your artistic QR code is scannable with automatic quality scoring</li>
