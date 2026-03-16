@@ -7352,6 +7352,21 @@ function renderReleaseNoteSections(activity) {
     });
 }
 
+function updateHeaderVersionReference(release) {
+    const versionEl = document.getElementById('appVersionRef');
+    const dateEl = document.getElementById('appVersionDate');
+    if (!versionEl || !dateEl) return;
+
+    if (!release) {
+        versionEl.textContent = 'v--';
+        dateEl.textContent = 'Date unavailable';
+        return;
+    }
+
+    versionEl.textContent = release.version || 'Unnamed release';
+    dateEl.textContent = `Released ${formatDateOnly(release.releasedAt)}`;
+}
+
 function updateWhatsNewBanner(release) {
     const banner = document.getElementById('whatsNewBanner');
     const summary = document.getElementById('whatsNewSummary');
@@ -7518,6 +7533,7 @@ async function initializeVersionsRoadmapPanel() {
     renderReleaseHistory(releases);
     renderDevelopmentActivity(commits);
     renderReleaseNoteSections(commits);
+    updateHeaderVersionReference(releases[0]);
     updateWhatsNewBanner(releases[0]);
 }
 
