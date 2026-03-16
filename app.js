@@ -6872,6 +6872,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.0.0',
+        releasedAt: '2026-03-16T14:00:00Z',
+        notes: [
+            'Launched Versions, Activity, and Roadmap as a first-class product panel.',
+            'Added release history, What\'s New syncing, and top-header version/date reference.',
+            'Added private timeline source support and grouped release notes by commit type.'
+        ]
+    },
+    {
         version: 'v1.4.1',
         releasedAt: '2026-03-14T22:45:00Z',
         notes: [
@@ -6958,7 +6967,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v1.5',
+        targetVersion: 'v2.1',
         eta: 'April 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
@@ -6966,7 +6975,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v1.5',
+        targetVersion: 'v2.1',
         eta: 'April 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
@@ -6974,7 +6983,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'dynamic-analytics',
         title: 'Dynamic scan analytics mode',
         status: 'backlog',
-        targetVersion: 'v1.6',
+        targetVersion: 'v2.2',
         eta: 'Q2 2026',
         details: 'Track scans by campaign and date with dashboard snapshots.'
     },
@@ -6982,19 +6991,19 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'ai-create-image',
         title: 'Artistic Create Image generator',
         status: 'planned',
-        targetVersion: 'v1.6',
+        targetVersion: 'v2.2',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
     }
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v1.5',
+    version: 'v2.1',
     eta: 'April 2026',
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',
-        'Expanded release timeline automation'
+        'Expanded release timeline automation and publishing workflow'
     ]
 };
 
