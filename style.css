@@ -2506,9 +2506,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .template-btn.active-filter {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f7ff 100%);
+    color: #1f2937;
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 1px rgba(26, 115, 232, 0.15), 0 2px 8px rgba(26, 115, 232, 0.18);
 }
 
 /* Keep Google wordmark colors readable when this filter is active */

@@ -587,9 +587,10 @@ templateBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         const template = btn.dataset.template;
         let templateText = '';
-        
-        // Toggle filter state
-        btn.classList.toggle('active-filter');
+
+        // Keep quick template selection single-select for consistent UX.
+        templateBtns.forEach(templateBtn => templateBtn.classList.remove('active-filter'));
+        btn.classList.add('active-filter');
         
         // Filter use cases based on active filters
         filterUseCases();
