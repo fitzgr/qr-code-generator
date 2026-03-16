@@ -6934,6 +6934,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.1.0',
+        releasedAt: '2026-03-16T20:30:00Z',
+        notes: [
+            'Improved quick-template UX with single-select behavior and unified active outline state.',
+            'Added artistic gradient eligibility guardrails with clearer inline guidance in Help.',
+            'Added WiFi privacy reassurance so password entry is clearly presented as local-only browser processing.'
+        ]
+    },
+    {
         version: 'v2.0.0',
         releasedAt: '2026-03-16T14:00:00Z',
         notes: [
@@ -7029,16 +7038,16 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v2.1',
-        eta: 'April 2026',
+        targetVersion: 'v2.2',
+        eta: 'May 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
     {
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v2.1',
-        eta: 'April 2026',
+        targetVersion: 'v2.2',
+        eta: 'May 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
     {
@@ -7060,8 +7069,8 @@ const DEFAULT_ROADMAP_ITEMS = [
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v2.1',
-    eta: 'April 2026',
+    version: 'v2.2',
+    eta: 'May 2026',
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',
