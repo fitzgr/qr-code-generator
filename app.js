@@ -7150,6 +7150,14 @@ const DEFAULT_ROADMAP_ITEMS = [
         targetVersion: 'v2.2',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
+    },
+    {
+        id: 'instagram-feedback-loop',
+        title: 'Instagram user feedback loop',
+        status: 'planned',
+        targetVersion: 'v2.2',
+        eta: 'Q2 2026',
+        details: 'Capture user feedback through Instagram stories with linked paths to and from the QR tool.'
     }
 ];
 
@@ -7159,7 +7167,8 @@ const NEXT_RELEASE_TARGET = {
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',
-        'Expanded release timeline automation and publishing workflow'
+        'Expanded release timeline automation and publishing workflow',
+        'Instagram-based feedback loop via linked stories and tool return paths'
     ]
 };
 
