@@ -173,6 +173,132 @@ textarea:focus {
     line-height: 1.45;
 }
 
+.template-form-container {
+    margin-top: 10px;
+    border: 1px solid #d6d6d6;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 12px;
+}
+
+.template-form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.template-form-header h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #2f3b4a;
+}
+
+.manual-input-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+.template-form-fields {
+    display: grid;
+    gap: 10px;
+}
+
+.template-form-row {
+    display: grid;
+    gap: 6px;
+}
+
+.template-form-row.inline-2 {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.template-form-row label {
+    margin-bottom: 0;
+    font-size: 13px;
+    color: #3f4a59;
+}
+
+.template-form-fields input[type="text"],
+.template-form-fields input[type="url"],
+.template-form-fields input[type="email"],
+.template-form-fields input[type="tel"],
+.template-form-fields input[type="number"],
+.template-form-fields input[type="datetime-local"],
+.template-form-fields select,
+.template-form-fields textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cfd6e2;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+}
+
+.template-form-fields textarea {
+    min-height: 70px;
+    resize: vertical;
+}
+
+.template-form-fields input:focus,
+.template-form-fields select:focus,
+.template-form-fields textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.12);
+}
+
+.template-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.template-checkbox-row label {
+    margin: 0;
+    font-size: 13px;
+}
+
+.template-preview-box {
+    margin-top: 12px;
+    border-top: 1px dashed #d7d7d7;
+    padding-top: 10px;
+}
+
+.template-preview-box label {
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #626b77;
+}
+
+.template-preview-output {
+    margin: 0;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #d0d0d0;
+    background: #f0f0f0;
+    color: #6a6a6a;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 72px;
+}
+
+@media (max-width: 700px) {
+    .template-form-row.inline-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .template-form-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 .label-controls {
     display: flex;
     gap: 8px;
@@ -2075,6 +2201,18 @@ body.cropper-open #cropperModal {
     color: #333;
 }
 
+.cropper-help-tip {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #355070;
+    background: #eef5ff;
+    border: 1px solid #d5e4ff;
+    border-left: 4px solid #2f6feb;
+    border-radius: 8px;
+    padding: 8px 10px;
+}
+
 .cropper-container-wrapper {
     /* Fixed height so Cropper.js can calculate container dimensions reliably.
        flex:1 alone gives no stable pixel height during Cropper init. */
@@ -2194,6 +2332,11 @@ body.cropper-open #cropperModal {
     
     .cropper-modal-controls {
         padding: 10px;
+    }
+
+    .cropper-help-tip {
+        font-size: 12px;
+        padding: 7px 9px;
     }
     
     .cropper-modal-controls .btn {

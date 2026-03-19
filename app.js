@@ -567,6 +567,667 @@ const qrModeRadios = document.querySelectorAll('input[name="qrMode"]');
 // Quick template buttons
 const templateBtns = document.querySelectorAll('.template-btn');
 const wifiPrivacyNotice = document.getElementById('wifiPrivacyNotice');
+const googleColorToggle = document.getElementById('googleColorToggle');
+const templateFormContainer = document.getElementById('templateFormContainer');
+const templateFormTitle = document.getElementById('templateFormTitle');
+const templateFormFields = document.getElementById('templateFormFields');
+const templatePreviewOutput = document.getElementById('templatePreviewOutput');
+const rawInputContainer = document.getElementById('rawInputContainer');
+const manualInputBtn = document.getElementById('manualInputBtn');
+let activeTemplateType = null;
+
+const TEMPLATE_FORM_SCHEMAS = {
+    'google-review': {
+        title: 'Google Review Template',
+        fields: [
+            { name: 'placeId', label: 'Google Place ID', type: 'text', required: true, placeholder: 'ChIJN1t_tDeuEmsRUsoyG83frY4', default: '' }
+        ]
+    },
+    url: {
+        title: 'URL Template',
+        fields: [
+            { name: 'url', label: 'Website URL', type: 'url', required: true, placeholder: 'https://example.com', default: 'https://' }
+        ]
+    },
+    email: {
+        title: 'Email Template',
+        fields: [
+            { name: 'email', label: 'Email Address', type: 'email', required: true, placeholder: 'hello@example.com', default: 'hello@example.com' },
+            { name: 'subject', label: 'Subject (optional)', type: 'text', placeholder: 'Product inquiry', default: '' },
+            { name: 'body', label: 'Body (optional)', type: 'textarea', placeholder: 'Hello, I would like to ask about...', default: '' }
+        ]
+    },
+    phone: {
+        title: 'Phone Template',
+        fields: [
+            { name: 'phone', label: 'Phone Number', type: 'tel', required: true, placeholder: '+1234567890', default: '' }
+        ]
+    },
+    sms: {
+        title: 'SMS Template',
+        fields: [
+            { name: 'phone', label: 'Phone Number', type: 'tel', required: true, placeholder: '+1234567890', default: '' },
+            { name: 'message', label: 'Message Body', type: 'textarea', placeholder: 'Your message here', default: '' }
+        ]
+    },
+    wifi: {
+        title: 'WiFi Template',
+        fields: [
+            { name: 'security', label: 'Security Type', type: 'select', default: 'WPA', options: [
+                { value: 'WPA', label: 'WPA/WPA2' },
+                { value: 'WEP', label: 'WEP' },
+                { value: 'nopass', label: 'No Password' }
+            ] },
+            { name: 'ssid', label: 'Network Name (SSID)', type: 'text', required: true, placeholder: 'GuestNetwork', default: '' },
+            { name: 'password', label: 'Password', type: 'text', placeholder: 'Welcome123', default: '' },
+            { name: 'hidden', label: 'Hidden network', type: 'checkbox', default: false }
+        ]
+    },
+    vcard: {
+        title: 'vCard Template',
+        fields: [
+            { name: 'fullName', label: 'Full Name', type: 'text', required: true, placeholder: 'Jane Smith', default: '' },
+            { name: 'phone', label: 'Phone', type: 'tel', placeholder: '+1234567890', default: '' },
+            { name: 'email', label: 'Email', type: 'email', placeholder: 'jane@company.com', default: '' },
+            { name: 'org', label: 'Organization', type: 'text', placeholder: 'Company Name', default: '' },
+            { name: 'title', label: 'Job Title', type: 'text', placeholder: 'Marketing Manager', default: '' },
+            { name: 'url', label: 'Website (optional)', type: 'url', placeholder: 'https://example.com', default: '' }
+        ]
+    },
+    mecard: {
+        title: 'MECARD Template',
+        fields: [
+            { name: 'lastName', label: 'Last Name', type: 'text', required: true, placeholder: 'Smith', default: '' },
+            { name: 'firstName', label: 'First Name', type: 'text', required: true, placeholder: 'Jane', default: '' },
+            { name: 'phone', label: 'Phone', type: 'tel', placeholder: '+1234567890', default: '' },
+            { name: 'email', label: 'Email', type: 'email', placeholder: 'jane@company.com', default: '' },
+            { name: 'url', label: 'Website (optional)', type: 'url', placeholder: 'https://example.com', default: '' }
+        ]
+    },
+    event: {
+        title: 'Calendar Event Template',
+        fields: [
+            { name: 'summary', label: 'Event Title', type: 'text', required: true, placeholder: 'Event Title', default: '' },
+            { name: 'start', label: 'Start Date & Time', type: 'datetime-local', required: true, default: '' },
+            { name: 'end', label: 'End Date & Time', type: 'datetime-local', required: true, default: '' },
+            { name: 'location', label: 'Location', type: 'text', placeholder: 'Event Location', default: '' },
+            { name: 'description', label: 'Description (optional)', type: 'textarea', placeholder: 'Event description', default: '' }
+        ]
+    },
+    geo: {
+        title: 'Location Template',
+        fields: [
+            { name: 'lat', label: 'Latitude', type: 'number', required: true, step: 'any', placeholder: '37.7749', default: '' },
+            { name: 'lng', label: 'Longitude', type: 'number', required: true, step: 'any', placeholder: '-122.4194', default: '' },
+            { name: 'alt', label: 'Altitude in meters (optional)', type: 'number', step: 'any', placeholder: '100', default: '' }
+        ]
+    }
+};
+
+function trimMultilineValue(value) {
+    return (value || '').replace(/\r?\n/g, ' ').trim();
+}
+
+function escapeWifiValue(value) {
+    return (value || '').replace(/([\\;,:"])/g, '\\$1');
+}
+
+function unescapeWifiValue(value) {
+    return (value || '').replace(/\\([\\;,:"])/g, '$1');
+}
+
+function formatDateForIcs(dateInput) {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+}
+
+function parseIcsToLocalDate(icsDate) {
+    if (!icsDate || !/^\d{8}T\d{6}Z$/.test(icsDate)) return '';
+    const normalized = `${icsDate.slice(0, 4)}-${icsDate.slice(4, 6)}-${icsDate.slice(6, 8)}T${icsDate.slice(9, 11)}:${icsDate.slice(11, 13)}`;
+    return normalized;
+}
+
+function updateTemplatePreview(payload) {
+    if (!templatePreviewOutput) return;
+    templatePreviewOutput.textContent = payload || '';
+}
+
+function readTemplateFormValues(template) {
+    const schema = TEMPLATE_FORM_SCHEMAS[template];
+    if (!schema || !templateFormFields) return {};
+
+    const values = {};
+    schema.fields.forEach(field => {
+        const fieldEl = templateFormFields.querySelector(`[name="tpl-${field.name}"]`);
+        if (!fieldEl) {
+            values[field.name] = field.default || '';
+            return;
+        }
+        values[field.name] = field.type === 'checkbox' ? fieldEl.checked : fieldEl.value.trim();
+    });
+
+    return values;
+}
+
+function buildPayloadFromTemplate(template, values) {
+    switch (template) {
+        case 'google-review':
+            return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(values.placeId || '')}`;
+        case 'url':
+            return values.url || 'https://';
+        case 'email': {
+            const email = (values.email || '').trim();
+            const params = new URLSearchParams();
+            if (values.subject) params.set('subject', values.subject);
+            if (values.body) params.set('body', values.body);
+            const query = params.toString();
+            return `mailto:${email}${query ? `?${query}` : ''}`;
+        }
+        case 'phone':
+            return `tel:${(values.phone || '').trim()}`;
+        case 'sms': {
+            const phone = (values.phone || '').trim();
+            const body = (values.message || '').trim();
+            return `sms:${phone}${body ? `?body=${encodeURIComponent(body)}` : ''}`;
+        }
+        case 'wifi': {
+            const security = values.security || 'WPA';
+            const ssid = escapeWifiValue(values.ssid || '');
+            const hidden = values.hidden ? ';H:true' : '';
+            if (security === 'nopass') {
+                return `WIFI:T:nopass;S:${ssid}${hidden};;`;
+            }
+            const password = escapeWifiValue(values.password || '');
+            return `WIFI:T:${security};S:${ssid};P:${password}${hidden};;`;
+        }
+        case 'vcard': {
+            const lines = [
+                'BEGIN:VCARD',
+                'VERSION:3.0',
+                `FN:${trimMultilineValue(values.fullName)}`
+            ];
+            if (values.phone) lines.push(`TEL:${trimMultilineValue(values.phone)}`);
+            if (values.email) lines.push(`EMAIL:${trimMultilineValue(values.email)}`);
+            if (values.org) lines.push(`ORG:${trimMultilineValue(values.org)}`);
+            if (values.title) lines.push(`TITLE:${trimMultilineValue(values.title)}`);
+            if (values.url) lines.push(`URL:${trimMultilineValue(values.url)}`);
+            lines.push('END:VCARD');
+            return lines.join('\n');
+        }
+        case 'mecard': {
+            const pieces = [
+                `N:${trimMultilineValue(values.lastName)},${trimMultilineValue(values.firstName)}`
+            ];
+            if (values.phone) pieces.push(`TEL:${trimMultilineValue(values.phone)}`);
+            if (values.email) pieces.push(`EMAIL:${trimMultilineValue(values.email)}`);
+            if (values.url) pieces.push(`URL:${trimMultilineValue(values.url)}`);
+            return `MECARD:${pieces.join(';')};;`;
+        }
+        case 'event': {
+            const lines = [
+                'BEGIN:VEVENT',
+                `SUMMARY:${trimMultilineValue(values.summary)}`,
+                `DTSTART:${formatDateForIcs(values.start)}`,
+                `DTEND:${formatDateForIcs(values.end)}`
+            ];
+            if (values.location) lines.push(`LOCATION:${trimMultilineValue(values.location)}`);
+            if (values.description) lines.push(`DESCRIPTION:${trimMultilineValue(values.description)}`);
+            lines.push('END:VEVENT');
+            return lines.join('\n');
+        }
+        case 'geo': {
+            const lat = (values.lat || '').toString().trim();
+            const lng = (values.lng || '').toString().trim();
+            const alt = (values.alt || '').toString().trim();
+            return alt ? `geo:${lat},${lng},${alt}` : `geo:${lat},${lng}`;
+        }
+        default:
+            return textInput.value;
+    }
+}
+
+function parseTemplatePayload(template, payload) {
+    const text = (payload || '').trim();
+    const values = {};
+
+    switch (template) {
+        case 'google-review': {
+            try {
+                const url = new URL(text);
+                values.placeId = url.searchParams.get('placeid') || '';
+            } catch (_error) {
+                values.placeId = '';
+            }
+            break;
+        }
+        case 'url':
+            values.url = text;
+            break;
+        case 'email': {
+            if (!/^mailto:/i.test(text)) break;
+            const raw = text.replace(/^mailto:/i, '');
+            const [emailPart, queryPart] = raw.split('?');
+            const params = new URLSearchParams(queryPart || '');
+            values.email = decodeURIComponent(emailPart || '');
+            values.subject = params.get('subject') || '';
+            values.body = params.get('body') || '';
+            break;
+        }
+        case 'phone':
+            values.phone = text.replace(/^tel:/i, '');
+            break;
+        case 'sms': {
+            const raw = text.replace(/^sms:/i, '');
+            const [phonePart, queryPart] = raw.split('?');
+            const params = new URLSearchParams(queryPart || '');
+            values.phone = phonePart || '';
+            values.message = params.get('body') || '';
+            break;
+        }
+        case 'wifi': {
+            const body = text.replace(/^WIFI:/i, '').replace(/;;$/, ';');
+            const chunks = body.split(';').filter(Boolean);
+            chunks.forEach(chunk => {
+                const sepIndex = chunk.indexOf(':');
+                if (sepIndex === -1) return;
+                const key = chunk.slice(0, sepIndex);
+                const rawValue = chunk.slice(sepIndex + 1);
+                if (key === 'T') values.security = rawValue || 'WPA';
+                if (key === 'S') values.ssid = unescapeWifiValue(rawValue);
+                if (key === 'P') values.password = unescapeWifiValue(rawValue);
+                if (key === 'H') values.hidden = rawValue.toLowerCase() === 'true';
+            });
+            break;
+        }
+        case 'vcard': {
+            text.split(/\r?\n/).forEach(line => {
+                if (line.startsWith('FN:')) values.fullName = line.slice(3);
+                if (line.startsWith('TEL:')) values.phone = line.slice(4);
+                if (line.startsWith('EMAIL:')) values.email = line.slice(6);
+                if (line.startsWith('ORG:')) values.org = line.slice(4);
+                if (line.startsWith('TITLE:')) values.title = line.slice(6);
+                if (line.startsWith('URL:')) values.url = line.slice(4);
+            });
+            break;
+        }
+        case 'mecard': {
+            const body = text.replace(/^MECARD:/i, '').replace(/;;$/, ';');
+            body.split(';').forEach(segment => {
+                if (!segment) return;
+                if (segment.startsWith('N:')) {
+                    const [lastName = '', firstName = ''] = segment.slice(2).split(',');
+                    values.lastName = lastName;
+                    values.firstName = firstName;
+                }
+                if (segment.startsWith('TEL:')) values.phone = segment.slice(4);
+                if (segment.startsWith('EMAIL:')) values.email = segment.slice(6);
+                if (segment.startsWith('URL:')) values.url = segment.slice(4);
+            });
+            break;
+        }
+        case 'event': {
+            text.split(/\r?\n/).forEach(line => {
+                if (line.startsWith('SUMMARY:')) values.summary = line.slice(8);
+                if (line.startsWith('DTSTART:')) values.start = parseIcsToLocalDate(line.slice(8));
+                if (line.startsWith('DTEND:')) values.end = parseIcsToLocalDate(line.slice(6));
+                if (line.startsWith('LOCATION:')) values.location = line.slice(9);
+                if (line.startsWith('DESCRIPTION:')) values.description = line.slice(12);
+            });
+            break;
+        }
+        case 'geo': {
+            const body = text.replace(/^geo:/i, '');
+            const [lat = '', lng = '', alt = ''] = body.split(',');
+            values.lat = lat;
+            values.lng = lng;
+            values.alt = alt;
+            break;
+        }
+        default:
+            break;
+    }
+
+    return values;
+}
+
+function getTemplateDefaults(template) {
+    const schema = TEMPLATE_FORM_SCHEMAS[template];
+    if (!schema) return {};
+    const defaults = {};
+    schema.fields.forEach(field => {
+        defaults[field.name] = field.default;
+    });
+
+    if (template === 'event') {
+        const now = new Date();
+        const start = new Date(now.getTime() + (60 * 60 * 1000));
+        const end = new Date(start.getTime() + (60 * 60 * 1000));
+        const toLocalInput = date => date.toISOString().slice(0, 16);
+        defaults.start = defaults.start || toLocalInput(start);
+        defaults.end = defaults.end || toLocalInput(end);
+    }
+
+    return defaults;
+}
+
+function canSeedTemplateFromPayload(template, payload) {
+    const text = (payload || '').trim();
+    if (!text) return false;
+
+    switch (template) {
+        case 'google-review':
+            return /^https:\/\/search\.google\.com\/local\/writereview\?placeid=/i.test(text);
+        case 'url':
+            return /^https?:\/\//i.test(text);
+        case 'email':
+            return /^mailto:/i.test(text);
+        case 'phone':
+            return /^tel:/i.test(text);
+        case 'sms':
+            return /^sms:/i.test(text);
+        case 'wifi':
+            return /^WIFI:/i.test(text);
+        case 'vcard':
+            return /^BEGIN:VCARD/i.test(text);
+        case 'mecard':
+            return /^MECARD:/i.test(text);
+        case 'event':
+            return /^BEGIN:VEVENT/i.test(text);
+        case 'geo':
+            return /^geo:/i.test(text);
+        default:
+            return false;
+    }
+}
+
+function renderTemplateField(field, template) {
+    const name = `tpl-${field.name}`;
+    const requiredAttr = field.required ? 'required' : '';
+    const stepAttr = field.step ? `step="${field.step}"` : '';
+    const placeholderAttr = field.placeholder ? `placeholder="${field.placeholder}"` : '';
+
+    if (field.type === 'checkbox') {
+        return `
+            <div class="template-form-row template-checkbox-row" data-field-row="${field.name}">
+                <input type="checkbox" id="${name}" name="${name}" ${field.default ? 'checked' : ''}>
+                <label for="${name}">${field.label}</label>
+            </div>
+        `;
+    }
+
+    if (field.type === 'select') {
+        const options = (field.options || []).map(option => {
+            const selected = option.value === field.default ? 'selected' : '';
+            return `<option value="${option.value}" ${selected}>${option.label}</option>`;
+        }).join('');
+
+        return `
+            <div class="template-form-row" data-field-row="${field.name}">
+                <label for="${name}">${field.label}</label>
+                <select id="${name}" name="${name}" ${requiredAttr}>${options}</select>
+            </div>
+        `;
+    }
+
+    if (field.type === 'textarea') {
+        return `
+            <div class="template-form-row" data-field-row="${field.name}">
+                <label for="${name}">${field.label}</label>
+                <textarea id="${name}" name="${name}" ${requiredAttr} ${placeholderAttr}>${field.default || ''}</textarea>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="template-form-row" data-field-row="${field.name}">
+            <label for="${name}">${field.label}</label>
+            <input type="${field.type}" id="${name}" name="${name}" value="${field.default || ''}" ${requiredAttr} ${stepAttr} ${placeholderAttr}>
+        </div>
+    `;
+}
+
+function updateWifiPasswordFieldVisibility() {
+    if (activeTemplateType !== 'wifi' || !templateFormFields) return;
+    const securityEl = templateFormFields.querySelector('[name="tpl-security"]');
+    const passwordRow = templateFormFields.querySelector('[data-field-row="password"]');
+    if (!securityEl || !passwordRow) return;
+    passwordRow.style.display = securityEl.value === 'nopass' ? 'none' : 'grid';
+}
+
+function syncPayloadFromTemplateForm() {
+    if (!activeTemplateType) return;
+    const values = readTemplateFormValues(activeTemplateType);
+    const payload = buildPayloadFromTemplate(activeTemplateType, values);
+    textInput.value = payload;
+    updateTemplatePreview(payload);
+    updateWifiPasswordFieldVisibility();
+}
+
+function renderTemplateForm(template, payloadSeed = '') {
+    const schema = TEMPLATE_FORM_SCHEMAS[template];
+    if (!schema || !templateFormFields || !templateFormTitle) return;
+
+    templateFormTitle.textContent = schema.title;
+    templateFormFields.innerHTML = schema.fields.map(field => renderTemplateField(field, template)).join('');
+
+    const values = {
+        ...getTemplateDefaults(template),
+        ...parseTemplatePayload(template, payloadSeed)
+    };
+
+    schema.fields.forEach(field => {
+        const fieldEl = templateFormFields.querySelector(`[name="tpl-${field.name}"]`);
+        if (!fieldEl || values[field.name] === undefined || values[field.name] === null) return;
+        if (field.type === 'checkbox') {
+            fieldEl.checked = !!values[field.name];
+        } else {
+            fieldEl.value = values[field.name];
+        }
+    });
+
+    syncPayloadFromTemplateForm();
+
+    if (template === 'event') {
+        attachEventLocationSearchPanel();
+    }
+
+    const firstInteractive = templateFormFields.querySelector('input:not([type="checkbox"]), select, textarea');
+    if (firstInteractive) firstInteractive.focus();
+}
+
+function attachEventLocationSearchPanel() {
+    if (!templateFormFields) return;
+
+    const existing = templateFormFields.querySelector('.event-location-search-panel');
+    if (existing) existing.remove();
+
+    const panel = document.createElement('div');
+    panel.className = 'event-location-search-panel';
+    panel.style.marginTop = '6px';
+    panel.style.padding = '10px';
+    panel.style.border = '1px solid #dbe3f0';
+    panel.style.borderRadius = '8px';
+    panel.style.background = '#f8fbff';
+
+    panel.innerHTML = `
+        <label style="margin-bottom: 8px; font-size: 12px; color: #4f5e73;">Search and insert event location from Google Maps</label>
+        <div style="display: flex; gap: 8px;">
+            <input type="text" class="event-location-search-input" placeholder="e.g. Seattle Convention Center" style="flex: 1;">
+            <button type="button" class="btn btn-secondary event-location-search-btn">Search</button>
+        </div>
+        <p class="event-location-search-status" style="margin-top: 8px; font-size: 12px; color: #5f6368;"></p>
+        <div class="event-location-search-results" style="display: grid; gap: 6px;"></div>
+    `;
+
+    templateFormFields.appendChild(panel);
+
+    const searchInput = panel.querySelector('.event-location-search-input');
+    const searchBtn = panel.querySelector('.event-location-search-btn');
+    const searchStatus = panel.querySelector('.event-location-search-status');
+    const searchResults = panel.querySelector('.event-location-search-results');
+
+    const runSearch = async () => {
+        const query = searchInput.value.trim();
+        searchResults.innerHTML = '';
+
+        if (!query) {
+            searchStatus.textContent = 'Enter a place or address to search.';
+            searchStatus.style.color = '#666';
+            return;
+        }
+
+        if (!GOOGLE_MAPS_API_KEY) {
+            searchStatus.textContent = 'No Maps API key set. Add GOOGLE_MAPS_API_KEY in app.js to enable location search.';
+            searchStatus.style.color = '#f57c00';
+            return;
+        }
+
+        searchStatus.textContent = 'Searching...';
+        searchStatus.style.color = '#1565C0';
+
+        try {
+            await loadGoogleMapsAPI();
+
+            const { suggestions } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+                input: query
+            });
+
+            if (!suggestions || suggestions.length === 0) {
+                searchStatus.textContent = 'No locations found. Try a more specific query.';
+                searchStatus.style.color = '#666';
+                return;
+            }
+
+            searchStatus.textContent = `${Math.min(suggestions.length, 6)} result(s). Click one to set Event Location.`;
+            searchStatus.style.color = '#4CAF50';
+
+            suggestions.slice(0, 6).forEach(suggestion => {
+                const pred = suggestion.placePrediction;
+                const name = pred.mainText ? pred.mainText.toString() : pred.text.toString();
+                const address = pred.secondaryText ? pred.secondaryText.toString() : '';
+                const chosenText = address ? `${name}, ${address}` : name;
+
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'event-location-result-card';
+                card.style.textAlign = 'left';
+                card.style.border = '1px solid #d2dae8';
+                card.style.borderRadius = '8px';
+                card.style.padding = '8px 10px';
+                card.style.background = '#fff';
+                card.style.cursor = 'pointer';
+                card.innerHTML = `<strong style="display:block; color:#2f3b4a;">${name}</strong><span style="font-size:12px; color:#5f6368;">${address}</span>`;
+
+                card.addEventListener('click', () => {
+                    const locationInput = templateFormFields.querySelector('[name="tpl-location"]');
+                    if (locationInput) {
+                        locationInput.value = chosenText;
+                        syncPayloadFromTemplateForm();
+                    }
+                    searchStatus.textContent = `Location set: ${chosenText}`;
+                    searchStatus.style.color = '#4CAF50';
+                    Array.from(searchResults.querySelectorAll('.event-location-result-card')).forEach(el => {
+                        el.style.borderColor = '#d2dae8';
+                        el.style.background = '#fff';
+                    });
+                    card.style.borderColor = '#4CAF50';
+                    card.style.background = '#f0faf2';
+                });
+
+                searchResults.appendChild(card);
+            });
+        } catch (error) {
+            searchStatus.textContent = `Search failed: ${error.message}`;
+            searchStatus.style.color = '#f44336';
+            console.error('Event location search error:', error);
+        }
+    };
+
+    searchBtn.addEventListener('click', runSearch);
+    searchInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            runSearch();
+        }
+    });
+}
+
+function setTemplateUiState(template) {
+    if (placeIdPanel) placeIdPanel.style.display = template === 'google-review' ? 'block' : 'none';
+    if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = template === 'wifi' ? 'block' : 'none';
+
+    isGoogleReviewMode = template === 'google-review';
+    if (googleColorToggle) {
+        googleColorToggle.style.display = isGoogleReviewMode ? 'block' : 'none';
+    }
+
+    if (template === 'google-review' && placeIdPanel) {
+        const hint = document.getElementById('placeApiKeyHint');
+        if (hint) hint.style.display = GOOGLE_MAPS_API_KEY ? 'none' : 'block';
+    }
+}
+
+function activateTemplateMode(template, payloadSeed = '') {
+    if (!TEMPLATE_FORM_SCHEMAS[template]) return;
+
+    activeTemplateType = template;
+    templateBtns.forEach(templateBtn => {
+        templateBtn.classList.toggle('active-filter', templateBtn.dataset.template === template);
+    });
+    filterUseCases();
+
+    if (rawInputContainer) rawInputContainer.style.display = 'none';
+    if (templateFormContainer) templateFormContainer.style.display = 'block';
+
+    setTemplateUiState(template);
+    renderTemplateForm(template, payloadSeed);
+
+    if (!payloadSeed && template === 'google-review') {
+        labelInput.value = 'Leave us a Google Review!';
+    }
+
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'input_template_selected', { template });
+    }
+}
+
+function deactivateTemplateMode({ focusTextInput = false, clearTemplateFilter = true } = {}) {
+    activeTemplateType = null;
+    if (templateFormContainer) templateFormContainer.style.display = 'none';
+    if (rawInputContainer) rawInputContainer.style.display = 'block';
+    if (templateFormFields) templateFormFields.innerHTML = '';
+    updateTemplatePreview('');
+
+    isGoogleReviewMode = false;
+    if (googleColorToggle) googleColorToggle.style.display = 'none';
+    if (placeIdPanel) placeIdPanel.style.display = 'none';
+    if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'none';
+
+    if (clearTemplateFilter) {
+        templateBtns.forEach(templateBtn => templateBtn.classList.remove('active-filter'));
+        filterUseCases();
+    }
+
+    if (focusTextInput) textInput.focus();
+}
+
+if (templateFormFields) {
+    templateFormFields.addEventListener('input', () => {
+        syncPayloadFromTemplateForm();
+    });
+
+    templateFormFields.addEventListener('change', () => {
+        syncPayloadFromTemplateForm();
+    });
+}
+
+if (manualInputBtn) {
+    manualInputBtn.addEventListener('click', () => {
+        deactivateTemplateMode({ focusTextInput: true });
+    });
+}
 
 // Cropper modal elements
 const cropperModal = document.getElementById('cropperModal');
@@ -647,98 +1308,14 @@ cropperModal.addEventListener('click', (e) => {
 templateBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         const template = btn.dataset.template;
-        let templateText = '';
+        if (activeTemplateType === template) {
+            deactivateTemplateMode({ focusTextInput: true });
+            return;
+        }
 
-        // Keep quick template selection single-select for consistent UX.
-        templateBtns.forEach(templateBtn => templateBtn.classList.remove('active-filter'));
-        btn.classList.add('active-filter');
-        
-        // Filter use cases based on active filters
-        filterUseCases();
-        
-        if (placeIdPanel) placeIdPanel.style.display = 'none';
-        if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'none';
-        
-        switch(template) {
-            case 'google-review':
-                templateText = 'https://search.google.com/local/writereview?placeid=your place id';
-                labelInput.value = 'Leave us a Google Review!';
-                isGoogleReviewMode = true;
-                document.getElementById('googleColorToggle').style.display = 'block';
-                if (placeIdPanel) {
-                    placeIdPanel.style.display = 'block';
-                    const hint = document.getElementById('placeApiKeyHint');
-                    if (hint) hint.style.display = GOOGLE_MAPS_API_KEY ? 'none' : 'block';
-                }
-                break;
-            case 'url':
-                templateText = 'https://';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'email':
-                templateText = 'mailto:your@email.com';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'phone':
-                templateText = 'tel:+1234567890';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'sms':
-                templateText = 'sms:+1234567890?body=Your message here';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'wifi':
-                templateText = 'WIFI:T:WPA;S:NetworkName;P:Password;;';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'block';
-                break;
-            case 'vcard':
-                templateText = 'BEGIN:VCARD\nVERSION:3.0\nFN:Full Name\nTEL:+1234567890\nEMAIL:email@example.com\nORG:Company Name\nTITLE:Job Title\nEND:VCARD';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'mecard':
-                templateText = 'MECARD:N:Last Name,First Name;TEL:+1234567890;EMAIL:email@example.com;URL:https://example.com;;';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'event':
-                templateText = 'BEGIN:VEVENT\nSUMMARY:Event Title\nDTSTART:20250115T100000Z\nDTEND:20250115T110000Z\nLOCATION:Event Location\nDESCRIPTION:Event description here\nEND:VEVENT';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-            case 'geo':
-                templateText = 'geo:37.7749,-122.4194,100';
-                isGoogleReviewMode = false;
-                document.getElementById('googleColorToggle').style.display = 'none';
-                break;
-        }
-        
-        textInput.value = templateText;
-        textInput.focus();
-        
-        // Analytics: Track template selection
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'input_template_selected', {
-                'template': template
-            });
-        }
-        
-        // Select the template text for easy editing
-        if (template === 'url') {
-            textInput.setSelectionRange(8, 8); // Place cursor after https://
-        } else if (template === 'google-review') {
-            // Select 'your place id' for easy replacement
-            const startPos = templateText.indexOf('your place id');
-            textInput.setSelectionRange(startPos, startPos + 13);
-        } else {
-            textInput.select();
-        }
+        const currentPayload = textInput.value.trim();
+        const payloadSeed = canSeedTemplateFromPayload(template, currentPayload) ? currentPayload : '';
+        activateTemplateMode(template, payloadSeed);
     });
 });
 
@@ -1362,26 +1939,29 @@ function filterUseCases() {
 
 // Apply use case to form
 function applyUseCase(type, content, label) {
-    textInput.value = unescapeHtml(content);
+    const rawContent = unescapeHtml(content);
+    textInput.value = rawContent;
     labelInput.value = unescapeHtml(label);
-    
-    // Handle Google review specific settings
-    if (type === 'google-review') {
-        isGoogleReviewMode = true;
-        document.getElementById('googleColorToggle').style.display = 'block';
+
+    if (TEMPLATE_FORM_SCHEMAS[type]) {
+        activateTemplateMode(type, rawContent);
     } else {
-        isGoogleReviewMode = false;
-        document.getElementById('googleColorToggle').style.display = 'none';
+        deactivateTemplateMode({ clearTemplateFilter: false });
     }
-    
-    // Flash the textarea to show it changed
-    textInput.style.background = '#e7f3ff';
+
+    // Flash the changed input area to signal update
+    const flashTarget = activeTemplateType ? templatePreviewOutput : textInput;
+    flashTarget.style.background = '#e7f3ff';
     setTimeout(() => {
-        textInput.style.background = '';
+        flashTarget.style.background = '';
     }, 500);
-    
-    // Focus the textarea
-    textInput.focus();
+
+    if (activeTemplateType) {
+        const firstField = templateFormFields ? templateFormFields.querySelector('input:not([type="checkbox"]), select, textarea') : null;
+        if (firstField) firstField.focus();
+    } else {
+        textInput.focus();
+    }
     
     // Analytics
     if (typeof gtag !== 'undefined') {
@@ -1744,6 +2324,7 @@ function saveCurrentState(actionLabel = 'Change') {
             errorCorrection: currentErrorCorrectionLevel,
             border: parseInt(borderRange.value),
             labelText: labelInput.value,
+            activeTemplate: activeTemplateType,
             googleReviewMode: isGoogleReviewMode,
             useGoogleColors: useGoogleColorsInLabel,
             logo: selectedLogo ? selectedLogo.src : null,
@@ -1794,6 +2375,12 @@ function restoreState(state) {
     try {
         // Restore text input
         textInput.value = state.text;
+
+        if (state.activeTemplate && TEMPLATE_FORM_SCHEMAS[state.activeTemplate]) {
+            activateTemplateMode(state.activeTemplate, state.text || '');
+        } else {
+            deactivateTemplateMode({ clearTemplateFilter: false });
+        }
         
         // Restore colors
         currentDarkColor = state.colors.dark;
@@ -1839,6 +2426,9 @@ function restoreState(state) {
         const googleColorsCheckbox = document.getElementById('useGoogleColors');
         if (googleColorsCheckbox) {
             googleColorsCheckbox.checked = state.useGoogleColors;
+        }
+        if (googleColorToggle) {
+            googleColorToggle.style.display = isGoogleReviewMode ? 'block' : 'none';
         }
         
         // Restore logo
@@ -3370,6 +3960,13 @@ async function searchPlaceId(query) {
             card.addEventListener('click', () => {
                 const url = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
                 textInput.value = url;
+                if (activeTemplateType === 'google-review' && templateFormFields) {
+                    const placeIdInput = templateFormFields.querySelector('[name="tpl-placeId"]');
+                    if (placeIdInput) {
+                        placeIdInput.value = placeId;
+                        syncPayloadFromTemplateForm();
+                    }
+                }
                 generateQRCode();
                 placeSearchStatus.textContent = `✅ Place ID set for: ${name}`;
                 placeSearchStatus.style.color = '#4CAF50';
@@ -6850,6 +7447,7 @@ function canvasToSVGFromCanvas(canvas) {
 
 // Clear all
 clearBtn.addEventListener('click', () => {
+    deactivateTemplateMode();
     textInput.value = '';
     labelInput.value = '';
     if (qrNotesInput) {
@@ -7008,6 +7606,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.2.0',
+        releasedAt: '2026-03-19T22:30:00Z',
+        notes: [
+            'Launched structured template forms so users can safely enter metadata without breaking payload formats.',
+            'Added read-only generated template previews under each template form for better visibility and trust.',
+            'Added Google Maps location search inside Event template and improved Email defaults/seeding behavior.'
+        ]
+    },
+    {
         version: 'v2.1.2',
         releasedAt: '2026-03-19T21:00:00Z',
         notes: [
@@ -7145,7 +7752,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'May 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
@@ -7153,7 +7760,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'May 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
@@ -7161,7 +7768,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'dynamic-analytics',
         title: 'Dynamic scan analytics mode',
         status: 'backlog',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Track scans by campaign and date with dashboard snapshots.'
     },
@@ -7169,7 +7776,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'ai-create-image',
         title: 'Artistic Create Image generator',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
     },
@@ -7177,15 +7784,15 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'instagram-feedback-loop',
         title: 'Instagram user feedback loop',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Capture user feedback through Instagram stories with linked paths to and from the QR tool.'
     }
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v2.2',
-    eta: 'May 2026',
+    version: 'v2.3',
+    eta: 'Q3 2026',
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',

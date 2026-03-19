@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Content Security Policy: Allow required scripts for QRCode.js library -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai https://maps.googleapis.com https://places.googleapis.com https://stablehorde.net; font-src 'self' data:;">
-    <title>Free QR Code Generator with Logo | No Sign Up Required</title>
+    <title>Free QR Code Generator with Logo</title>
 
     <!-- Color Thief for dominant color extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
@@ -27,21 +27,21 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23fff'/%3E%3Crect x='2' y='2' width='8' height='8' fill='%23000'/%3E%3Crect x='22' y='2' width='8' height='8' fill='%23000'/%3E%3Crect x='2' y='22' width='8' height='8' fill='%23000'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%23fff'/%3E%3Crect x='24' y='4' width='4' height='4' fill='%23fff'/%3E%3Crect x='4' y='24' width='4' height='4' fill='%23fff'/%3E%3Crect x='12' y='2' width='2' height='2' fill='%23000'/%3E%3Crect x='16' y='2' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='6' width='2' height='2' fill='%23000'/%3E%3Crect x='18' y='6' width='2' height='2' fill='%23000'/%3E%3Crect x='14' y='10' width='4' height='4' fill='%23000'/%3E%3Crect x='20' y='12' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='16' width='2' height='2' fill='%23000'/%3E%3Crect x='18' y='18' width='2' height='2' fill='%23000'/%3E%3Crect x='22' y='20' width='2' height='2' fill='%23000'/%3E%3Crect x='26' y='22' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='22' width='2' height='2' fill='%23000'/%3E%3Crect x='16' y='26' width='2' height='2' fill='%23000'/%3E%3Crect x='12' y='28' width='2' height='2' fill='%23000'/%3E%3C/svg%3E">
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Create custom QR codes with your logo for free. No sign up required. Perfect for business cards, marketing, and events. Download as PNG, SVG, or JPG instantly.">
+    <meta name="description" content="Create custom QR codes with your logo for free. Perfect for business cards, marketing, and events. Download as PNG, SVG, or JPG instantly.">
     <meta name="keywords" content="qr code generator, qr code with logo, free qr code, custom qr code, qr code maker, business card qr code, qr code creator, logo qr code, qr code design">
     <meta name="author" content="QR Code Generator">
     <meta name="robots" content="index, follow">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Free QR Code Generator with Logo | No Sign Up Required">
+    <meta property="og:title" content="Free QR Code Generator with Logo">
     <meta property="og:description" content="Create custom QR codes with your logo for free. Download as PNG, SVG, or JPG instantly.">
     <meta property="og:url" content="https://fitzgr.github.io/qr-code-generator/">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Free QR Code Generator with Logo">
-    <meta name="twitter:description" content="Create custom QR codes with your logo for free. No sign up required.">
+    <meta name="twitter:description" content="Create custom QR codes with your logo for free.">
     
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
@@ -49,7 +49,7 @@
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "QR Code Generator with Logo",
-      "description": "Free online QR code generator that allows you to create custom QR codes with your logo. No sign up required.",
+    "description": "Free online QR code generator that allows you to create custom QR codes with your logo.",
       "url": "https://fitzgr.github.io/qr-code-generator/",
       "applicationCategory": "UtilitiesApplication",
       "offers": {
@@ -57,7 +57,7 @@
         "price": "0",
         "priceCurrency": "USD"
       },
-      "featureList": "Add custom logo, Multiple download formats (PNG, SVG, JPG), No sign up required, Free forever"
+    "featureList": "Add custom logo, Multiple download formats (PNG, SVG, JPG), Free forever"
     }
     </script>
     
@@ -90,7 +90,21 @@
                     <button class="template-btn" data-template="event" title="Calendar event (iCalendar format)">📅 Event</button>
                     <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
-                <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
+                <div id="templateFormContainer" class="template-form-container" style="display: none;">
+                    <div class="template-form-header">
+                        <h4 id="templateFormTitle">Template Builder</h4>
+                        <button id="manualInputBtn" type="button" class="btn btn-secondary manual-input-btn">Switch to Manual Input</button>
+                    </div>
+                    <div id="templateFormFields" class="template-form-fields"></div>
+                    <div class="template-preview-box">
+                        <label for="templatePreviewOutput">Generated Template Preview (read-only)</label>
+                        <pre id="templatePreviewOutput" class="template-preview-output" aria-live="polite"></pre>
+                    </div>
+                </div>
+
+                <div id="rawInputContainer">
+                    <textarea id="textInput" rows="4" placeholder="Enter your text or URL here..."></textarea>
+                </div>
                 <div id="wifiPrivacyNotice" class="wifi-privacy-note" style="display: none;" role="status" aria-live="polite">
                     <strong>Privacy note for WiFi QR:</strong> Your password stays in your browser while you use this page. This tool does not send WiFi passwords to our servers or save them to an account.
                 </div>
@@ -728,7 +742,7 @@
                     <p>
                         Create professional QR codes with your logo in seconds. Our free QR code generator allows you to 
                         customize your QR codes with your brand logo, perfect for business cards, marketing materials, 
-                        product packaging, and event promotions. No sign up or registration required.
+                        product packaging, and event promotions.
                     </p>
                 </section>
 
@@ -1898,7 +1912,8 @@ Label: "Conference Room Entrance"</pre>
         <div class="cropper-modal-content">
             <div class="cropper-modal-header">
                 <h3>Crop Image</h3>
-                <p style="font-size: 14px; color: #666; margin-top: 5px;">Adjust the crop area to prevent distortion</p>
+                <p style="font-size: 14px; color: #666; margin-top: 5px;">Adjust the crop area to prevent distortion. Cropping is square only (1:1) so the image fits best in the rendered QR result.</p>
+                <p class="cropper-help-tip">Tip: Drag the image to position it. Drag the square handles to resize the crop area (1:1 stays locked).</p>
             </div>
             <div class="cropper-container-wrapper">
                 <img id="cropperImage" alt="Image to crop">
