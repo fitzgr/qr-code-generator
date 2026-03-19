@@ -210,15 +210,15 @@ function showImageCropper(imageDataURL, mode, fileName) {
         cropperInstance = new Cropper(cropperImage, {
             aspectRatio: 1, // Always square — prevents distortion in QR overlays
             viewMode: 1,
-            // Keep the existing crop box active so dragging adjusts the selection
-            // instead of repeatedly drawing a new one.
-            dragMode: 'none',
+            // Default to moving the image so users can position content inside
+            // the square crop frame with normal mouse drag.
+            dragMode: 'move',
             autoCropArea: 0.72,
             restore: false,
             guides: true,
             center: true,
             highlight: false,
-            cropBoxMovable: true,
+            cropBoxMovable: false,
             cropBoxResizable: true,
             minCropBoxWidth: 48,
             minCropBoxHeight: 48,
@@ -240,7 +240,7 @@ function showImageCropper(imageDataURL, mode, fileName) {
                 cropperIsRedrawing = false;
                 requestAnimationFrame(() => {
                     if (cropperInstance) {
-                        cropperInstance.setDragMode('none');
+                        cropperInstance.setDragMode('move');
                     }
                 });
             },
@@ -255,7 +255,7 @@ function showImageCropper(imageDataURL, mode, fileName) {
                     width: Math.max(48, data.width - (insetX * 2)),
                     height: Math.max(48, data.height - (insetY * 2))
                 });
-                this.cropper.setDragMode('none');
+                this.cropper.setDragMode('move');
             }
         });
     };
@@ -633,7 +633,7 @@ cropperReset.addEventListener('click', () => {
     if (cropperInstance) {
         cropperIsRedrawing = false;
         cropperInstance.reset();
-        cropperInstance.setDragMode('none');
+        cropperInstance.setDragMode('move');
     }
 });
 
@@ -988,6 +988,14 @@ const useCaseExamples = [
         description: 'Room card or information sheet',
         content: 'WIFI:T:WPA;S:HotelWiFi;P:SecurePass456;;',
         label: 'Hotel WiFi Access'
+    },
+    {
+        type: 'wifi',
+        icon: '🏠',
+        title: 'Home Guest WiFi',
+        description: 'Friends and family at home can connect quickly without typing a long password',
+        content: 'WIFI:T:WPA;S:HomeGuest;P:FamilyVisit2026;;',
+        label: 'Scan for Home WiFi'
     },
     
     // vCard examples
@@ -7000,6 +7008,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.2.0',
+        releasedAt: '2026-03-19T21:00:00Z',
+        notes: [
+            'Added a Home Guest WiFi use case example to make household guest onboarding faster.',
+            'Expanded roadmap planning with an Instagram-linked feedback loop item.',
+            'Updated release timeline metadata for the new minor release.'
+        ]
+    },
+    {
         version: 'v2.1.1',
         releasedAt: '2026-03-16T23:30:00Z',
         notes: [
@@ -7092,6 +7109,11 @@ const FALLBACK_RELEASE_HISTORY = [
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
     {
+        message: 'feat: add Home Guest WiFi example and Instagram feedback loop roadmap item',
+        committedAt: '2026-03-19T20:45:00Z',
+        author: 'Grant'
+    },
+    {
         message: 'fix: lock cropper to 1:1 and improve crop resize interactions',
         committedAt: '2026-03-16T23:20:00Z',
         author: 'Grant'
@@ -7123,7 +7145,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'May 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
@@ -7131,7 +7153,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'May 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
@@ -7139,7 +7161,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'dynamic-analytics',
         title: 'Dynamic scan analytics mode',
         status: 'backlog',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Track scans by campaign and date with dashboard snapshots.'
     },
@@ -7147,7 +7169,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'ai-create-image',
         title: 'Artistic Create Image generator',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
     },
@@ -7155,15 +7177,15 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'instagram-feedback-loop',
         title: 'Instagram user feedback loop',
         status: 'planned',
-        targetVersion: 'v2.2',
+        targetVersion: 'v2.3',
         eta: 'Q2 2026',
         details: 'Capture user feedback through Instagram stories with linked paths to and from the QR tool.'
     }
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v2.2',
-    eta: 'May 2026',
+    version: 'v2.3',
+    eta: 'Jun 2026',
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',
