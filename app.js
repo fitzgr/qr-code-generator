@@ -8089,6 +8089,26 @@ const FALLBACK_RELEASE_HISTORY = [
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
     {
+        message: 'release: publish v2.3.0 with template isolation, privacy controls, and expanded dial codes',
+        committedAt: '2026-03-21T16:10:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'feat: add settings shortcut to reopen privacy notice and review local storage preferences',
+        committedAt: '2026-03-21T15:45:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'fix: isolate template payload state so event, phone, and manual flows do not cross over',
+        committedAt: '2026-03-21T15:20:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'feat: expand international dial code coverage and add privacy banner with history opt-in',
+        committedAt: '2026-03-21T14:55:00Z',
+        author: 'Grant'
+    },
+    {
         message: 'feat: add Home Guest WiFi example and Instagram feedback loop roadmap item',
         committedAt: '2026-03-19T20:45:00Z',
         author: 'Grant'
