@@ -36,6 +36,10 @@ let isGoogleReviewMode = false;
 let useGoogleColorsInLabel = true;
 let currentErrorCorrectionLevel = 'H'; // L, M, Q, or H
 
+// Privacy preference - true means user allows history saving
+let privacyOptInPreference = true;
+const PRIVACY_PREF_KEY = 'qr_privacy_opt_in';
+
 // State history for undo/redo functionality
 let stateHistory = [];
 let currentStateIndex = -1;
@@ -574,7 +578,224 @@ const templateFormFields = document.getElementById('templateFormFields');
 const templatePreviewOutput = document.getElementById('templatePreviewOutput');
 const rawInputContainer = document.getElementById('rawInputContainer');
 const manualInputBtn = document.getElementById('manualInputBtn');
+const templateFormBody = document.getElementById('templateFormBody');
 let activeTemplateType = null;
+// Per-template data cache: { 'event': 'event-payload-string', 'phone': 'phone-payload-string', ... }
+let templateDataCache = {};
+let lastActiveTemplate = null;
+
+const COUNTRY_DIAL_CODES = [
+    { code: 'AF', dial: '+93', name: 'Afghanistan' },
+    { code: 'AL', dial: '+355', name: 'Albania' },
+    { code: 'DZ', dial: '+213', name: 'Algeria' },
+    { code: 'AG', dial: '+1-268', name: 'Antigua & Barbuda' },
+    { code: 'AR', dial: '+54', name: 'Argentina' },
+    { code: 'AM', dial: '+374', name: 'Armenia' },
+    { code: 'AZ', dial: '+994', name: 'Azerbaijan' },
+    { code: 'BS', dial: '+1-242', name: 'Bahamas' },
+    { code: 'BH', dial: '+973', name: 'Bahrain' },
+    { code: 'BD', dial: '+880', name: 'Bangladesh' },
+    { code: 'BB', dial: '+1-246', name: 'Barbados' },
+    { code: 'BY', dial: '+375', name: 'Belarus' },
+    { code: 'BE', dial: '+32', name: 'Belgium' },
+    { code: 'BZ', dial: '+501', name: 'Belize' },
+    { code: 'BJ', dial: '+229', name: 'Benin' },
+    { code: 'BT', dial: '+975', name: 'Bhutan' },
+    { code: 'BO', dial: '+591', name: 'Bolivia' },
+    { code: 'BA', dial: '+387', name: 'Bosnia & Herzegovina' },
+    { code: 'BW', dial: '+267', name: 'Botswana' },
+    { code: 'BR', dial: '+55', name: 'Brazil' },
+    { code: 'BN', dial: '+673', name: 'Brunei' },
+    { code: 'BG', dial: '+359', name: 'Bulgaria' },
+    { code: 'BF', dial: '+226', name: 'Burkina Faso' },
+    { code: 'BI', dial: '+257', name: 'Burundi' },
+    { code: 'KH', dial: '+855', name: 'Cambodia' },
+    { code: 'CM', dial: '+237', name: 'Cameroon' },
+    { code: 'CA', dial: '+1', name: 'Canada' },
+    { code: 'CV', dial: '+238', name: 'Cape Verde' },
+    { code: 'CF', dial: '+236', name: 'Central African Republic' },
+    { code: 'TD', dial: '+235', name: 'Chad' },
+    { code: 'CL', dial: '+56', name: 'Chile' },
+    { code: 'CN', dial: '+86', name: 'China' },
+    { code: 'CO', dial: '+57', name: 'Colombia' },
+    { code: 'KM', dial: '+269', name: 'Comoros' },
+    { code: 'CG', dial: '+242', name: 'Congo' },
+    { code: 'CR', dial: '+506', name: 'Costa Rica' },
+    { code: 'HR', dial: '+385', name: 'Croatia' },
+    { code: 'CU', dial: '+53', name: 'Cuba' },
+    { code: 'CY', dial: '+357', name: 'Cyprus' },
+    { code: 'CZ', dial: '+420', name: 'Czech Republic' },
+    { code: 'CD', dial: '+243', name: 'Democratic Republic of Congo' },
+    { code: 'DK', dial: '+45', name: 'Denmark' },
+    { code: 'DJ', dial: '+253', name: 'Djibouti' },
+    { code: 'DM', dial: '+1-767', name: 'Dominica' },
+    { code: 'DO', dial: '+1-809', name: 'Dominican Republic' },
+    { code: 'EC', dial: '+593', name: 'Ecuador' },
+    { code: 'EG', dial: '+20', name: 'Egypt' },
+    { code: 'SV', dial: '+503', name: 'El Salvador' },
+    { code: 'EE', dial: '+372', name: 'Estonia' },
+    { code: 'ET', dial: '+251', name: 'Ethiopia' },
+    { code: 'FJ', dial: '+679', name: 'Fiji' },
+    { code: 'FI', dial: '+358', name: 'Finland' },
+    { code: 'FR', dial: '+33', name: 'France' },
+    { code: 'GA', dial: '+241', name: 'Gabon' },
+    { code: 'GM', dial: '+220', name: 'Gambia' },
+    { code: 'GE', dial: '+995', name: 'Georgia' },
+    { code: 'DE', dial: '+49', name: 'Germany' },
+    { code: 'GH', dial: '+233', name: 'Ghana' },
+    { code: 'GR', dial: '+30', name: 'Greece' },
+    { code: 'GD', dial: '+1-473', name: 'Grenada' },
+    { code: 'GT', dial: '+502', name: 'Guatemala' },
+    { code: 'GN', dial: '+224', name: 'Guinea' },
+    { code: 'GW', dial: '+245', name: 'Guinea-Bissau' },
+    { code: 'GY', dial: '+592', name: 'Guyana' },
+    { code: 'HT', dial: '+509', name: 'Haiti' },
+    { code: 'HK', dial: '+852', name: 'Hong Kong' },
+    { code: 'HU', dial: '+36', name: 'Hungary' },
+    { code: 'IS', dial: '+354', name: 'Iceland' },
+    { code: 'IN', dial: '+91', name: 'India' },
+    { code: 'ID', dial: '+62', name: 'Indonesia' },
+    { code: 'IR', dial: '+98', name: 'Iran' },
+    { code: 'IQ', dial: '+964', name: 'Iraq' },
+    { code: 'IE', dial: '+353', name: 'Ireland' },
+    { code: 'IL', dial: '+972', name: 'Israel' },
+    { code: 'IT', dial: '+39', name: 'Italy' },
+    { code: 'CI', dial: '+225', name: 'Ivory Coast' },
+    { code: 'JM', dial: '+1-876', name: 'Jamaica' },
+    { code: 'JP', dial: '+81', name: 'Japan' },
+    { code: 'JO', dial: '+962', name: 'Jordan' },
+    { code: 'KZ', dial: '+7', name: 'Kazakhstan' },
+    { code: 'KE', dial: '+254', name: 'Kenya' },
+    { code: 'KI', dial: '+686', name: 'Kiribati' },
+    { code: 'KP', dial: '+850', name: 'North Korea' },
+    { code: 'KR', dial: '+82', name: 'South Korea' },
+    { code: 'KW', dial: '+965', name: 'Kuwait' },
+    { code: 'KG', dial: '+996', name: 'Kyrgyzstan' },
+    { code: 'LA', dial: '+856', name: 'Laos' },
+    { code: 'LV', dial: '+371', name: 'Latvia' },
+    { code: 'LB', dial: '+961', name: 'Lebanon' },
+    { code: 'LS', dial: '+266', name: 'Lesotho' },
+    { code: 'LR', dial: '+231', name: 'Liberia' },
+    { code: 'LY', dial: '+218', name: 'Libya' },
+    { code: 'LI', dial: '+423', name: 'Liechtenstein' },
+    { code: 'LT', dial: '+370', name: 'Lithuania' },
+    { code: 'LU', dial: '+352', name: 'Luxembourg' },
+    { code: 'MO', dial: '+853', name: 'Macau' },
+    { code: 'MK', dial: '+389', name: 'North Macedonia' },
+    { code: 'MG', dial: '+261', name: 'Madagascar' },
+    { code: 'MW', dial: '+265', name: 'Malawi' },
+    { code: 'MY', dial: '+60', name: 'Malaysia' },
+    { code: 'MV', dial: '+960', name: 'Maldives' },
+    { code: 'ML', dial: '+223', name: 'Mali' },
+    { code: 'MT', dial: '+356', name: 'Malta' },
+    { code: 'MH', dial: '+692', name: 'Marshall Islands' },
+    { code: 'MR', dial: '+222', name: 'Mauritania' },
+    { code: 'MU', dial: '+230', name: 'Mauritius' },
+    { code: 'MX', dial: '+52', name: 'Mexico' },
+    { code: 'FM', dial: '+691', name: 'Micronesia' },
+    { code: 'MD', dial: '+373', name: 'Moldova' },
+    { code: 'MC', dial: '+377', name: 'Monaco' },
+    { code: 'MN', dial: '+976', name: 'Mongolia' },
+    { code: 'ME', dial: '+382', name: 'Montenegro' },
+    { code: 'MA', dial: '+212', name: 'Morocco' },
+    { code: 'MZ', dial: '+258', name: 'Mozambique' },
+    { code: 'MM', dial: '+95', name: 'Myanmar' },
+    { code: 'NA', dial: '+264', name: 'Namibia' },
+    { code: 'NR', dial: '+674', name: 'Nauru' },
+    { code: 'NP', dial: '+977', name: 'Nepal' },
+    { code: 'NL', dial: '+31', name: 'Netherlands' },
+    { code: 'NZ', dial: '+64', name: 'New Zealand' },
+    { code: 'NI', dial: '+505', name: 'Nicaragua' },
+    { code: 'NE', dial: '+227', name: 'Niger' },
+    { code: 'NG', dial: '+234', name: 'Nigeria' },
+    { code: 'NO', dial: '+47', name: 'Norway' },
+    { code: 'OM', dial: '+968', name: 'Oman' },
+    { code: 'PK', dial: '+92', name: 'Pakistan' },
+    { code: 'PW', dial: '+680', name: 'Palau' },
+    { code: 'PA', dial: '+507', name: 'Panama' },
+    { code: 'PG', dial: '+675', name: 'Papua New Guinea' },
+    { code: 'PY', dial: '+595', name: 'Paraguay' },
+    { code: 'PE', dial: '+51', name: 'Peru' },
+    { code: 'PH', dial: '+63', name: 'Philippines' },
+    { code: 'PL', dial: '+48', name: 'Poland' },
+    { code: 'PT', dial: '+351', name: 'Portugal' },
+    { code: 'QA', dial: '+974', name: 'Qatar' },
+    { code: 'RO', dial: '+40', name: 'Romania' },
+    { code: 'RU', dial: '+7', name: 'Russia' },
+    { code: 'RW', dial: '+250', name: 'Rwanda' },
+    { code: 'KN', dial: '+1-869', name: 'St Kitts & Nevis' },
+    { code: 'LC', dial: '+1-758', name: 'St Lucia' },
+    { code: 'VC', dial: '+1-784', name: 'St Vincent & Grenadines' },
+    { code: 'WS', dial: '+685', name: 'Samoa' },
+    { code: 'SM', dial: '+378', name: 'San Marino' },
+    { code: 'ST', dial: '+239', name: 'São Tomé & Príncipe' },
+    { code: 'SA', dial: '+966', name: 'Saudi Arabia' },
+    { code: 'SN', dial: '+221', name: 'Senegal' },
+    { code: 'RS', dial: '+381', name: 'Serbia' },
+    { code: 'SC', dial: '+248', name: 'Seychelles' },
+    { code: 'SL', dial: '+232', name: 'Sierra Leone' },
+    { code: 'SG', dial: '+65', name: 'Singapore' },
+    { code: 'SK', dial: '+421', name: 'Slovakia' },
+    { code: 'SI', dial: '+386', name: 'Slovenia' },
+    { code: 'SB', dial: '+677', name: 'Solomon Islands' },
+    { code: 'SO', dial: '+252', name: 'Somalia' },
+    { code: 'ZA', dial: '+27', name: 'South Africa' },
+    { code: 'SS', dial: '+211', name: 'South Sudan' },
+    { code: 'ES', dial: '+34', name: 'Spain' },
+    { code: 'LK', dial: '+94', name: 'Sri Lanka' },
+    { code: 'SD', dial: '+249', name: 'Sudan' },
+    { code: 'SR', dial: '+597', name: 'Suriname' },
+    { code: 'SE', dial: '+46', name: 'Sweden' },
+    { code: 'CH', dial: '+41', name: 'Switzerland' },
+    { code: 'SY', dial: '+963', name: 'Syria' },
+    { code: 'TW', dial: '+886', name: 'Taiwan' },
+    { code: 'TJ', dial: '+992', name: 'Tajikistan' },
+    { code: 'TZ', dial: '+255', name: 'Tanzania' },
+    { code: 'TH', dial: '+66', name: 'Thailand' },
+    { code: 'TL', dial: '+670', name: 'East Timor' },
+    { code: 'TG', dial: '+228', name: 'Togo' },
+    { code: 'TO', dial: '+676', name: 'Tonga' },
+    { code: 'TT', dial: '+1-868', name: 'Trinidad & Tobago' },
+    { code: 'TN', dial: '+216', name: 'Tunisia' },
+    { code: 'TR', dial: '+90', name: 'Turkey' },
+    { code: 'TM', dial: '+993', name: 'Turkmenistan' },
+    { code: 'TV', dial: '+688', name: 'Tuvalu' },
+    { code: 'UG', dial: '+256', name: 'Uganda' },
+    { code: 'UA', dial: '+380', name: 'Ukraine' },
+    { code: 'AE', dial: '+971', name: 'United Arab Emirates' },
+    { code: 'GB', dial: '+44', name: 'United Kingdom' },
+    { code: 'US', dial: '+1', name: 'United States' },
+    { code: 'UY', dial: '+598', name: 'Uruguay' },
+    { code: 'UZ', dial: '+998', name: 'Uzbekistan' },
+    { code: 'VU', dial: '+678', name: 'Vanuatu' },
+    { code: 'VE', dial: '+58', name: 'Venezuela' },
+    { code: 'VN', dial: '+84', name: 'Vietnam' },
+    { code: 'YE', dial: '+967', name: 'Yemen' },
+    { code: 'ZM', dial: '+260', name: 'Zambia' },
+    { code: 'ZW', dial: '+263', name: 'Zimbabwe' },
+];
+
+function detectDialCode() {
+    const langs = [...(navigator.languages || []), navigator.language || ''];
+    for (const lang of langs) {
+        const country = lang.split('-')[1]?.toUpperCase();
+        if (!country) continue;
+        const found = COUNTRY_DIAL_CODES.find(c => c.code === country);
+        if (found) return found.dial;
+    }
+    return '+1';
+}
+
+function splitPhoneNumber(full) {
+    if (!full) return { dial: detectDialCode(), local: '' };
+    if (!full.startsWith('+')) return { dial: detectDialCode(), local: full };
+    const sorted = [...COUNTRY_DIAL_CODES].sort((a, b) => b.dial.length - a.dial.length);
+    for (const c of sorted) {
+        if (full.startsWith(c.dial)) return { dial: c.dial, local: full.slice(c.dial.length) };
+    }
+    const match = full.match(/^(\+\d{1,4})(.*)/);
+    return match ? { dial: match[1], local: match[2] } : { dial: detectDialCode(), local: full };
+}
 
 const TEMPLATE_FORM_SCHEMAS = {
     'google-review': {
@@ -600,13 +821,13 @@ const TEMPLATE_FORM_SCHEMAS = {
     phone: {
         title: 'Phone Template',
         fields: [
-            { name: 'phone', label: 'Phone Number', type: 'tel', required: true, placeholder: '+1234567890', default: '' }
+            { name: 'phone', label: 'Phone Number', type: 'tel-country', required: true }
         ]
     },
     sms: {
         title: 'SMS Template',
         fields: [
-            { name: 'phone', label: 'Phone Number', type: 'tel', required: true, placeholder: '+1234567890', default: '' },
+            { name: 'phone', label: 'Phone Number', type: 'tel-country', required: true },
             { name: 'message', label: 'Message Body', type: 'textarea', placeholder: 'Your message here', default: '' }
         ]
     },
@@ -651,6 +872,7 @@ const TEMPLATE_FORM_SCHEMAS = {
             { name: 'start', label: 'Start Date & Time', type: 'datetime-local', required: true, default: '' },
             { name: 'end', label: 'End Date & Time', type: 'datetime-local', required: true, default: '' },
             { name: 'location', label: 'Location', type: 'text', placeholder: 'Event Location', default: '' },
+            { name: 'locationPlaceId', type: 'hidden', default: '' },
             { name: 'description', label: 'Description (optional)', type: 'textarea', placeholder: 'Event description', default: '' }
         ]
     },
@@ -689,6 +911,15 @@ function parseIcsToLocalDate(icsDate) {
     return normalized;
 }
 
+function buildGoogleMapsPlaceUrl(placeId, query = '') {
+    const params = new URLSearchParams({
+        api: '1',
+        query: (query || 'Google Maps').trim(),
+        query_place_id: (placeId || '').trim()
+    });
+    return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
 function updateTemplatePreview(payload) {
     if (!templatePreviewOutput) return;
     templatePreviewOutput.textContent = payload || '';
@@ -700,6 +931,14 @@ function readTemplateFormValues(template) {
 
     const values = {};
     schema.fields.forEach(field => {
+        if (field.type === 'tel-country') {
+            const dialEl = templateFormFields.querySelector(`[name="tpl-${field.name}-country"]`);
+            const localEl = templateFormFields.querySelector(`[name="tpl-${field.name}-local"]`);
+            const dial = (dialEl ? dialEl.value.trim() : '') || detectDialCode();
+            const local = (localEl ? localEl.value.trim() : '');
+            values[field.name] = local ? `${dial}${local}` : '';
+            return;
+        }
         const fieldEl = templateFormFields.querySelector(`[name="tpl-${field.name}"]`);
         if (!fieldEl) {
             values[field.name] = field.default || '';
@@ -772,8 +1011,11 @@ function buildPayloadFromTemplate(template, values) {
                 `DTSTART:${formatDateForIcs(values.start)}`,
                 `DTEND:${formatDateForIcs(values.end)}`
             ];
-            if (values.location) lines.push(`LOCATION:${trimMultilineValue(values.location)}`);
-            if (values.description) lines.push(`DESCRIPTION:${trimMultilineValue(values.description)}`);
+            lines.push(`LOCATION:${trimMultilineValue(values.location)}`);
+            if (values.locationPlaceId) {
+                lines.push(`URL:${buildGoogleMapsPlaceUrl(values.locationPlaceId, values.location || 'Google Maps')}`);
+            }
+            lines.push(`DESCRIPTION:${trimMultilineValue(values.description)}`);
             lines.push('END:VEVENT');
             return lines.join('\n');
         }
@@ -868,13 +1110,23 @@ function parseTemplatePayload(template, payload) {
             break;
         }
         case 'event': {
+            let eventUrl = '';
             text.split(/\r?\n/).forEach(line => {
                 if (line.startsWith('SUMMARY:')) values.summary = line.slice(8);
                 if (line.startsWith('DTSTART:')) values.start = parseIcsToLocalDate(line.slice(8));
                 if (line.startsWith('DTEND:')) values.end = parseIcsToLocalDate(line.slice(6));
                 if (line.startsWith('LOCATION:')) values.location = line.slice(9);
                 if (line.startsWith('DESCRIPTION:')) values.description = line.slice(12);
+                if (line.startsWith('URL:')) eventUrl = line.slice(4);
             });
+            if (eventUrl) {
+                try {
+                    const url = new URL(eventUrl);
+                    values.locationPlaceId = url.searchParams.get('query_place_id') || '';
+                } catch (_error) {
+                    values.locationPlaceId = '';
+                }
+            }
             break;
         }
         case 'geo': {
@@ -948,6 +1200,10 @@ function renderTemplateField(field, template) {
     const stepAttr = field.step ? `step="${field.step}"` : '';
     const placeholderAttr = field.placeholder ? `placeholder="${field.placeholder}"` : '';
 
+    if (field.type === 'hidden') {
+        return `<input type="hidden" id="${name}" name="${name}" value="${field.default || ''}">`;
+    }
+
     if (field.type === 'checkbox') {
         return `
             <div class="template-form-row template-checkbox-row" data-field-row="${field.name}">
@@ -980,10 +1236,35 @@ function renderTemplateField(field, template) {
         `;
     }
 
+    if (field.type === 'tel-country') {
+        const datalistOptions = COUNTRY_DIAL_CODES
+            .map(c => `<option value="${c.dial}">${c.dial} ${c.name}</option>`).join('');
+        return `
+            <div class="template-form-row" data-field-row="${field.name}">
+                <label>${field.label}</label>
+                <div class="tel-country-row">
+                    <input type="text" name="tpl-${field.name}-country"
+                           class="tel-country-input" list="tel-country-datalist"
+                           placeholder="+1" autocomplete="off" spellcheck="false"
+                           aria-label="Country dial code">
+                    <input type="tel" name="tpl-${field.name}-local"
+                           class="tel-local-input"
+                           placeholder="Local number (no leading 0)"
+                           autocomplete="tel-local" ${requiredAttr}
+                           aria-label="Local phone number">
+                </div>
+                <span class="template-field-hint">Country auto-detected from your browser &mdash; type to override or search, then press Down Arrow for full list</span>
+                <datalist id="tel-country-datalist">${datalistOptions}</datalist>
+            </div>
+        `;
+    }
+
+    const hintHtml = field.hint ? `<span class="template-field-hint">${field.hint}</span>` : '';
     return `
         <div class="template-form-row" data-field-row="${field.name}">
             <label for="${name}">${field.label}</label>
             <input type="${field.type}" id="${name}" name="${name}" value="${field.default || ''}" ${requiredAttr} ${stepAttr} ${placeholderAttr}>
+            ${hintHtml}
         </div>
     `;
 }
@@ -1018,6 +1299,14 @@ function renderTemplateForm(template, payloadSeed = '') {
     };
 
     schema.fields.forEach(field => {
+        if (field.type === 'tel-country') {
+            const dialEl = templateFormFields.querySelector(`[name="tpl-${field.name}-country"]`);
+            const localEl = templateFormFields.querySelector(`[name="tpl-${field.name}-local"]`);
+            const { dial, local } = splitPhoneNumber(values[field.name] || '');
+            if (dialEl) dialEl.value = dial;
+            if (localEl) localEl.value = local;
+            return;
+        }
         const fieldEl = templateFormFields.querySelector(`[name="tpl-${field.name}"]`);
         if (!fieldEl || values[field.name] === undefined || values[field.name] === null) return;
         if (field.type === 'checkbox') {
@@ -1052,7 +1341,7 @@ function attachEventLocationSearchPanel() {
     panel.style.background = '#f8fbff';
 
     panel.innerHTML = `
-        <label style="margin-bottom: 8px; font-size: 12px; color: #4f5e73;">Search and insert event location from Google Maps</label>
+        <label style="margin-bottom: 8px; font-size: 12px; color: #4f5e73;">Optional: search and insert event location from Google Maps</label>
         <div style="display: flex; gap: 8px;">
             <input type="text" class="event-location-search-input" placeholder="e.g. Seattle Convention Center" style="flex: 1;">
             <button type="button" class="btn btn-secondary event-location-search-btn">Search</button>
@@ -1067,6 +1356,25 @@ function attachEventLocationSearchPanel() {
     const searchBtn = panel.querySelector('.event-location-search-btn');
     const searchStatus = panel.querySelector('.event-location-search-status');
     const searchResults = panel.querySelector('.event-location-search-results');
+    const locationInput = templateFormFields.querySelector('[name="tpl-location"]');
+    const placeIdInput = templateFormFields.querySelector('[name="tpl-locationPlaceId"]');
+    let selectedLocationText = locationInput ? locationInput.value.trim() : '';
+
+    if (placeIdInput && placeIdInput.value) {
+        searchStatus.textContent = 'Google Maps link is attached to this event location.';
+        searchStatus.style.color = '#4CAF50';
+    }
+
+    if (locationInput && placeIdInput) {
+        locationInput.addEventListener('input', () => {
+            if (locationInput.value.trim() !== selectedLocationText && placeIdInput.value) {
+                placeIdInput.value = '';
+                searchStatus.textContent = 'Location text edited manually. Maps place link cleared (search again to reattach).';
+                searchStatus.style.color = '#666';
+                syncPayloadFromTemplateForm();
+            }
+        });
+    }
 
     const runSearch = async () => {
         const query = searchInput.value.trim();
@@ -1105,6 +1413,7 @@ function attachEventLocationSearchPanel() {
 
             suggestions.slice(0, 6).forEach(suggestion => {
                 const pred = suggestion.placePrediction;
+                const placeId = pred.placeId;
                 const name = pred.mainText ? pred.mainText.toString() : pred.text.toString();
                 const address = pred.secondaryText ? pred.secondaryText.toString() : '';
                 const chosenText = address ? `${name}, ${address}` : name;
@@ -1121,12 +1430,15 @@ function attachEventLocationSearchPanel() {
                 card.innerHTML = `<strong style="display:block; color:#2f3b4a;">${name}</strong><span style="font-size:12px; color:#5f6368;">${address}</span>`;
 
                 card.addEventListener('click', () => {
-                    const locationInput = templateFormFields.querySelector('[name="tpl-location"]');
                     if (locationInput) {
                         locationInput.value = chosenText;
-                        syncPayloadFromTemplateForm();
                     }
-                    searchStatus.textContent = `Location set: ${chosenText}`;
+                    if (placeIdInput) {
+                        placeIdInput.value = placeId || '';
+                    }
+                    selectedLocationText = chosenText;
+                    syncPayloadFromTemplateForm();
+                    searchStatus.textContent = `Location set with Maps link: ${chosenText}`;
                     searchStatus.style.color = '#4CAF50';
                     Array.from(searchResults.querySelectorAll('.event-location-result-card')).forEach(el => {
                         el.style.borderColor = '#d2dae8';
@@ -1180,9 +1492,13 @@ function activateTemplateMode(template, payloadSeed = '') {
 
     if (rawInputContainer) rawInputContainer.style.display = 'none';
     if (templateFormContainer) templateFormContainer.style.display = 'block';
+    if (templateFormBody) templateFormBody.style.display = 'block';
+    if (manualInputBtn) manualInputBtn.textContent = 'Switch to Manual Input';
 
     setTemplateUiState(template);
-    renderTemplateForm(template, payloadSeed);
+    // Use provided seed, or fall back to cached data for this template
+    const seed = payloadSeed || templateDataCache[template] || '';
+    renderTemplateForm(template, seed);
 
     if (!payloadSeed && template === 'google-review') {
         labelInput.value = 'Leave us a Google Review!';
@@ -1193,12 +1509,34 @@ function activateTemplateMode(template, payloadSeed = '') {
     }
 }
 
-function deactivateTemplateMode({ focusTextInput = false, clearTemplateFilter = true } = {}) {
+function deactivateTemplateMode({ focusTextInput = false, clearTemplateFilter = true, showBackBtn = false } = {}) {
+    // Save the current template's payload to cache before deactivating
+    if (activeTemplateType && textInput) {
+        const payload = textInput.value;
+        if (payload && payload.trim()) {
+            templateDataCache[activeTemplateType] = payload;
+        }
+        if (showBackBtn) {
+            lastActiveTemplate = activeTemplateType;
+        }
+    }
     activeTemplateType = null;
-    if (templateFormContainer) templateFormContainer.style.display = 'none';
     if (rawInputContainer) rawInputContainer.style.display = 'block';
-    if (templateFormFields) templateFormFields.innerHTML = '';
-    updateTemplatePreview('');
+
+    if (showBackBtn && lastActiveTemplate) {
+        // Keep the header visible with the toggle button; collapse only the form body
+        if (templateFormBody) templateFormBody.style.display = 'none';
+        if (manualInputBtn) manualInputBtn.textContent = '\u2190 Back to Template';
+        // Keep the generated template payload visible/editable in manual mode.
+        const cachedPayload = templateDataCache[lastActiveTemplate];
+        if (cachedPayload) textInput.value = cachedPayload;
+    } else {
+        // Full deactivation — hide the entire container
+        if (templateFormFields) templateFormFields.innerHTML = '';
+        updateTemplatePreview('');
+        if (templateFormContainer) templateFormContainer.style.display = 'none';
+        lastActiveTemplate = null;
+    }
 
     isGoogleReviewMode = false;
     if (googleColorToggle) googleColorToggle.style.display = 'none';
@@ -1225,7 +1563,16 @@ if (templateFormFields) {
 
 if (manualInputBtn) {
     manualInputBtn.addEventListener('click', () => {
-        deactivateTemplateMode({ focusTextInput: true });
+        if (activeTemplateType) {
+            // Currently in template mode — switch to manual
+            deactivateTemplateMode({ focusTextInput: true, showBackBtn: true, clearTemplateFilter: false });
+        } else if (lastActiveTemplate) {
+            // Currently in manual mode — go back to the last template
+            // Try to seed from manual text if it matches the template format
+            const currentPayload = textInput.value.trim();
+            const payloadSeed = canSeedTemplateFromPayload(lastActiveTemplate, currentPayload) ? currentPayload : '';
+            activateTemplateMode(lastActiveTemplate, payloadSeed);
+        }
     });
 }
 
@@ -1313,9 +1660,16 @@ templateBtns.forEach(btn => {
             return;
         }
 
-        const currentPayload = textInput.value.trim();
-        const payloadSeed = canSeedTemplateFromPayload(template, currentPayload) ? currentPayload : '';
-        activateTemplateMode(template, payloadSeed);
+        // Save current template's data before switching to a different template
+        if (activeTemplateType && textInput) {
+            const payload = textInput.value;
+            if (payload && payload.trim()) {
+                templateDataCache[activeTemplateType] = payload;
+            }
+        }
+
+        // Switching directly between templates - use cached data for the new template
+        activateTemplateMode(template);
     });
 });
 
@@ -2636,6 +2990,11 @@ function jumpToHistoryState(index) {
 
 // Save history to localStorage
 function saveHistoryToLocalStorage() {
+    // Check if user has opted out of history saving
+    if (!privacyOptInPreference) {
+        return;
+    }
+    
     try {
         const historyData = {
             version: 1,
@@ -2671,6 +3030,11 @@ function saveHistoryToLocalStorage() {
 
 // Load history from localStorage on page load
 function loadHistoryFromLocalStorage() {
+    // Check if user has opted out of history saving
+    if (!privacyOptInPreference) {
+        return;
+    }
+    
     try {
         const data = localStorage.getItem('qr_history');
         if (!data) return;
@@ -7606,6 +7970,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.3.0',
+        releasedAt: '2026-03-21T16:00:00Z',
+        notes: [
+            'Expanded country dial code list from 50 to 190+ countries with comprehensive ISO 3166-1 support.',
+            'Added a privacy banner with local storage disclosure, opt-in history persistence, and a settings shortcut to reopen privacy details.',
+            'Fixed template data isolation so event, phone, and other template payloads stay separated when switching modes.'
+        ]
+    },
+    {
         version: 'v2.2.0',
         releasedAt: '2026-03-19T22:30:00Z',
         notes: [
@@ -8494,6 +8867,81 @@ function toggleTemplate(templateElement, tabName) {
 
 
 // ===== INITIALIZATION =====
+// Load privacy preference from localStorage
+function initializePrivacy() {
+    const savedPref = localStorage.getItem(PRIVACY_PREF_KEY);
+    if (savedPref !== null) {
+        privacyOptInPreference = savedPref === 'true';
+    }
+    setupPrivacyBannerEventListeners();
+}
+
+function setupPrivacyBannerEventListeners() {
+    const optInCheckbox = document.getElementById('privacyOptIn');
+    const dismissBtn = document.getElementById('dismissPrivacyBtn');
+    const detailsLink = document.querySelector('.privacy-banner-text a');
+    const settingsBtn = document.getElementById('settingsBtn');
+
+    if (optInCheckbox) {
+        optInCheckbox.checked = privacyOptInPreference;
+        optInCheckbox.addEventListener('change', function() {
+            privacyOptInPreference = this.checked;
+            localStorage.setItem(PRIVACY_PREF_KEY, String(privacyOptInPreference));
+            const message = privacyOptInPreference ? 
+                '✓ History saving enabled' : 
+                '⊘ History saving disabled - your data will not be saved to this browser';
+            showNotification(message, 'info');
+        });
+    }
+    
+    if (dismissBtn) {
+        dismissBtn.addEventListener('click', function() {
+            const banner = document.getElementById('privacyBanner');
+            if (banner) {
+                banner.style.display = 'none';
+                localStorage.setItem('privacy_banner_dismissed', 'true');
+            }
+        });
+    }
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', function() {
+            const banner = document.getElementById('privacyBanner');
+            if (banner) {
+                banner.style.display = 'block';
+                localStorage.removeItem('privacy_banner_dismissed');
+            }
+            const details = document.getElementById('privacyDetails');
+            if (details) {
+                details.style.display = 'block';
+            }
+        });
+    }
+}
+
+function togglePrivacyDetails(event) {
+    event.preventDefault();
+    const details = document.getElementById('privacyDetails');
+    if (details) {
+        const isVisible = details.style.display !== 'none';
+        details.style.display = isVisible ? 'none' : 'block';
+    }
+}
+
+// Initialize privacy settings
+initializePrivacy();
+
+// Hide banner if user previously dismissed it
+if (localStorage.getItem('privacy_banner_dismissed') === 'true') {
+    const banner = document.getElementById('privacyBanner');
+    if (banner) {
+        banner.style.display = 'none';
+    }
+}
+
+// Initialize template data cache (one data slot per template type)
+templateDataCache = {};
+
 // Load history from localStorage on page load
 loadHistoryFromLocalStorage();
 // ============================================

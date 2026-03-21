@@ -14,7 +14,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Content Security Policy: Allow required scripts for QRCode.js library -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.googletagmanager.com https://generativelanguage.googleapis.com https://maps.googleapis.com https://maps.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://image.pollinations.ai https://pollinations.ai https://maps.googleapis.com https://places.googleapis.com https://stablehorde.net; font-src 'self' data:;">
-    <title>Free QR Code Generator with Logo</title>
+    <title>QR Code Generator with Logo</title>
 
     <!-- Color Thief for dominant color extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js"></script>
@@ -65,14 +65,43 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
+    <!-- Privacy Banner -->
+    <div id="privacyBanner" class="privacy-banner">
+        <div class="privacy-banner-content">
+            <div class="privacy-banner-text">
+                <strong>📋 Privacy Notice:</strong> This app uses your browser's local storage to save QR history and AI model selections for a better experience. Your data stays on your device only and is never transmitted to any server. <a href="#" onclick="togglePrivacyDetails(event)">Learn more</a>
+            </div>
+            <div id="privacyDetails" class="privacy-details" style="display: none;">
+                <ul>
+                    <li><strong>QR History:</strong> Stores your last 50 QR codes with full input data (text, emails, phone numbers, locations, WiFi details, etc.) for undo/redo functionality</li>
+                    <li><strong>AI Cache:</strong> Remembers which Gemini model version works on your network</li>
+                    <li><strong>Browser-Only:</strong> All data stays in your local browser and is never uploaded</li>
+                    <li><strong>Your Control:</strong> Use the toggle below to opt-out of history saving. Your preference is remembered.</li>
+                </ul>
+            </div>
+            <div class="privacy-banner-controls">
+                <label class="privacy-toggle">
+                    <input type="checkbox" id="privacyOptIn" checked>
+                    Keep history (recommended)
+                </label>
+                <button id="dismissPrivacyBtn" class="btn btn-small">Dismiss</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="container">
         <!-- Left Panel - Controls -->
         <div class="left-panel">
             <div class="app-title-row">
                 <h1>QR Code Generator</h1>
-                <div id="appVersionMeta" class="app-version-meta" aria-live="polite">
-                    <span id="appVersionRef" class="app-version-ref">v--</span>
-                    <span id="appVersionDate" class="app-version-date">Date unavailable</span>
+                <div class="app-header-controls">
+                    <div id="appVersionMeta" class="app-version-meta" aria-live="polite">
+                        <span id="appVersionRef" class="app-version-ref">v--</span>
+                        <span id="appVersionDate" class="app-version-date">Date unavailable</span>
+                    </div>
+                    <button id="settingsBtn" class="settings-btn" title="App settings and preferences" aria-label="Open settings">
+                        ⚙️
+                    </button>
                 </div>
             </div>
             
@@ -95,10 +124,12 @@
                         <h4 id="templateFormTitle">Template Builder</h4>
                         <button id="manualInputBtn" type="button" class="btn btn-secondary manual-input-btn">Switch to Manual Input</button>
                     </div>
-                    <div id="templateFormFields" class="template-form-fields"></div>
-                    <div class="template-preview-box">
-                        <label for="templatePreviewOutput">Generated Template Preview (read-only)</label>
-                        <pre id="templatePreviewOutput" class="template-preview-output" aria-live="polite"></pre>
+                    <div id="templateFormBody">
+                        <div id="templateFormFields" class="template-form-fields"></div>
+                        <div class="template-preview-box">
+                            <label for="templatePreviewOutput">Generated Template Preview (read-only)</label>
+                            <pre id="templatePreviewOutput" class="template-preview-output" aria-live="polite"></pre>
+                        </div>
                     </div>
                 </div>
 
