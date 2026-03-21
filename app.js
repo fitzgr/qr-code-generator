@@ -7917,9 +7917,8 @@ const RELEASE_NOTE_GROUP_LABELS = {
 };
 
 const DEVELOPMENT_ACTIVITY_ALLOWED_WINDOWS = [
-    { startHour: 5, endHour: 9 },
-    { startHour: 12, endHour: 13 },
-    { startHour: 17, endHour: 21 }
+    { startHour: 9, endHour: 12 },
+    { startHour: 13, endHour: 17 }
 ];
 
 function hashStringToInt(input) {
@@ -7939,9 +7938,74 @@ function isInWorkHours(date) {
     return inMorningBlock || inAfternoonBlock;
 }
 
+function getNthWeekdayOfMonth(year, month, weekday, occurrence) {
+    const first = new Date(year, month, 1);
+    const firstWeekdayOffset = (7 + weekday - first.getDay()) % 7;
+    return new Date(year, month, 1 + firstWeekdayOffset + ((occurrence - 1) * 7));
+}
+
+function getLastWeekdayOfMonth(year, month, weekday) {
+    const last = new Date(year, month + 1, 0);
+    const offset = (7 + last.getDay() - weekday) % 7;
+    return new Date(year, month, last.getDate() - offset);
+}
+
+function getEasterSunday(year) {
+    const century = Math.floor(year / 100);
+    const yearInCentury = year % 100;
+    const leapCenturyAdjust = Math.floor(century / 4);
+    const centuryRemainder = century % 4;
+    const moonCorrection = Math.floor((century + 8) / 25);
+    const leapCorrection = Math.floor((century - moonCorrection + 1) / 3);
+    const epact = (19 * (year % 19) + century - leapCenturyAdjust - leapCorrection + 15) % 30;
+    const yearQuarter = Math.floor(yearInCentury / 4);
+    const yearRemainder = yearInCentury % 4;
+    const weekdayCorrection = (32 + 2 * centuryRemainder + 2 * yearQuarter - epact - yearRemainder) % 7;
+    const monthFactor = Math.floor((year % 19 + 11 * epact + 22 * weekdayCorrection) / 451);
+    const month = Math.floor((epact + weekdayCorrection - 7 * monthFactor + 114) / 31) - 1;
+    const day = ((epact + weekdayCorrection - 7 * monthFactor + 114) % 31) + 1;
+    return new Date(year, month, day);
+}
+
+function isSameLocalDate(date, other) {
+    return date.getFullYear() === other.getFullYear()
+        && date.getMonth() === other.getMonth()
+        && date.getDate() === other.getDate();
+}
+
+function isCanadianHoliday(date) {
+    const year = date.getFullYear();
+    const holidays = [];
+
+    holidays.push(new Date(year, 0, 1));
+    holidays.push(getNthWeekdayOfMonth(year, 1, 1, 3));
+
+    const easterSunday = getEasterSunday(year);
+    const goodFriday = new Date(easterSunday);
+    goodFriday.setDate(easterSunday.getDate() - 2);
+    holidays.push(goodFriday);
+
+    holidays.push(getLastWeekdayOfMonth(year, 4, 1));
+    holidays.push(new Date(year, 6, 1));
+    holidays.push(getNthWeekdayOfMonth(year, 8, 1, 1));
+    holidays.push(new Date(year, 8, 30));
+    holidays.push(getNthWeekdayOfMonth(year, 9, 1, 2));
+    holidays.push(new Date(year, 10, 11));
+    holidays.push(new Date(year, 11, 25));
+    holidays.push(new Date(year, 11, 26));
+
+    return holidays.some(holiday => isSameLocalDate(date, holiday));
+}
+
+function shouldPreserveDevelopmentActivityTime(date) {
+    const day = date.getDay();
+    const isWeekend = day === 0 || day === 6;
+    return isWeekend || isCanadianHoliday(date);
+}
+
 function remapCommitTimeToAllowedWindow(dateValue, seed) {
     const original = new Date(dateValue);
-    if (Number.isNaN(original.getTime()) || !isInWorkHours(original)) {
+    if (Number.isNaN(original.getTime()) || shouldPreserveDevelopmentActivityTime(original) || isInWorkHours(original)) {
         return original;
     }
 
