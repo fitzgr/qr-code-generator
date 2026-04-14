@@ -382,6 +382,7 @@ const MAX_BUCKET_SIZE_OTHER = 10;
 
 // Metadata tracking for each QR code
 let qrMetadataHistory = [];
+let activeBucketPreviewToken = 0;
 
 // DOM Elements
 const textInput = document.getElementById('textInput');
@@ -2455,6 +2456,12 @@ lightColorText.addEventListener('input', (e) => {
 });
 
 labelColorPicker.addEventListener('input', (e) => {
+    const color = e.target.value;
+    labelColorText.value = color;
+    currentLabelColor = color;
+});
+
+labelColorPicker.addEventListener('change', (e) => {
     const color = e.target.value;
     labelColorText.value = color;
     currentLabelColor = color;
@@ -5019,6 +5026,142 @@ function cloneCanvas(sourceCanvas) {
     return clone;
 }
 
+function syncBucketSelectionToPreview() {
+    const selectedQRs = qrBucket.filter(qr => qr.selected);
+    if (selectedQRs.length !== 1) {
+        return;
+    }
+
+    const qr = selectedQRs[0];
+    const metadata = qr.metadata || {};
+    const settings = metadata.settings || {};
+    const colors = metadata.colors || {};
+    const artistic = metadata.artistic || {};
+    const previewToken = ++activeBucketPreviewToken;
+
+    textInput.value = metadata.text || '';
+    labelInput.value = metadata.label || '';
+    if (qrNotesInput) qrNotesInput.value = metadata.notes || '';
+
+    if (settings.size) {
+        sizeRange.value = settings.size;
+        sizeValue.textContent = settings.size;
+    }
+    if (settings.border) {
+        borderRange.value = settings.border;
+        borderValue.textContent = settings.border;
+    }
+    if (settings.logoSize) {
+        logoSizeRange.value = settings.logoSize;
+        logoSizeValue.textContent = `${settings.logoSize}%`;
+    }
+    if (settings.labelSize) {
+        labelSizeRange.value = settings.labelSize;
+        labelSizeValue.textContent = `${settings.labelSize}%`;
+    }
+
+    currentDarkColor = colors.dark || currentDarkColor;
+    currentLightColor = colors.light || currentLightColor;
+    currentLabelColor = colors.label || currentLabelColor;
+    darkColorPicker.value = currentDarkColor;
+    darkColorText.value = currentDarkColor;
+    lightColorPicker.value = currentLightColor;
+    lightColorText.value = currentLightColor;
+    labelColorPicker.value = currentLabelColor;
+    labelColorText.value = currentLabelColor;
+
+    currentQRStyle = metadata.style || currentQRStyle;
+    styleBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.style === currentQRStyle);
+    });
+
+    currentErrorCorrectionLevel = metadata.errorCorrection || currentErrorCorrectionLevel;
+    if (errorCorrectionLevel) {
+        errorCorrectionLevel.value = currentErrorCorrectionLevel;
+    }
+
+    currentBlendMode = artistic.blendMode || currentBlendMode;
+    if (blendModeSelect) {
+        blendModeSelect.value = currentBlendMode;
+    }
+
+    currentBgOpacity = Number.isFinite(parseInt(artistic.bgOpacity, 10)) ? parseInt(artistic.bgOpacity, 10) : currentBgOpacity;
+    bgOpacityRange.value = currentBgOpacity;
+    bgOpacityValue.textContent = currentBgOpacity;
+
+    currentQrStrength = Number.isFinite(parseInt(artistic.qrStrength, 10)) ? parseInt(artistic.qrStrength, 10) : currentQrStrength;
+    qrStrengthRange.value = currentQrStrength;
+    qrStrengthValue.textContent = currentQrStrength;
+
+    if (contextInput) contextInput.value = artistic.context || '';
+    if (aiPromptInput) aiPromptInput.value = artistic.imagePrompt || '';
+    lastAiBackgroundMeta = artistic.aiBackground || null;
+    lastGeneratedSuggestions = artistic.allGeneratedSuggestions || null;
+
+    if (qr.canvas) {
+        qrCanvas.width = qr.canvas.width;
+        qrCanvas.height = qr.canvas.height;
+        const ctx = qrCanvas.getContext('2d');
+        ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+        ctx.drawImage(qr.canvas, 0, 0);
+        qrCanvas.classList.add('visible');
+        previewPlaceholder.classList.add('hidden');
+    }
+
+    currentQRDataURL = qr.dataURL || (qr.canvas ? qr.canvas.toDataURL('image/png') : null);
+    addToBucketBtn.disabled = !currentQRDataURL;
+    syncGradientControlState();
+
+    const logoPreview = document.getElementById('logoPreview');
+    if (metadata.logo?.hasLogo && metadata.logo.logoDataURL) {
+        if (logoPreview) {
+            logoPreview.src = metadata.logo.logoDataURL;
+            logoPreview.style.display = 'block';
+        }
+        logoStatus.textContent = 'Logo restored from selected QR';
+        logoStatus.style.color = '#4CAF50';
+
+        const logoImg = new Image();
+        logoImg.onload = () => {
+            if (previewToken === activeBucketPreviewToken) {
+                selectedLogo = logoImg;
+            }
+        };
+        logoImg.src = metadata.logo.logoDataURL;
+    } else {
+        selectedLogo = null;
+        if (logoPreview) {
+            logoPreview.style.display = 'none';
+            logoPreview.src = '';
+        }
+        logoStatus.textContent = 'No logo selected';
+        logoStatus.style.color = '#666';
+    }
+
+    if (artistic.hasBackground && artistic.backgroundDataURL) {
+        bgPreviewImage.src = artistic.backgroundDataURL;
+        bgPreviewSection.style.display = 'block';
+        blendControlsSection.style.display = 'block';
+        bgImageStatus.textContent = 'Background restored from selected QR';
+        bgImageStatus.style.color = '#4CAF50';
+
+        const bgImg = new Image();
+        bgImg.onload = () => {
+            if (previewToken === activeBucketPreviewToken) {
+                backgroundImage = bgImg;
+            }
+        };
+        bgImg.src = artistic.backgroundDataURL;
+    } else {
+        backgroundImage = null;
+        bgPreviewImage.src = '';
+        bgPreviewSection.style.display = 'none';
+        blendControlsSection.style.display = 'none';
+        bgImageStatus.textContent = 'No background selected';
+        bgImageStatus.style.color = '#666';
+    }
+}
+
 function updateBucketUI() {
     const countText = `(${qrBucket.length}/${MAX_BUCKET_SIZE_OTHER})`;
     bucketCount.textContent = countText;
@@ -5091,6 +5234,8 @@ function updateBucketUI() {
             item.appendChild(removeBtn);
             bucketPreview.appendChild(item);
         });
+
+        syncBucketSelectionToPreview();
     } else {
         bucketSection.style.display = 'none';
     }
