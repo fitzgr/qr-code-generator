@@ -590,6 +590,7 @@ let lastActiveTemplate = null;
 const merchantHoursRows = document.getElementById('merchantHoursRows');
 const merchantHolidays = document.getElementById('merchantHolidays');
 const futureEventDate = document.getElementById('futureEventDate');
+const futureEventDateWeekday = document.getElementById('futureEventDateWeekday');
 const futureQuickDays = document.getElementById('futureQuickDays');
 const futureQuickMonths = document.getElementById('futureQuickMonths');
 const futureQuickYears = document.getElementById('futureQuickYears');
@@ -1882,6 +1883,22 @@ function setMerchantScheduleStatus(message) {
     }
 }
 
+function formatDateWithWeekday(dateValue) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))) return '';
+    const parsed = new Date(`${dateValue}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return '';
+    const weekday = parsed.toLocaleDateString(undefined, { weekday: 'long' });
+    return `${dateValue} (${weekday})`;
+}
+
+function updateFutureDateWeekdayHint(dateValue) {
+    if (!futureEventDateWeekday) return;
+    const label = formatDateWithWeekday(dateValue);
+    futureEventDateWeekday.textContent = label
+        ? `Resolved business day: ${label}`
+        : '';
+}
+
 function hydrateMerchantScheduleUiFromState() {
     if (!merchantScheduleSettings) {
         merchantScheduleSettings = createDefaultMerchantSchedule();
@@ -1900,6 +1917,7 @@ function hydrateMerchantScheduleUiFromState() {
     if (futureEventDate) {
         futureEventDate.value = merchantScheduleSettings.scheduledDate || '';
     }
+    updateFutureDateWeekdayHint(merchantScheduleSettings.scheduledDate || '');
 
     syncFutureOffsetDropdowns();
 }
@@ -1937,6 +1955,7 @@ function applyOffsetSelectionToScheduledDate(shouldPersist = true) {
     if (futureEventDate) {
         futureEventDate.value = slot.resolvedDate;
     }
+    updateFutureDateWeekdayHint(slot.resolvedDate);
 
     merchantScheduleSettings.futureOffset = offset;
     merchantScheduleSettings.scheduledDate = slot.resolvedDate;
@@ -1949,7 +1968,8 @@ function applyOffsetSelectionToScheduledDate(shouldPersist = true) {
         const shiftedCopy = slot.shiftedDays > 0
             ? ` Rolled forward ${slot.shiftedDays} day${slot.shiftedDays === 1 ? '' : 's'} to next open business day.`
             : '';
-        setMerchantScheduleStatus(`Future date updated from day/month/year selection.${shiftedCopy}`);
+        const resolvedLabel = formatDateWithWeekday(slot.resolvedDate);
+        setMerchantScheduleStatus(`Future date updated to ${resolvedLabel} from day/month/year selection.${shiftedCopy}`);
     }
 }
 
@@ -1988,7 +2008,8 @@ function saveMerchantScheduleFromUi(showToast = false) {
     hydrateMerchantScheduleUiFromState();
 
     const message = `Saved schedule settings (${merchantScheduleSettings.holidays.length} holiday closure${merchantScheduleSettings.holidays.length === 1 ? '' : 's'}).`;
-    setMerchantScheduleStatus(message);
+    const resolvedLabel = formatDateWithWeekday(merchantScheduleSettings.scheduledDate);
+    setMerchantScheduleStatus(`${message} Next valid business day: ${resolvedLabel}.`);
     if (showToast) {
         showNotification('Merchant schedule saved.');
     }
