@@ -1814,6 +1814,18 @@ function renderTemplateField(field, template) {
         `;
     }
 
+    if (template === 'merchant-future-event' && field.name === 'futureDate') {
+        return `
+            <div class="template-form-row" data-field-row="${field.name}">
+                <label for="${name}">${field.label}</label>
+                <div class="template-future-date-control-row">
+                    <input class="merchant-future-date-input" type="${field.type}" id="${name}" name="${name}" value="${field.default || ''}" ${requiredAttr} ${stepAttr} ${placeholderAttr}>
+                    <span id="templateFutureDateResolved" class="merchant-template-resolved-day-inline">Resolved Day: --</span>
+                </div>
+            </div>
+        `;
+    }
+
     if (field.type === 'tel-country') {
         const datalistOptions = COUNTRY_DIAL_CODES
             .map(c => `<option value="${c.dial}">${c.dial} ${c.name}</option>`).join('');
@@ -1895,8 +1907,18 @@ function updateFutureDateWeekdayHint(dateValue) {
     if (!futureEventDateWeekday) return;
     const label = formatDateWithWeekday(dateValue);
     futureEventDateWeekday.textContent = label
-        ? `Resolved business day: ${label}`
-        : '';
+        ? `Resolved Day: ${label}`
+        : 'Resolved Day: --';
+}
+
+function updateTemplateFutureResolvedDayHint(dateValue) {
+    if (!templateFormFields) return;
+    const hintEl = templateFormFields.querySelector('#templateFutureDateResolved');
+    if (!hintEl) return;
+    const label = formatDateWithWeekday(dateValue);
+    hintEl.textContent = label
+        ? `Resolved Day: ${label}`
+        : 'Resolved Day: --';
 }
 
 function hydrateMerchantScheduleUiFromState() {
@@ -2100,7 +2122,10 @@ function initializeMerchantSchedulePanel() {
         merchantHolidays.addEventListener('change', () => saveMerchantScheduleFromUi(false));
     }
     if (futureEventDate) {
-        futureEventDate.addEventListener('change', () => saveMerchantScheduleFromUi(false));
+        futureEventDate.addEventListener('change', () => {
+            updateFutureDateWeekdayHint(futureEventDate.value || '');
+            saveMerchantScheduleFromUi(false);
+        });
     }
     if (futureQuickDays) futureQuickDays.addEventListener('change', () => applyOffsetSelectionToScheduledDate(true));
     if (futureQuickMonths) futureQuickMonths.addEventListener('change', () => applyOffsetSelectionToScheduledDate(true));
@@ -2141,6 +2166,7 @@ function syncPayloadFromTemplateForm() {
             const dateField = templateFormFields ? templateFormFields.querySelector('[name="tpl-futureDate"]') : null;
             if (dateField) dateField.value = slot.resolvedDate;
         }
+        updateTemplateFutureResolvedDayHint(slot ? slot.resolvedDate : values.futureDate);
         persistMerchantScheduleSettings();
         persistMerchantEventDraft({
             summary: values.summary,
@@ -9140,6 +9166,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.5.0',
+        releasedAt: '2026-06-28T19:30:00Z',
+        notes: [
+            'Added persistent Merchant Future Event draft data, including event title, description, and saved location/place linking.',
+            'Added Google Places phone lookup outcomes with clear status messaging and optional debug details in location search.',
+            'Added resolved business-day visibility improvements, including weekday display and compact Future Date row alignment.'
+        ]
+    },
+    {
         version: 'v2.4.0',
         releasedAt: '2026-06-28T16:30:00Z',
         notes: [
@@ -9268,6 +9303,11 @@ const FALLBACK_RELEASE_HISTORY = [
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
     {
+        message: 'release: publish v2.5.0 with merchant draft persistence, place-phone status UX, and resolved-day alignment improvements',
+        committedAt: '2026-06-28T19:35:00Z',
+        author: 'Grant'
+    },
+    {
         message: 'release: publish v2.4.0 with merchant future event template, schedule gating, and invite export updates',
         committedAt: '2026-06-28T16:35:00Z',
         author: 'Grant'
@@ -9329,7 +9369,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v2.5',
+        targetVersion: 'v2.6',
         eta: 'May 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
@@ -9337,7 +9377,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v2.5',
+        targetVersion: 'v2.6',
         eta: 'May 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
@@ -9345,7 +9385,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'dynamic-analytics',
         title: 'Dynamic scan analytics mode',
         status: 'backlog',
-        targetVersion: 'v2.5',
+        targetVersion: 'v2.6',
         eta: 'Q2 2026',
         details: 'Track scans by campaign and date with dashboard snapshots.'
     },
@@ -9353,7 +9393,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'ai-create-image',
         title: 'Artistic Create Image generator',
         status: 'planned',
-        targetVersion: 'v2.5',
+        targetVersion: 'v2.6',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
     },
@@ -9361,15 +9401,15 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'instagram-feedback-loop',
         title: 'Instagram user feedback loop',
         status: 'planned',
-        targetVersion: 'v2.5',
+        targetVersion: 'v2.6',
         eta: 'Q2 2026',
         details: 'Capture user feedback through Instagram stories with linked paths to and from the QR tool.'
     }
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v2.5',
-    eta: 'Q3 2026',
+    version: 'v2.6',
+    eta: 'Q4 2026',
     planned: [
         'Template gallery with guided setup',
         'Logo preset library improvements',

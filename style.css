@@ -317,6 +317,57 @@ textarea:focus {
     margin-top: -2px;
 }
 
+.merchant-template-resolved-day {
+    margin-top: -2px;
+    margin-bottom: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f4f8a;
+}
+
+.template-future-date-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.template-future-date-control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.template-form-fields .template-future-date-control-row input.merchant-future-date-input {
+    width: 220px;
+    min-width: 220px;
+    flex: 0 0 220px;
+}
+
+.merchant-template-resolved-day-inline {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f4f8a;
+    white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+    .template-future-date-control-row {
+        flex-wrap: wrap;
+        gap: 6px 10px;
+    }
+
+    .template-form-fields .template-future-date-control-row input.merchant-future-date-input {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .merchant-template-resolved-day-inline {
+        white-space: normal;
+    }
+}
+
 .tel-country-row {
     display: flex;
     gap: 8px;
@@ -487,6 +538,20 @@ textarea:focus {
     gap: 8px;
 }
 
+.future-date-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.future-date-weekday-inline {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f4f8a;
+    white-space: nowrap;
+}
+
 .merchant-schedule-actions {
     margin-top: 10px;
     display: grid;
@@ -520,6 +585,15 @@ textarea:focus {
 
     .future-quick-grid {
         grid-template-columns: 1fr;
+    }
+
+    .future-date-label-row {
+        flex-wrap: wrap;
+        gap: 4px 10px;
+    }
+
+    .future-date-weekday-inline {
+        white-space: normal;
     }
 }
 

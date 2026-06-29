@@ -159,9 +159,11 @@
 
                     <div class="template-form-row inline-2">
                         <div>
-                            <label for="futureEventDate">Future Date</label>
+                            <div class="future-date-label-row">
+                                <label for="futureEventDate">Future Date</label>
+                                <span id="futureEventDateWeekday" class="future-date-weekday-inline" aria-live="polite">Resolved Day: --</span>
+                            </div>
                             <input type="date" id="futureEventDate">
-                            <span id="futureEventDateWeekday" class="template-field-hint"></span>
                         </div>
                         <div>
                             <label>Quick Select</label>
