@@ -408,6 +408,97 @@ textarea:focus {
     min-height: 72px;
 }
 
+.merchant-schedule-panel {
+    margin-top: 14px;
+    border-color: #cdddf5;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.merchant-schedule-copy {
+    font-size: 12px;
+    color: #58677d;
+    line-height: 1.45;
+    margin-bottom: 10px;
+}
+
+.merchant-hours-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.merchant-hours-row {
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.merchant-hours-day {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2f3b4a;
+}
+
+.merchant-hours-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.merchant-hours-closed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #495a72;
+    white-space: nowrap;
+}
+
+.merchant-hours-closed label {
+    margin: 0;
+    font-size: 12px;
+}
+
+.merchant-hours-row.is-closed .merchant-hours-inputs {
+    opacity: 0.45;
+}
+
+.merchant-schedule-panel input[type="date"],
+.merchant-schedule-panel select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cfd6e2;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+}
+
+.merchant-schedule-panel input[type="date"]:focus,
+.merchant-schedule-panel select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.12);
+}
+
+.future-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.merchant-schedule-actions {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.merchant-schedule-actions .btn {
+    padding: 10px 12px;
+    font-size: 12px;
+}
+
 @media (max-width: 700px) {
     .template-form-row.inline-2 {
         grid-template-columns: 1fr;
@@ -416,6 +507,19 @@ textarea:focus {
     .template-form-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .merchant-hours-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .merchant-schedule-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .future-quick-grid {
+        grid-template-columns: 1fr;
     }
 }
 

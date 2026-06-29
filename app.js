@@ -580,10 +580,44 @@ const templatePreviewOutput = document.getElementById('templatePreviewOutput');
 const rawInputContainer = document.getElementById('rawInputContainer');
 const manualInputBtn = document.getElementById('manualInputBtn');
 const templateFormBody = document.getElementById('templateFormBody');
+const merchantSchedulePanel = document.getElementById('merchantSchedulePanel');
 let activeTemplateType = null;
 // Per-template data cache: { 'event': 'event-payload-string', 'phone': 'phone-payload-string', ... }
 let templateDataCache = {};
 let lastActiveTemplate = null;
+
+// Merchant scheduling controls
+const merchantHoursRows = document.getElementById('merchantHoursRows');
+const merchantHolidays = document.getElementById('merchantHolidays');
+const futureEventDate = document.getElementById('futureEventDate');
+const futureQuickDays = document.getElementById('futureQuickDays');
+const futureQuickMonths = document.getElementById('futureQuickMonths');
+const futureQuickYears = document.getElementById('futureQuickYears');
+const saveMerchantScheduleBtn = document.getElementById('saveMerchantScheduleBtn');
+const applyFutureSlotBtn = document.getElementById('applyFutureSlotBtn');
+const downloadInviteBtn = document.getElementById('downloadInviteBtn');
+const merchantScheduleStatus = document.getElementById('merchantScheduleStatus');
+
+const MERCHANT_SCHEDULE_STORAGE_KEY = 'qr_merchant_schedule_v1';
+const MERCHANT_EVENT_DRAFT_STORAGE_KEY = 'qr_merchant_event_draft_v1';
+const EVENT_LOCATION_DEBUG_PREF_KEY = 'qr_event_location_debug_details_v1';
+const MERCHANT_FUTURE_OFFSET_DEFAULT = { days: 0, months: 0, years: 1 };
+const MERCHANT_FUTURE_OFFSET_LIMITS = {
+    days: { min: 0, max: 365 },
+    months: { min: 0, max: 120 },
+    years: { min: 0, max: 10 }
+};
+const BUSINESS_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const BUSINESS_DAY_LABELS = {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday'
+};
+let merchantScheduleSettings = null;
 
 const COUNTRY_DIAL_CODES = [
     { code: 'AF', dial: '+93', name: 'Afghanistan' },
@@ -877,6 +911,16 @@ const TEMPLATE_FORM_SCHEMAS = {
             { name: 'description', label: 'Description (optional)', type: 'textarea', placeholder: 'Event description', default: '' }
         ]
     },
+    'merchant-future-event': {
+        title: 'Merchant Future Event Template',
+        fields: [
+            { name: 'summary', label: 'Event Title', type: 'text', required: true, placeholder: 'Merchant Event Title', default: '' },
+            { name: 'futureDate', label: 'Future Date', type: 'date', required: true, default: '' },
+            { name: 'location', label: 'Location', type: 'text', placeholder: 'Merchant Location', default: '' },
+            { name: 'locationPlaceId', type: 'hidden', default: '' },
+            { name: 'description', label: 'Description (optional)', type: 'textarea', placeholder: 'Future merchant event details', default: '' }
+        ]
+    },
     geo: {
         title: 'Location Template',
         fields: [
@@ -889,6 +933,116 @@ const TEMPLATE_FORM_SCHEMAS = {
 
 function trimMultilineValue(value) {
     return (value || '').replace(/\r?\n/g, ' ').trim();
+}
+
+function extractDialLinksFromText(text) {
+    const source = String(text || '');
+    const matches = source.match(/\+?[\d][\d\s().-]{5,}[\d]/g) || [];
+    const links = [];
+    const seen = new Set();
+
+    matches.forEach(raw => {
+        const trimmed = raw.trim();
+        const startsWithPlus = trimmed.startsWith('+');
+        const digits = trimmed.replace(/\D/g, '');
+        if (digits.length < 7) return;
+
+        const dialNumber = startsWithPlus ? `+${digits}` : digits;
+        const link = `tel:${dialNumber}`;
+        if (seen.has(link)) return;
+        seen.add(link);
+        links.push(link);
+    });
+
+    return links;
+}
+
+function buildEventDescriptionWithCallLinks(description) {
+    const marker = 'Call options:';
+    const baseRaw = trimMultilineValue(description || '');
+    const markerIndex = baseRaw.indexOf(marker);
+    const base = markerIndex >= 0 ? baseRaw.slice(0, markerIndex).trim() : baseRaw;
+    const dialLinks = extractDialLinksFromText(base);
+
+    if (!dialLinks.length) return base;
+    const callSuffix = `${marker} ${dialLinks.join(' | ')}`;
+    return base ? `${base} ${callSuffix}` : callSuffix;
+}
+
+async function fetchPlacePhoneNumber(placeId) {
+    if (!placeId || !window.google || !google.maps || !google.maps.places || !google.maps.places.Place) {
+        return { phone: '', status: 'unavailable' };
+    }
+
+    try {
+        const place = new google.maps.places.Place({ id: placeId });
+        await place.fetchFields({ fields: ['internationalPhoneNumber', 'nationalPhoneNumber'] });
+        const phone = (place.internationalPhoneNumber || place.nationalPhoneNumber || '').trim();
+        return {
+            phone,
+            status: phone ? 'found' : 'not-published'
+        };
+    } catch (error) {
+        console.warn('Could not fetch place phone number:', error);
+        const errorText = String((error && error.message) || '').toLowerCase();
+        const isApiRestricted =
+            errorText.includes('permission_denied')
+            || errorText.includes('unregistered callers')
+            || errorText.includes('request denied')
+            || errorText.includes('api key')
+            || errorText.includes('forbidden')
+            || errorText.includes('403');
+
+        return {
+            phone: '',
+            status: isApiRestricted ? 'api-blocked' : 'lookup-failed'
+        };
+    }
+}
+
+function addPlacePhoneToDescriptionField(phone) {
+    if (!templateFormFields || !phone) return false;
+
+    const descriptionEl = templateFormFields.querySelector('[name="tpl-description"]');
+    if (!descriptionEl) return false;
+
+    const current = String(descriptionEl.value || '');
+    const telLink = extractDialLinksFromText(phone)[0] || '';
+    const phoneLine = `Phone: ${phone}`;
+    const telLine = telLink ? `Tap to call: ${telLink}` : '';
+
+    if (current.includes(phoneLine) || (telLine && current.includes(telLine))) {
+        return false;
+    }
+
+    const next = [current.trim(), phoneLine, telLine].filter(Boolean).join('\n');
+    descriptionEl.value = next;
+    syncPayloadFromTemplateForm();
+    return true;
+}
+
+function hasPhoneDataInDescriptionField() {
+    if (!templateFormFields) return false;
+    const descriptionEl = templateFormFields.querySelector('[name="tpl-description"]');
+    if (!descriptionEl) return false;
+    const text = String(descriptionEl.value || '');
+    return text.includes('Phone:') || text.includes('Tap to call:') || extractDialLinksFromText(text).length > 0;
+}
+
+function loadEventLocationDebugPreference() {
+    try {
+        return localStorage.getItem(EVENT_LOCATION_DEBUG_PREF_KEY) === 'true';
+    } catch (_error) {
+        return false;
+    }
+}
+
+function persistEventLocationDebugPreference(enabled) {
+    try {
+        localStorage.setItem(EVENT_LOCATION_DEBUG_PREF_KEY, enabled ? 'true' : 'false');
+    } catch (_error) {
+        // Ignore persistence issues for this optional UI preference.
+    }
 }
 
 function escapeWifiValue(value) {
@@ -910,6 +1064,381 @@ function parseIcsToLocalDate(icsDate) {
     if (!icsDate || !/^\d{8}T\d{6}Z$/.test(icsDate)) return '';
     const normalized = `${icsDate.slice(0, 4)}-${icsDate.slice(4, 6)}-${icsDate.slice(6, 8)}T${icsDate.slice(9, 11)}:${icsDate.slice(11, 13)}`;
     return normalized;
+}
+
+function toLocalDateTimeValue(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    return local.toISOString().slice(0, 16);
+}
+
+function getFutureEventDefaults() {
+    const start = new Date();
+    start.setFullYear(start.getFullYear() + 1);
+    start.setHours(10, 0, 0, 0);
+    const end = new Date(start.getTime() + (10 * 60 * 1000));
+    return {
+        start: toLocalDateTimeValue(start),
+        end: toLocalDateTimeValue(end)
+    };
+}
+
+function toLocalDateValue(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    const local = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+    return local.toISOString().slice(0, 10);
+}
+
+function parseOffsetValue(value, key) {
+    const limits = MERCHANT_FUTURE_OFFSET_LIMITS[key];
+    const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+    if (Number.isNaN(parsed)) return MERCHANT_FUTURE_OFFSET_DEFAULT[key];
+    return Math.min(limits.max, Math.max(limits.min, parsed));
+}
+
+function normalizeFutureOffset(raw) {
+    const input = raw && typeof raw === 'object' ? raw : {};
+    return {
+        days: parseOffsetValue(input.days, 'days'),
+        months: parseOffsetValue(input.months, 'months'),
+        years: parseOffsetValue(input.years, 'years')
+    };
+}
+
+function addOffsetToDate(baseDate, offset) {
+    const out = new Date(baseDate);
+    out.setHours(0, 0, 0, 0);
+    out.setDate(out.getDate() + offset.days);
+    out.setMonth(out.getMonth() + offset.months);
+    out.setFullYear(out.getFullYear() + offset.years);
+    return out;
+}
+
+function resolveBusinessDateSlot(dateValue, settings) {
+    const sourceDate = new Date(`${dateValue}T00:00:00`);
+    if (Number.isNaN(sourceDate.getTime())) return null;
+
+    const safeSettings = settings || createDefaultMerchantSchedule();
+    const holidaySet = new Set(safeSettings.holidays || []);
+    const cursor = new Date(sourceDate);
+    cursor.setHours(0, 0, 0, 0);
+
+    for (let offset = 0; offset < 370; offset++) {
+        const dateKey = formatLocalDateKey(cursor);
+        const dayName = getDayNameFromDate(cursor);
+        const daySchedule = safeSettings.businessHours && safeSettings.businessHours[dayName];
+
+        if (!daySchedule || daySchedule.closed || holidaySet.has(dateKey)) {
+            cursor.setDate(cursor.getDate() + 1);
+            continue;
+        }
+
+        const openMinutes = parseTimeToMinutes(daySchedule.open);
+        const closeMinutes = parseTimeToMinutes(daySchedule.close);
+        if (openMinutes === null || closeMinutes === null || closeMinutes <= openMinutes) {
+            cursor.setDate(cursor.getDate() + 1);
+            continue;
+        }
+
+        const start = new Date(cursor);
+        start.setHours(Math.floor(openMinutes / 60), openMinutes % 60, 0, 0);
+
+        const slotLengthMinutes = Math.min(10, Math.max(1, closeMinutes - openMinutes));
+        const end = new Date(start.getTime() + (slotLengthMinutes * 60000));
+        const closeBoundary = new Date(cursor);
+        closeBoundary.setHours(Math.floor(closeMinutes / 60), closeMinutes % 60, 0, 0);
+        if (end > closeBoundary) {
+            end.setTime(closeBoundary.getTime());
+        }
+
+        if (end <= start) {
+            cursor.setDate(cursor.getDate() + 1);
+            continue;
+        }
+
+        return {
+            requestedDate: dateValue,
+            resolvedDate: dateKey,
+            start: toLocalDateTimeValue(start),
+            end: toLocalDateTimeValue(end),
+            shiftedDays: offset,
+            dayName
+        };
+    }
+
+    return null;
+}
+
+function createDefaultMerchantSchedule() {
+    const futureDefaults = getFutureEventDefaults();
+    const businessHours = {};
+
+    BUSINESS_DAYS.forEach(day => {
+        const isWeekend = day === 'saturday' || day === 'sunday';
+        businessHours[day] = {
+            closed: isWeekend,
+            open: '09:00',
+            close: '17:00'
+        };
+    });
+
+    return {
+        businessHours,
+        holidays: [],
+        scheduledStart: futureDefaults.start,
+        scheduledEnd: futureDefaults.end,
+        scheduledDate: toLocalDateValue(new Date(futureDefaults.start)),
+        futureOffset: { ...MERCHANT_FUTURE_OFFSET_DEFAULT }
+    };
+}
+
+function normalizeTimeValue(value, fallback) {
+    const text = (value || '').trim();
+    return /^([01]\d|2[0-3]):([0-5]\d)$/.test(text) ? text : fallback;
+}
+
+function normalizeHolidayList(value) {
+    if (!value) return [];
+
+    const parts = Array.isArray(value)
+        ? value
+        : String(value)
+            .split(/[\n,;]+/)
+            .map(v => v.trim());
+
+    const unique = new Set();
+    parts.forEach(entry => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(entry)) {
+            unique.add(entry);
+        }
+    });
+    return Array.from(unique).sort();
+}
+
+function normalizeMerchantSchedule(raw) {
+    const fallback = createDefaultMerchantSchedule();
+    const input = raw && typeof raw === 'object' ? raw : {};
+    const normalizedHours = {};
+
+    BUSINESS_DAYS.forEach(day => {
+        const dayInput = input.businessHours && input.businessHours[day] ? input.businessHours[day] : {};
+        normalizedHours[day] = {
+            closed: !!dayInput.closed,
+            open: normalizeTimeValue(dayInput.open, '09:00'),
+            close: normalizeTimeValue(dayInput.close, '17:00')
+        };
+    });
+
+    const startCandidate = String(input.scheduledStart || '').trim();
+    const endCandidate = String(input.scheduledEnd || '').trim();
+    const dateCandidate = String(input.scheduledDate || '').trim();
+    const normalizedDate = /^\d{4}-\d{2}-\d{2}$/.test(dateCandidate)
+        ? dateCandidate
+        : (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startCandidate)
+            ? startCandidate.slice(0, 10)
+            : toLocalDateValue(new Date(fallback.scheduledStart)));
+
+    const derivedOffset = normalizeFutureOffset(input.futureOffset || MERCHANT_FUTURE_OFFSET_DEFAULT);
+    const derivedRange = resolveBusinessDateSlot(normalizedDate, {
+        businessHours: normalizedHours,
+        holidays: normalizeHolidayList(input.holidays)
+    }) || getFutureEventDefaults();
+
+    return {
+        businessHours: normalizedHours,
+        holidays: normalizeHolidayList(input.holidays),
+        scheduledStart: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startCandidate) ? startCandidate : derivedRange.start,
+        scheduledEnd: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endCandidate) ? endCandidate : derivedRange.end,
+        scheduledDate: normalizedDate,
+        futureOffset: derivedOffset
+    };
+}
+
+function loadMerchantScheduleSettings() {
+    try {
+        const raw = localStorage.getItem(MERCHANT_SCHEDULE_STORAGE_KEY);
+        if (!raw) return createDefaultMerchantSchedule();
+        return normalizeMerchantSchedule(JSON.parse(raw));
+    } catch (error) {
+        console.error('Failed to load merchant schedule settings:', error);
+        return createDefaultMerchantSchedule();
+    }
+}
+
+function persistMerchantScheduleSettings() {
+    if (!merchantScheduleSettings) return;
+    try {
+        localStorage.setItem(MERCHANT_SCHEDULE_STORAGE_KEY, JSON.stringify(merchantScheduleSettings));
+    } catch (error) {
+        console.error('Failed to persist merchant schedule settings:', error);
+    }
+}
+
+function normalizeMerchantEventDraft(raw) {
+    const input = raw && typeof raw === 'object' ? raw : {};
+    const futureDateCandidate = String(input.futureDate || '').trim();
+    return {
+        summary: trimMultilineValue(input.summary || ''),
+        location: trimMultilineValue(input.location || ''),
+        locationPlaceId: trimMultilineValue(input.locationPlaceId || ''),
+        description: String(input.description || '').trim(),
+        futureDate: /^\d{4}-\d{2}-\d{2}$/.test(futureDateCandidate) ? futureDateCandidate : ''
+    };
+}
+
+function loadMerchantEventDraft() {
+    try {
+        const raw = localStorage.getItem(MERCHANT_EVENT_DRAFT_STORAGE_KEY);
+        if (!raw) return normalizeMerchantEventDraft({});
+        return normalizeMerchantEventDraft(JSON.parse(raw));
+    } catch (error) {
+        console.error('Failed to load merchant event draft:', error);
+        return normalizeMerchantEventDraft({});
+    }
+}
+
+function persistMerchantEventDraft(values) {
+    try {
+        const normalized = normalizeMerchantEventDraft(values);
+        localStorage.setItem(MERCHANT_EVENT_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (error) {
+        console.error('Failed to persist merchant event draft:', error);
+    }
+}
+
+function formatLocalDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getDayNameFromDate(date) {
+    return BUSINESS_DAYS[(date.getDay() + 6) % 7];
+}
+
+function getMinutesOfDay(date) {
+    return (date.getHours() * 60) + date.getMinutes();
+}
+
+function parseTimeToMinutes(timeValue) {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(timeValue || '');
+    if (!match) return null;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+}
+
+function validateEventTimingForMerchant(values) {
+    const startDate = new Date(values.start || '');
+    const endDate = new Date(values.end || '');
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        return { valid: false, message: 'Event start/end date is invalid.' };
+    }
+
+    if (endDate <= startDate) {
+        return { valid: false, message: 'Event end must be after event start.' };
+    }
+
+    const settings = merchantScheduleSettings || createDefaultMerchantSchedule();
+    const holidaySet = new Set(settings.holidays || []);
+
+    const dayCursor = new Date(startDate);
+    dayCursor.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(endDate);
+    dayEnd.setHours(0, 0, 0, 0);
+
+    while (dayCursor <= dayEnd) {
+        const dateKey = formatLocalDateKey(dayCursor);
+        const dayName = getDayNameFromDate(dayCursor);
+        const daySchedule = settings.businessHours[dayName];
+
+        if (holidaySet.has(dateKey)) {
+            return {
+                valid: false,
+                message: `This event is scheduled on a holiday closure (${dateKey}). Update holiday settings or choose another date.`
+            };
+        }
+
+        if (!daySchedule || daySchedule.closed) {
+            return {
+                valid: false,
+                message: `This event touches ${BUSINESS_DAY_LABELS[dayName]}, which is marked closed in merchant hours.`
+            };
+        }
+
+        dayCursor.setDate(dayCursor.getDate() + 1);
+    }
+
+    const startDayName = getDayNameFromDate(startDate);
+    const endDayName = getDayNameFromDate(endDate);
+    const startDaySchedule = settings.businessHours[startDayName];
+    const endDaySchedule = settings.businessHours[endDayName];
+    const startOpen = parseTimeToMinutes(startDaySchedule.open);
+    const startClose = parseTimeToMinutes(startDaySchedule.close);
+    const endOpen = parseTimeToMinutes(endDaySchedule.open);
+    const endClose = parseTimeToMinutes(endDaySchedule.close);
+    const startMinutes = getMinutesOfDay(startDate);
+    const endMinutes = getMinutesOfDay(endDate);
+
+    if (startOpen === null || startClose === null || endOpen === null || endClose === null) {
+        return { valid: false, message: 'Merchant hours contain an invalid time value.' };
+    }
+
+    if (startMinutes < startOpen || startMinutes >= startClose) {
+        return {
+            valid: false,
+            message: `${BUSINESS_DAY_LABELS[startDayName]} opens at ${startDaySchedule.open} and closes at ${startDaySchedule.close}. Your start time is outside those hours.`
+        };
+    }
+
+    if (endMinutes > endClose || endMinutes <= endOpen) {
+        return {
+            valid: false,
+            message: `${BUSINESS_DAY_LABELS[endDayName]} opens at ${endDaySchedule.open} and closes at ${endDaySchedule.close}. Your end time is outside those hours.`
+        };
+    }
+
+    return { valid: true, message: '' };
+}
+
+function buildCalendarInviteContent(values) {
+    const uid = `qr-${Date.now()}@merchant-schedule`;
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const summary = trimMultilineValue(values.summary || 'Scheduled Merchant Event');
+    const location = trimMultilineValue(values.location || '');
+    const description = buildEventDescriptionWithCallLinks(values.description || '');
+
+    const lines = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//QR Code Generator//Merchant Schedule//EN',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${stamp}`,
+        `SUMMARY:${summary}`,
+        `DTSTART:${formatDateForIcs(values.start)}`,
+        `DTEND:${formatDateForIcs(values.end)}`,
+        `LOCATION:${location}`,
+        `DESCRIPTION:${description}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ];
+
+    return lines.join('\r\n');
+}
+
+function downloadCalendarInvite(values) {
+    const text = buildCalendarInviteContent(values);
+    const blob = new Blob([text], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `merchant-invite-${Date.now()}.ics`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
 }
 
 function buildGoogleMapsPlaceUrl(placeId, query = '') {
@@ -1016,7 +1545,25 @@ function buildPayloadFromTemplate(template, values) {
             if (values.locationPlaceId) {
                 lines.push(`URL:${buildGoogleMapsPlaceUrl(values.locationPlaceId, values.location || 'Google Maps')}`);
             }
-            lines.push(`DESCRIPTION:${trimMultilineValue(values.description)}`);
+            lines.push(`DESCRIPTION:${buildEventDescriptionWithCallLinks(values.description)}`);
+            lines.push('END:VEVENT');
+            return lines.join('\n');
+        }
+        case 'merchant-future-event': {
+            const slot = resolveBusinessDateSlot(values.futureDate, merchantScheduleSettings || loadMerchantScheduleSettings());
+            const start = slot ? slot.start : '';
+            const end = slot ? slot.end : '';
+            const lines = [
+                'BEGIN:VEVENT',
+                `SUMMARY:${trimMultilineValue(values.summary)}`,
+                `DTSTART:${formatDateForIcs(start)}`,
+                `DTEND:${formatDateForIcs(end)}`
+            ];
+            lines.push(`LOCATION:${trimMultilineValue(values.location)}`);
+            if (values.locationPlaceId) {
+                lines.push(`URL:${buildGoogleMapsPlaceUrl(values.locationPlaceId, values.location || 'Google Maps')}`);
+            }
+            lines.push(`DESCRIPTION:${buildEventDescriptionWithCallLinks(values.description)}`);
             lines.push('END:VEVENT');
             return lines.join('\n');
         }
@@ -1130,6 +1677,28 @@ function parseTemplatePayload(template, payload) {
             }
             break;
         }
+        case 'merchant-future-event': {
+            let eventUrl = '';
+            text.split(/\r?\n/).forEach(line => {
+                if (line.startsWith('SUMMARY:')) values.summary = line.slice(8);
+                if (line.startsWith('DTSTART:')) {
+                    const parsed = parseIcsToLocalDate(line.slice(8));
+                    values.futureDate = parsed ? parsed.slice(0, 10) : '';
+                }
+                if (line.startsWith('LOCATION:')) values.location = line.slice(9);
+                if (line.startsWith('DESCRIPTION:')) values.description = line.slice(12);
+                if (line.startsWith('URL:')) eventUrl = line.slice(4);
+            });
+            if (eventUrl) {
+                try {
+                    const url = new URL(eventUrl);
+                    values.locationPlaceId = url.searchParams.get('query_place_id') || '';
+                } catch (_error) {
+                    values.locationPlaceId = '';
+                }
+            }
+            break;
+        }
         case 'geo': {
             const body = text.replace(/^geo:/i, '');
             const [lat = '', lng = '', alt = ''] = body.split(',');
@@ -1153,13 +1722,18 @@ function getTemplateDefaults(template) {
         defaults[field.name] = field.default;
     });
 
-    if (template === 'event') {
-        const now = new Date();
-        const start = new Date(now.getTime() + (60 * 60 * 1000));
-        const end = new Date(start.getTime() + (60 * 60 * 1000));
-        const toLocalInput = date => date.toISOString().slice(0, 16);
-        defaults.start = defaults.start || toLocalInput(start);
-        defaults.end = defaults.end || toLocalInput(end);
+    if (template === 'merchant-future-event') {
+        if (!merchantScheduleSettings) {
+            merchantScheduleSettings = loadMerchantScheduleSettings();
+        }
+
+        const draft = loadMerchantEventDraft();
+
+        defaults.futureDate = defaults.futureDate || merchantScheduleSettings.scheduledDate;
+        defaults.summary = draft.summary || defaults.summary;
+        defaults.location = draft.location || defaults.location;
+        defaults.locationPlaceId = draft.locationPlaceId || defaults.locationPlaceId;
+        defaults.description = draft.description || defaults.description;
     }
 
     return defaults;
@@ -1187,6 +1761,8 @@ function canSeedTemplateFromPayload(template, payload) {
         case 'mecard':
             return /^MECARD:/i.test(text);
         case 'event':
+            return /^BEGIN:VEVENT/i.test(text);
+        case 'merchant-future-event':
             return /^BEGIN:VEVENT/i.test(text);
         case 'geo':
             return /^geo:/i.test(text);
@@ -1270,6 +1846,256 @@ function renderTemplateField(field, template) {
     `;
 }
 
+function renderMerchantHoursRows() {
+    if (!merchantHoursRows) return;
+
+    const settings = merchantScheduleSettings || createDefaultMerchantSchedule();
+    merchantHoursRows.innerHTML = BUSINESS_DAYS.map(day => {
+        const dayHours = settings.businessHours[day];
+        const closedClass = dayHours.closed ? 'is-closed' : '';
+        return `
+            <div class="merchant-hours-row ${closedClass}" data-day="${day}">
+                <span class="merchant-hours-day">${BUSINESS_DAY_LABELS[day]}</span>
+                <div class="merchant-hours-inputs">
+                    <input type="time" id="merchant-${day}-open" value="${dayHours.open}">
+                    <input type="time" id="merchant-${day}-close" value="${dayHours.close}">
+                </div>
+                <div class="merchant-hours-closed">
+                    <input type="checkbox" id="merchant-${day}-closed" ${dayHours.closed ? 'checked' : ''}>
+                    <label for="merchant-${day}-closed">Closed</label>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateMerchantHoursClosedState(day) {
+    const row = merchantHoursRows ? merchantHoursRows.querySelector(`[data-day="${day}"]`) : null;
+    const closedEl = document.getElementById(`merchant-${day}-closed`);
+    if (!row || !closedEl) return;
+    row.classList.toggle('is-closed', closedEl.checked);
+}
+
+function setMerchantScheduleStatus(message) {
+    if (merchantScheduleStatus) {
+        merchantScheduleStatus.textContent = message;
+    }
+}
+
+function hydrateMerchantScheduleUiFromState() {
+    if (!merchantScheduleSettings) {
+        merchantScheduleSettings = createDefaultMerchantSchedule();
+    }
+
+    renderMerchantHoursRows();
+
+    BUSINESS_DAYS.forEach(day => {
+        updateMerchantHoursClosedState(day);
+    });
+
+    if (merchantHolidays) {
+        merchantHolidays.value = (merchantScheduleSettings.holidays || []).join('\n');
+    }
+
+    if (futureEventDate) {
+        futureEventDate.value = merchantScheduleSettings.scheduledDate || '';
+    }
+
+    syncFutureOffsetDropdowns();
+}
+
+function getFutureOffsetFromUi() {
+    return normalizeFutureOffset({
+        days: futureQuickDays ? futureQuickDays.value : MERCHANT_FUTURE_OFFSET_DEFAULT.days,
+        months: futureQuickMonths ? futureQuickMonths.value : MERCHANT_FUTURE_OFFSET_DEFAULT.months,
+        years: futureQuickYears ? futureQuickYears.value : MERCHANT_FUTURE_OFFSET_DEFAULT.years
+    });
+}
+
+function syncFutureOffsetDropdowns() {
+    if (!merchantScheduleSettings) return;
+    const offset = normalizeFutureOffset(merchantScheduleSettings.futureOffset);
+    if (futureQuickDays) futureQuickDays.value = String(offset.days);
+    if (futureQuickMonths) futureQuickMonths.value = String(offset.months);
+    if (futureQuickYears) futureQuickYears.value = String(offset.years);
+}
+
+function applyOffsetSelectionToScheduledDate(shouldPersist = true) {
+    if (!merchantScheduleSettings) {
+        merchantScheduleSettings = loadMerchantScheduleSettings();
+    }
+
+    const offset = getFutureOffsetFromUi();
+    const computedDate = addOffsetToDate(new Date(), offset);
+    const computedDateValue = toLocalDateValue(computedDate);
+    const slot = resolveBusinessDateSlot(computedDateValue, merchantScheduleSettings);
+    if (!slot) {
+        setMerchantScheduleStatus('Unable to find a valid business day from your selected offsets.');
+        return;
+    }
+
+    if (futureEventDate) {
+        futureEventDate.value = slot.resolvedDate;
+    }
+
+    merchantScheduleSettings.futureOffset = offset;
+    merchantScheduleSettings.scheduledDate = slot.resolvedDate;
+    merchantScheduleSettings.scheduledStart = slot.start;
+    merchantScheduleSettings.scheduledEnd = slot.end;
+
+    syncFutureOffsetDropdowns();
+    if (shouldPersist) {
+        persistMerchantScheduleSettings();
+        const shiftedCopy = slot.shiftedDays > 0
+            ? ` Rolled forward ${slot.shiftedDays} day${slot.shiftedDays === 1 ? '' : 's'} to next open business day.`
+            : '';
+        setMerchantScheduleStatus(`Future date updated from day/month/year selection.${shiftedCopy}`);
+    }
+}
+
+function readMerchantScheduleFromUi() {
+    const next = createDefaultMerchantSchedule();
+
+    BUSINESS_DAYS.forEach(day => {
+        const openEl = document.getElementById(`merchant-${day}-open`);
+        const closeEl = document.getElementById(`merchant-${day}-close`);
+        const closedEl = document.getElementById(`merchant-${day}-closed`);
+        next.businessHours[day] = {
+            open: normalizeTimeValue(openEl ? openEl.value : '09:00', '09:00'),
+            close: normalizeTimeValue(closeEl ? closeEl.value : '17:00', '17:00'),
+            closed: !!(closedEl && closedEl.checked)
+        };
+    });
+
+    next.holidays = normalizeHolidayList(merchantHolidays ? merchantHolidays.value : []);
+    next.futureOffset = getFutureOffsetFromUi();
+    const preferredDate = futureEventDate && futureEventDate.value ? futureEventDate.value : next.scheduledDate;
+    const slot = resolveBusinessDateSlot(preferredDate, {
+        businessHours: next.businessHours,
+        holidays: next.holidays
+    });
+    if (slot) {
+        next.scheduledDate = slot.resolvedDate;
+        next.scheduledStart = slot.start;
+        next.scheduledEnd = slot.end;
+    }
+    return normalizeMerchantSchedule(next);
+}
+
+function saveMerchantScheduleFromUi(showToast = false) {
+    merchantScheduleSettings = readMerchantScheduleFromUi();
+    persistMerchantScheduleSettings();
+    hydrateMerchantScheduleUiFromState();
+
+    const message = `Saved schedule settings (${merchantScheduleSettings.holidays.length} holiday closure${merchantScheduleSettings.holidays.length === 1 ? '' : 's'}).`;
+    setMerchantScheduleStatus(message);
+    if (showToast) {
+        showNotification('Merchant schedule saved.');
+    }
+}
+
+function applyFutureSlotToActiveEvent() {
+    saveMerchantScheduleFromUi(false);
+    applyOffsetSelectionToScheduledDate(true);
+
+    if (activeTemplateType !== 'merchant-future-event') {
+        activateTemplateMode('merchant-future-event');
+    }
+
+    if (!templateFormFields) return;
+
+    const dateEl = templateFormFields.querySelector('[name="tpl-futureDate"]');
+    if (dateEl) dateEl.value = merchantScheduleSettings.scheduledDate;
+    syncPayloadFromTemplateForm();
+    showNotification('Applied saved future slot to Merchant Future Event template.');
+}
+
+function gatherEventValuesForCalendarInvite() {
+    if (activeTemplateType === 'merchant-future-event') {
+        const formValues = readTemplateFormValues('merchant-future-event');
+        const slot = resolveBusinessDateSlot(formValues.futureDate, merchantScheduleSettings || loadMerchantScheduleSettings());
+        if (!slot) return null;
+        return {
+            summary: formValues.summary,
+            start: slot.start,
+            end: slot.end,
+            location: formValues.location,
+            description: formValues.description,
+            locationPlaceId: formValues.locationPlaceId,
+            futureDate: slot.resolvedDate
+        };
+    }
+
+    saveMerchantScheduleFromUi(false);
+    return {
+        summary: trimMultilineValue(labelInput.value || 'Scheduled Merchant Event'),
+        start: merchantScheduleSettings.scheduledStart,
+        end: merchantScheduleSettings.scheduledEnd,
+        location: '',
+        description: trimMultilineValue(qrNotesInput ? qrNotesInput.value : '')
+    };
+}
+
+function downloadCalendarInviteFromCurrentSchedule() {
+    const values = gatherEventValuesForCalendarInvite();
+    if (!values) {
+        alert('Unable to generate invite because no valid open business day could be found.');
+        return;
+    }
+    const check = validateEventTimingForMerchant(values);
+    if (!check.valid) {
+        alert(`Cannot generate calendar invite.\n\n${check.message}`);
+        return;
+    }
+
+    downloadCalendarInvite(values);
+    setMerchantScheduleStatus('Calendar invite downloaded successfully.');
+    showNotification('Calendar invite (.ics) downloaded.');
+}
+
+function initializeMerchantSchedulePanel() {
+    if (!merchantHoursRows) return;
+
+    merchantScheduleSettings = loadMerchantScheduleSettings();
+    hydrateMerchantScheduleUiFromState();
+    setMerchantScheduleStatus('Schedule settings are stored in this browser.');
+
+    BUSINESS_DAYS.forEach(day => {
+        const openEl = document.getElementById(`merchant-${day}-open`);
+        const closeEl = document.getElementById(`merchant-${day}-close`);
+        const closedEl = document.getElementById(`merchant-${day}-closed`);
+
+        if (openEl) openEl.addEventListener('change', () => saveMerchantScheduleFromUi(false));
+        if (closeEl) closeEl.addEventListener('change', () => saveMerchantScheduleFromUi(false));
+        if (closedEl) {
+            closedEl.addEventListener('change', () => {
+                updateMerchantHoursClosedState(day);
+                saveMerchantScheduleFromUi(false);
+            });
+        }
+    });
+
+    if (merchantHolidays) {
+        merchantHolidays.addEventListener('change', () => saveMerchantScheduleFromUi(false));
+    }
+    if (futureEventDate) {
+        futureEventDate.addEventListener('change', () => saveMerchantScheduleFromUi(false));
+    }
+    if (futureQuickDays) futureQuickDays.addEventListener('change', () => applyOffsetSelectionToScheduledDate(true));
+    if (futureQuickMonths) futureQuickMonths.addEventListener('change', () => applyOffsetSelectionToScheduledDate(true));
+    if (futureQuickYears) futureQuickYears.addEventListener('change', () => applyOffsetSelectionToScheduledDate(true));
+
+    if (saveMerchantScheduleBtn) {
+        saveMerchantScheduleBtn.addEventListener('click', () => saveMerchantScheduleFromUi(true));
+    }
+    if (applyFutureSlotBtn) {
+        applyFutureSlotBtn.addEventListener('click', applyFutureSlotToActiveEvent);
+    }
+    if (downloadInviteBtn) {
+        downloadInviteBtn.addEventListener('click', downloadCalendarInviteFromCurrentSchedule);
+    }
+}
+
 function updateWifiPasswordFieldVisibility() {
     if (activeTemplateType !== 'wifi' || !templateFormFields) return;
     const securityEl = templateFormFields.querySelector('[name="tpl-security"]');
@@ -1281,6 +2107,31 @@ function updateWifiPasswordFieldVisibility() {
 function syncPayloadFromTemplateForm() {
     if (!activeTemplateType) return;
     const values = readTemplateFormValues(activeTemplateType);
+
+    if (activeTemplateType === 'merchant-future-event') {
+        if (!merchantScheduleSettings) {
+            merchantScheduleSettings = loadMerchantScheduleSettings();
+        }
+        const slot = resolveBusinessDateSlot(values.futureDate, merchantScheduleSettings);
+        if (slot) {
+            merchantScheduleSettings.scheduledDate = slot.resolvedDate;
+            merchantScheduleSettings.scheduledStart = slot.start;
+            merchantScheduleSettings.scheduledEnd = slot.end;
+            const dateField = templateFormFields ? templateFormFields.querySelector('[name="tpl-futureDate"]') : null;
+            if (dateField) dateField.value = slot.resolvedDate;
+        }
+        persistMerchantScheduleSettings();
+        persistMerchantEventDraft({
+            summary: values.summary,
+            location: values.location,
+            locationPlaceId: values.locationPlaceId,
+            description: values.description,
+            futureDate: slot ? slot.resolvedDate : values.futureDate
+        });
+        if (futureEventDate) futureEventDate.value = merchantScheduleSettings.scheduledDate;
+        syncFutureOffsetDropdowns();
+    }
+
     const payload = buildPayloadFromTemplate(activeTemplateType, values);
     textInput.value = payload;
     updateTemplatePreview(payload);
@@ -1319,7 +2170,7 @@ function renderTemplateForm(template, payloadSeed = '') {
 
     syncPayloadFromTemplateForm();
 
-    if (template === 'event') {
+    if (template === 'event' || template === 'merchant-future-event') {
         attachEventLocationSearchPanel();
     }
 
@@ -1348,6 +2199,10 @@ function attachEventLocationSearchPanel() {
             <button type="button" class="btn btn-secondary event-location-search-btn">Search</button>
         </div>
         <p class="event-location-search-status" style="margin-top: 8px; font-size: 12px; color: #5f6368;"></p>
+        <label style="display:flex; align-items:center; gap:6px; margin: 2px 0 8px; font-size: 12px; color: #5f6368;">
+            <input type="checkbox" class="event-location-debug-toggle">
+            Show lookup debug details
+        </label>
         <div class="event-location-search-results" style="display: grid; gap: 6px;"></div>
     `;
 
@@ -1356,14 +2211,44 @@ function attachEventLocationSearchPanel() {
     const searchInput = panel.querySelector('.event-location-search-input');
     const searchBtn = panel.querySelector('.event-location-search-btn');
     const searchStatus = panel.querySelector('.event-location-search-status');
+    const debugToggle = panel.querySelector('.event-location-debug-toggle');
     const searchResults = panel.querySelector('.event-location-search-results');
     const locationInput = templateFormFields.querySelector('[name="tpl-location"]');
     const placeIdInput = templateFormFields.querySelector('[name="tpl-locationPlaceId"]');
     let selectedLocationText = locationInput ? locationInput.value.trim() : '';
 
+    const setLocationLookupStatus = (message, color = '#666', debugDetails = '') => {
+        const showDebug = !!(debugToggle && debugToggle.checked);
+        const withDebug = showDebug && debugDetails ? `${message} (${debugDetails})` : message;
+        searchStatus.textContent = withDebug;
+        searchStatus.style.color = color;
+    };
+
+    if (debugToggle) {
+        debugToggle.checked = loadEventLocationDebugPreference();
+        debugToggle.addEventListener('change', () => {
+            persistEventLocationDebugPreference(debugToggle.checked);
+        });
+    }
+
     if (placeIdInput && placeIdInput.value) {
-        searchStatus.textContent = 'Google Maps link is attached to this event location.';
-        searchStatus.style.color = '#4CAF50';
+        setLocationLookupStatus('Restored saved location with Google Maps link.', '#4CAF50', `placeId=${placeIdInput.value}`);
+        if (searchInput && selectedLocationText) {
+            searchInput.value = selectedLocationText;
+        }
+
+        // On restore, backfill phone details into description when missing.
+        if (!hasPhoneDataInDescriptionField()) {
+            fetchPlacePhoneNumber(placeIdInput.value).then(phoneLookup => {
+                if (phoneLookup.status !== 'found') return;
+                const inserted = addPlacePhoneToDescriptionField(phoneLookup.phone);
+                if (inserted) {
+                    setLocationLookupStatus('Restored saved location and repopulated phone details in description.', '#4CAF50', `phone=${phoneLookup.phone}`);
+                }
+            }).catch(() => {
+                // Keep UI stable if phone lookup fails during restore.
+            });
+        }
     }
 
     if (locationInput && placeIdInput) {
@@ -1382,19 +2267,16 @@ function attachEventLocationSearchPanel() {
         searchResults.innerHTML = '';
 
         if (!query) {
-            searchStatus.textContent = 'Enter a place or address to search.';
-            searchStatus.style.color = '#666';
+            setLocationLookupStatus('Enter a place or address to search.', '#666', 'empty-query');
             return;
         }
 
         if (!GOOGLE_MAPS_API_KEY) {
-            searchStatus.textContent = 'No Maps API key set. Add GOOGLE_MAPS_API_KEY in app.js to enable location search.';
-            searchStatus.style.color = '#f57c00';
+            setLocationLookupStatus('No Maps API key set. Add GOOGLE_MAPS_API_KEY in app.js to enable location search.', '#f57c00', 'missing-api-key');
             return;
         }
 
-        searchStatus.textContent = 'Searching...';
-        searchStatus.style.color = '#1565C0';
+        setLocationLookupStatus('Searching...', '#1565C0', `query=${query}`);
 
         try {
             await loadGoogleMapsAPI();
@@ -1404,13 +2286,11 @@ function attachEventLocationSearchPanel() {
             });
 
             if (!suggestions || suggestions.length === 0) {
-                searchStatus.textContent = 'No locations found. Try a more specific query.';
-                searchStatus.style.color = '#666';
+                setLocationLookupStatus('No locations found. Try a more specific query.', '#666', `query=${query}`);
                 return;
             }
 
-            searchStatus.textContent = `${Math.min(suggestions.length, 6)} result(s). Click one to set Event Location.`;
-            searchStatus.style.color = '#4CAF50';
+            setLocationLookupStatus(`${Math.min(suggestions.length, 6)} result(s). Click one to set Event Location.`, '#4CAF50', `query=${query}`);
 
             suggestions.slice(0, 6).forEach(suggestion => {
                 const pred = suggestion.placePrediction;
@@ -1430,7 +2310,7 @@ function attachEventLocationSearchPanel() {
                 card.style.cursor = 'pointer';
                 card.innerHTML = `<strong style="display:block; color:#2f3b4a;">${name}</strong><span style="font-size:12px; color:#5f6368;">${address}</span>`;
 
-                card.addEventListener('click', () => {
+                card.addEventListener('click', async () => {
                     if (locationInput) {
                         locationInput.value = chosenText;
                     }
@@ -1439,21 +2319,37 @@ function attachEventLocationSearchPanel() {
                     }
                     selectedLocationText = chosenText;
                     syncPayloadFromTemplateForm();
-                    searchStatus.textContent = `Location set with Maps link: ${chosenText}`;
-                    searchStatus.style.color = '#4CAF50';
+                    setLocationLookupStatus(`Location set with Maps link: ${chosenText}`, '#4CAF50', `placeId=${placeId}`);
                     Array.from(searchResults.querySelectorAll('.event-location-result-card')).forEach(el => {
                         el.style.borderColor = '#d2dae8';
                         el.style.background = '#fff';
                     });
                     card.style.borderColor = '#4CAF50';
                     card.style.background = '#f0faf2';
+
+                    const phoneLookup = await fetchPlacePhoneNumber(placeId);
+                    if (phoneLookup.status === 'found') {
+                        const inserted = addPlacePhoneToDescriptionField(phoneLookup.phone);
+                        setLocationLookupStatus(
+                            inserted
+                                ? `Location set with Maps link: ${chosenText}. Phone found and added to description.`
+                                : `Location set with Maps link: ${chosenText}. Phone found (already in description).`,
+                            '#4CAF50',
+                            `status=found; phone=${phoneLookup.phone}`
+                        );
+                    } else if (phoneLookup.status === 'not-published') {
+                        setLocationLookupStatus(`Location set with Maps link: ${chosenText}. No phone published for this place.`, '#666', 'status=not-published');
+                    } else if (phoneLookup.status === 'api-blocked') {
+                        setLocationLookupStatus(`Location set with Maps link: ${chosenText}. Phone lookup blocked by API key restrictions.`, '#f57c00', 'status=api-blocked');
+                    } else {
+                        setLocationLookupStatus(`Location set with Maps link: ${chosenText}. Phone lookup was unavailable.`, '#666', 'status=lookup-failed');
+                    }
                 });
 
                 searchResults.appendChild(card);
             });
         } catch (error) {
-            searchStatus.textContent = `Search failed: ${error.message}`;
-            searchStatus.style.color = '#f44336';
+            setLocationLookupStatus(`Search failed: ${error.message}`, '#f44336', 'search-failed');
             console.error('Event location search error:', error);
         }
     };
@@ -1470,6 +2366,7 @@ function attachEventLocationSearchPanel() {
 function setTemplateUiState(template) {
     if (placeIdPanel) placeIdPanel.style.display = template === 'google-review' ? 'block' : 'none';
     if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = template === 'wifi' ? 'block' : 'none';
+    if (merchantSchedulePanel) merchantSchedulePanel.style.display = template === 'merchant-future-event' ? 'block' : 'none';
 
     isGoogleReviewMode = template === 'google-review';
     if (googleColorToggle) {
@@ -1543,6 +2440,7 @@ function deactivateTemplateMode({ focusTextInput = false, clearTemplateFilter = 
     if (googleColorToggle) googleColorToggle.style.display = 'none';
     if (placeIdPanel) placeIdPanel.style.display = 'none';
     if (wifiPrivacyNotice) wifiPrivacyNotice.style.display = 'none';
+    if (merchantSchedulePanel) merchantSchedulePanel.style.display = 'none';
 
     if (clearTemplateFilter) {
         templateBtns.forEach(templateBtn => templateBtn.classList.remove('active-filter'));
@@ -1998,6 +2896,14 @@ const useCaseExamples = [
         description: 'Online event invitation',
         content: 'BEGIN:VEVENT\nSUMMARY:Marketing Webinar\nDTSTART:20260510T140000Z\nDTEND:20260510T150000Z\nLOCATION:Zoom Meeting\nDESCRIPTION:Learn digital marketing strategies\nEND:VEVENT',
         label: 'Register for Webinar'
+    },
+    {
+        type: 'merchant-future-event',
+        icon: '🏪',
+        title: 'Merchant Future Event',
+        description: 'Schedule up to a year ahead with business-hours and holiday validation',
+        content: 'BEGIN:VEVENT\nSUMMARY:Holiday Preview Weekend\nDTSTART:20270610T150000Z\nDTEND:20270610T180000Z\nLOCATION:Downtown Flagship Store\nDESCRIPTION:Exclusive preview event scheduled within merchant operating hours\nEND:VEVENT',
+        label: 'Save Merchant Event'
     },
     
     // Location examples - General
@@ -5276,7 +6182,41 @@ function clearBucket() {
 }
 
 // Generate QR Code
+function canGenerateCurrentQrPayload() {
+    if (activeTemplateType !== 'merchant-future-event') return true;
+
+    const formValues = readTemplateFormValues('merchant-future-event');
+    const slot = resolveBusinessDateSlot(formValues.futureDate, merchantScheduleSettings || loadMerchantScheduleSettings());
+    if (!slot) {
+        alert('Cannot generate QR yet because no valid open business day could be found from the selected future date.');
+        return false;
+    }
+
+    const eventValues = {
+        ...formValues,
+        start: slot.start,
+        end: slot.end,
+        futureDate: slot.resolvedDate
+    };
+    const validation = validateEventTimingForMerchant(eventValues);
+    if (!validation.valid) {
+        alert(`Cannot generate QR for this event yet.\n\n${validation.message}`);
+        return false;
+    }
+
+    return true;
+}
+
 generateBtn.addEventListener('click', () => {
+    if (activeTemplateType === 'merchant-future-event') {
+        // Persist both schedule settings and merchant event draft before generation.
+        saveMerchantScheduleFromUi(false);
+        syncPayloadFromTemplateForm();
+    }
+
+    if (!canGenerateCurrentQrPayload()) {
+        return;
+    }
     saveCurrentState('Generated QR Code');
     generateQRCode();
 });
@@ -8179,6 +9119,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.4.0',
+        releasedAt: '2026-06-28T16:30:00Z',
+        notes: [
+            'Added Merchant Future Event template so schedule-aware merchant events are isolated from standard Event QR creation.',
+            'Added merchant schedule visibility rules so business-hours controls only appear when Merchant Future Event is selected.',
+            'Added persisted future scheduling defaults, hours/holiday validation, and calendar invite export wiring for merchant event workflows.'
+        ]
+    },
+    {
         version: 'v2.3.0',
         releasedAt: '2026-03-21T16:00:00Z',
         notes: [
@@ -8298,6 +9247,11 @@ const FALLBACK_RELEASE_HISTORY = [
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
     {
+        message: 'release: publish v2.4.0 with merchant future event template, schedule gating, and invite export updates',
+        committedAt: '2026-06-28T16:35:00Z',
+        author: 'Grant'
+    },
+    {
         message: 'release: publish v2.3.0 with template isolation, privacy controls, and expanded dial codes',
         committedAt: '2026-03-21T16:10:00Z',
         author: 'Grant'
@@ -8354,7 +9308,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'template-gallery',
         title: 'Template gallery for verticals',
         status: 'in-progress',
-        targetVersion: 'v2.3',
+        targetVersion: 'v2.5',
         eta: 'May 2026',
         details: 'Filterable starter templates by industry and campaign objective.'
     },
@@ -8362,7 +9316,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'logo-embedding',
         title: 'Reusable logo preset library',
         status: 'planned',
-        targetVersion: 'v2.3',
+        targetVersion: 'v2.5',
         eta: 'May 2026',
         details: 'Save common logo placements and size presets for quick reuse.'
     },
@@ -8370,7 +9324,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'dynamic-analytics',
         title: 'Dynamic scan analytics mode',
         status: 'backlog',
-        targetVersion: 'v2.3',
+        targetVersion: 'v2.5',
         eta: 'Q2 2026',
         details: 'Track scans by campaign and date with dashboard snapshots.'
     },
@@ -8378,7 +9332,7 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'ai-create-image',
         title: 'Artistic Create Image generator',
         status: 'planned',
-        targetVersion: 'v2.3',
+        targetVersion: 'v2.5',
         eta: 'Q2 2026',
         details: 'Generate artistic backgrounds from prompts with quality and safety guardrails.'
     },
@@ -8386,14 +9340,14 @@ const DEFAULT_ROADMAP_ITEMS = [
         id: 'instagram-feedback-loop',
         title: 'Instagram user feedback loop',
         status: 'planned',
-        targetVersion: 'v2.3',
+        targetVersion: 'v2.5',
         eta: 'Q2 2026',
         details: 'Capture user feedback through Instagram stories with linked paths to and from the QR tool.'
     }
 ];
 
 const NEXT_RELEASE_TARGET = {
-    version: 'v2.3',
+    version: 'v2.5',
     eta: 'Q3 2026',
     planned: [
         'Template gallery with guided setup',
@@ -9170,6 +10124,9 @@ if (localStorage.getItem('privacy_banner_dismissed') === 'true') {
 
 // Initialize template data cache (one data slot per template type)
 templateDataCache = {};
+
+// Initialize merchant schedule controls and persisted settings
+initializeMerchantSchedulePanel();
 
 // Load history from localStorage on page load
 loadHistoryFromLocalStorage();

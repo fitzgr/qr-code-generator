@@ -121,6 +121,7 @@
                     <button class="template-btn" data-template="vcard" title="vCard format (standard contact card)">👤 vCard</button>
                     <button class="template-btn" data-template="mecard" title="MECARD format (compact contact card)">👤 MECARD</button>
                     <button class="template-btn" data-template="event" title="Calendar event (iCalendar format)">📅 Event</button>
+                    <button class="template-btn" data-template="merchant-future-event" title="Merchant event with operating-hours validation and schedule persistence">🏪📅 Merchant Future Event</button>
                     <button class="template-btn" data-template="geo" title="Format: geo:latitude,longitude,altitude&#10;Get coordinates from Google Maps (right-click → copy coordinates)&#10;Altitude is optional (in meters)">📍 Location</button>
                 </div>
                 <div id="templateFormContainer" class="template-form-container" style="display: none;">
@@ -135,6 +136,76 @@
                             <pre id="templatePreviewOutput" class="template-preview-output" aria-live="polite"></pre>
                         </div>
                     </div>
+                </div>
+
+                <div id="merchantSchedulePanel" class="template-form-container merchant-schedule-panel" style="display: none;">
+                    <div class="template-form-header">
+                        <h4>Merchant Schedule &amp; Future Invites</h4>
+                    </div>
+                    <p class="merchant-schedule-copy">
+                        Set operating hours and holiday closures once, then use them to validate future event QR codes and export calendar invites.
+                    </p>
+
+                    <div class="template-form-row">
+                        <label>Business Hours</label>
+                        <div id="merchantHoursRows" class="merchant-hours-grid"></div>
+                    </div>
+
+                    <div class="template-form-row">
+                        <label for="merchantHolidays">Holiday Closures</label>
+                        <textarea id="merchantHolidays" rows="3" placeholder="One date per line (YYYY-MM-DD), for example:&#10;2027-01-01&#10;2027-12-25"></textarea>
+                        <span class="template-field-hint">Holiday dates block QR event scheduling on those days.</span>
+                    </div>
+
+                    <div class="template-form-row inline-2">
+                        <div>
+                            <label for="futureEventDate">Future Date</label>
+                            <input type="date" id="futureEventDate">
+                        </div>
+                        <div>
+                            <label>Quick Select</label>
+                            <div class="future-quick-grid" role="group" aria-label="Future Date Offset Selection">
+                                <select id="futureQuickDays" aria-label="Days offset">
+                                    <option value="0" selected>0 days</option>
+                                    <option value="1">1 day</option>
+                                    <option value="2">2 days</option>
+                                    <option value="3">3 days</option>
+                                    <option value="4">4 days</option>
+                                    <option value="5">5 days</option>
+                                    <option value="6">6 days</option>
+                                    <option value="7">7 days</option>
+                                    <option value="14">14 days</option>
+                                    <option value="21">21 days</option>
+                                    <option value="30">30 days</option>
+                                </select>
+                                <select id="futureQuickMonths" aria-label="Months offset">
+                                    <option value="0" selected>0 months</option>
+                                    <option value="1">1 month</option>
+                                    <option value="2">2 months</option>
+                                    <option value="3">3 months</option>
+                                    <option value="6">6 months</option>
+                                    <option value="9">9 months</option>
+                                    <option value="12">12 months</option>
+                                </select>
+                                <select id="futureQuickYears" aria-label="Years offset">
+                                    <option value="0">0 years</option>
+                                    <option value="1" selected>1 year</option>
+                                    <option value="2">2 years</option>
+                                    <option value="3">3 years</option>
+                                    <option value="4">4 years</option>
+                                    <option value="5">5 years</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="template-field-hint">Day/month/year offsets are saved and used to calculate the next valid business-date slot.</span>
+
+                    <div class="merchant-schedule-actions">
+                        <button id="saveMerchantScheduleBtn" type="button" class="btn btn-secondary">Save Schedule Settings</button>
+                        <button id="applyFutureSlotBtn" type="button" class="btn btn-secondary">Apply Future Slot To Merchant Event</button>
+                        <button id="downloadInviteBtn" type="button" class="btn btn-secondary">Download Calendar Invite (.ics)</button>
+                    </div>
+                    <p id="merchantScheduleStatus" class="status-text" aria-live="polite">Schedule settings are stored in this browser.</p>
                 </div>
 
                 <div id="rawInputContainer">
@@ -448,15 +519,15 @@
                 <div class="coming-soon-actions">
                     <button type="button" class="coming-soon-btn" data-roadmap-link="logo-embedding" aria-disabled="true" title="Planned for an upcoming release">
                         Add Logo Presets
-                        <span class="coming-soon-tag">Coming in v2.3</span>
+                        <span class="coming-soon-tag">Coming in v2.5</span>
                     </button>
                     <button type="button" class="coming-soon-btn" data-roadmap-link="dynamic-analytics" aria-disabled="true" title="Planned for an upcoming release">
                         Dynamic Tracking
-                        <span class="coming-soon-tag">Coming in v2.3</span>
+                        <span class="coming-soon-tag">Coming in v2.5</span>
                     </button>
                     <button type="button" class="coming-soon-btn" data-roadmap-link="template-gallery" aria-disabled="true" title="Planned for an upcoming release">
                         Template Gallery
-                        <span class="coming-soon-tag">Coming in v2.3</span>
+                        <span class="coming-soon-tag">Coming in v2.5</span>
                     </button>
                 </div>
                 <button type="button" id="viewRoadmapBtn" class="btn btn-secondary roadmap-link-btn">Open Versions &amp; Roadmap</button>
