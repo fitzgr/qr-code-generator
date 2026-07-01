@@ -1030,7 +1030,7 @@
                             <span class="template-name">Calendar Event</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
                         </div>
-                        <div class="template-item high-value active" data-template-type="calendar" onclick="toggleTemplate(this, 'events')">
+                        <div class="template-item high-value active" data-template-type="merchant-future-event" onclick="toggleTemplate(this, 'events')">
                             <span class="template-icon">🏪📅</span>
                             <span class="template-name">Merchant Future Event</span>
                             <span class="value-badge">⭐⭐⭐⭐⭐</span>
@@ -1089,6 +1089,23 @@ DTEND:20260815T230000Z
 LOCATION:The Grand Ballroom
 DESCRIPTION:Join us! Cocktail hour 4pm</pre>
                             <p><strong>Use on:</strong> Invitations, save-the-dates → Guests scan → Never forget the date!</p>
+                        </div>
+                    </div>
+
+                    <div class="event-template" data-templates="merchant-future-event">
+                        <h3>2. Merchant Future Event QR Code ⭐⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Creates a future event invite that respects your saved business hours and holiday closure dates before generating the calendar payload.</p>
+                        <p><strong>Perfect for:</strong> Retail promos, launch weekends, client appointment blocks, and seasonal campaigns planned months in advance.</p>
+                        <div class="example-box">
+                            <strong>Example Setup:</strong>
+                            <pre>Template: Merchant Future Event
+Title: Holiday Preview Weekend
+Future Date: 2027-11-20
+Business Hours: Mon-Fri 09:00-18:00, Sat 10:00-16:00
+Holiday Closures:
+2027-11-25
+2027-12-25</pre>
+                            <p><strong>Why it helps:</strong> If the chosen date lands outside open hours or on a closure date, you can resolve to the next valid business slot before publishing.</p>
                         </div>
                     </div>
 
@@ -1743,6 +1760,11 @@ Label: "Valet & Parking Garage"</pre>
                             <span class="template-name">Calendar Event</span>
                             <span class="value-badge">⭐⭐⭐</span>
                         </div>
+                        <div class="template-item medium-value active" data-template-type="merchant-future-event" onclick="toggleTemplate(this, 'business')">
+                            <span class="template-icon">🏪📅</span>
+                            <span class="template-name">Merchant Future Event</span>
+                            <span class="value-badge">⭐⭐⭐</span>
+                        </div>
                         <div class="template-item medium-value active" data-template-type="location" onclick="toggleTemplate(this, 'business')">
                             <span class="template-icon">📍</span>
                             <span class="template-name">Location (Geo)</span>
@@ -1816,8 +1838,23 @@ Label: "Schedule a Free Consultation"</pre>
                         </div>
                     </div>
 
+                    <div class="event-template" data-templates="merchant-future-event,calendar">
+                        <h3>5. Merchant Schedule-Aware Events ⭐⭐⭐⭐</h3>
+                        <p><strong>What it does:</strong> Generates future invites using your saved open/close hours while automatically accounting for planned holiday closures.</p>
+                        <p><strong>Perfect for:</strong> Holiday retail campaigns, limited-time in-store promotions, service windows, and recurring client events with blackout dates.</p>
+                        <div class="example-box">
+                            <strong>Example:</strong>
+                            <pre>Template: Merchant Future Event
+Title: Spring Collection Preview
+Future Date: +1 year offset
+Business Hours: 10:00-19:00 weekdays
+Holiday Closures: New Year's Day, Thanksgiving, Christmas</pre>
+                            <p><strong>Operational benefit:</strong> Avoids publishing invites on days your team is closed and keeps event windows aligned with actual staffed hours.</p>
+                        </div>
+                    </div>
+
                     <div class="event-template" data-templates="url">
-                        <h3>5. LinkedIn Connection Request ⭐⭐⭐⭐</h3>
+                        <h3>6. LinkedIn Connection Request ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Instant LinkedIn connection - no searching, no typing names</p>
                         <p><strong>Perfect for:</strong> Conference materials, business cards, email signatures, Zoom backgrounds</p>
                         <div class="example-box">
@@ -1830,7 +1867,7 @@ Label: "Connect on LinkedIn"</pre>
                     </div>
 
                     <div class="event-template" data-templates="email">
-                        <h3>6. Business Email Contact ⭐⭐⭐⭐</h3>
+                        <h3>7. Business Email Contact ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Pre-filled email for sales inquiries, support requests, general contact</p>
                         <p><strong>Perfect for:</strong> Business cards, office signage, proposals, website</p>
                         <div class="example-box">
@@ -1848,7 +1885,7 @@ Label: "Email Us"</pre>
                     </div>
 
                     <div class="event-template" data-templates="url,email">
-                        <h3>7. Email Newsletter Signup ⭐⭐⭐⭐</h3>
+                        <h3>8. Email Newsletter Signup ⭐⭐⭐⭐</h3>
                         <p><strong>What it does:</strong> Grow your email list from in-person interactions</p>
                         <p><strong>Perfect for:</strong> Events, receipts, packaging, office waiting rooms</p>
                         <div class="example-box">

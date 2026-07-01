@@ -10066,6 +10066,7 @@ function toggleTemplate(templateElement, tabName) {
     // Map data-template-type to use case example types
     const templateTypeMapping = {
         'calendar': 'event',
+        'merchant-future-event': 'merchant-future-event',
         'location': 'geo',
         'review': 'google-review',
         'email': 'email',
