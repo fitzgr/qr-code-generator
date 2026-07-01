@@ -16,6 +16,15 @@ Simply open `index.html` in your browser to use the app locally.
 - Works completely offline (after initial load)
 - No server or backend required
 
+## 📝 Release Notes
+
+### v2.5.1 (2026-07-01)
+
+- Added Merchant Future Event documentation content that appears when selected in Event Planning quick templates.
+- Added Merchant Future Event to the Business quick-template reference list.
+- Added business-hours and holiday-closure guidance for merchant schedule-aware event planning in both Event Planning and Business sections.
+- Synced merchant-future-event quick-template filtering to the global use-case filter mapping.
+
 ## 🌐 Deploy to GitHub Pages
 
 ### Step 1: Create a GitHub Repository

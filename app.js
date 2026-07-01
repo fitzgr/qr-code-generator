@@ -9166,6 +9166,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.5.1',
+        releasedAt: '2026-07-01T18:00:00Z',
+        notes: [
+            'Updated Merchant Future Event quick-template docs so selecting it in Event Planning shows dedicated merchant scheduling guidance.',
+            'Added Merchant Future Event to the Business quick-template reference list and linked it to a business-focused schedule-aware use case.',
+            'Updated template filter mapping so merchant-future-event selection syncs correctly with use-case filtering behavior.'
+        ]
+    },
+    {
         version: 'v2.5.0',
         releasedAt: '2026-06-28T19:30:00Z',
         notes: [
@@ -9302,6 +9311,16 @@ const FALLBACK_RELEASE_HISTORY = [
 ];
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
+    {
+        message: 'release: publish v2.5.1 with merchant future event docs coverage in event planning/business and filter sync updates',
+        committedAt: '2026-07-01T18:05:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'docs: add merchant future event quick-template guidance for business hours and holiday closures in planning/business tabs',
+        committedAt: '2026-07-01T17:55:00Z',
+        author: 'Grant'
+    },
     {
         message: 'release: publish v2.5.0 with merchant draft persistence, place-phone status UX, and resolved-day alignment improvements',
         committedAt: '2026-06-28T19:35:00Z',
