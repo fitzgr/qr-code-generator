@@ -9338,6 +9338,15 @@ function sanitizeDevelopmentActivityTimes(activity) {
 
 const FALLBACK_RELEASE_HISTORY = [
     {
+        version: 'v2.5.2',
+        releasedAt: '2026-08-20T22:30:00Z',
+        notes: [
+            'Replaced ambiguous QR overflow alerts with a native in-app modal that explains capacity limits in plain language.',
+            'Added tailored recovery suggestions for long URLs, high error-correction settings, and Event QR payloads.',
+            'Added expandable technical details so advanced users can inspect overflow bit counts without overwhelming general users.'
+        ]
+    },
+    {
         version: 'v2.5.1',
         releasedAt: '2026-07-01T18:00:00Z',
         notes: [
@@ -9483,6 +9492,16 @@ const FALLBACK_RELEASE_HISTORY = [
 ];
 
 const FALLBACK_DEVELOPMENT_ACTIVITY = [
+    {
+        message: 'release: publish v2.5.2 with native QR overflow modal guidance and event-focused recovery suggestions',
+        committedAt: '2026-08-20T22:35:00Z',
+        author: 'Grant'
+    },
+    {
+        message: 'fix: replace ambiguous code length overflow alert with native dialog and actionable capacity guidance',
+        committedAt: '2026-08-20T22:20:00Z',
+        author: 'Grant'
+    },
     {
         message: 'release: publish v2.5.1 with merchant future event docs coverage in event planning/business and filter sync updates',
         committedAt: '2026-07-01T18:05:00Z',

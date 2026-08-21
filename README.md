@@ -18,6 +18,12 @@ Simply open `index.html` in your browser to use the app locally.
 
 ## 📝 Release Notes
 
+### v2.5.2 (2026-08-20)
+
+- Replaced ambiguous QR overflow alerts with a native in-app modal that explains the issue in plain language.
+- Added specific suggestions to recover from capacity overflow, including URL shortening, error-correction adjustments, and Event QR-focused tips.
+- Added optional technical details in the modal so advanced users can inspect overflow bit counts.
+
 ### v2.5.1 (2026-07-01)
 
 - Added Merchant Future Event documentation content that appears when selected in Event Planning quick templates.
