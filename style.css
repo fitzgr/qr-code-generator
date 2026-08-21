@@ -2647,6 +2647,105 @@ body.cropper-open #cropperModal {
     background: #ffffff;
 }
 
+/* Native app dialog for QR generation issues */
+.native-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 24, 33, 0.55);
+    backdrop-filter: blur(1px);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.native-dialog-card {
+    width: min(680px, 100%);
+    background: #ffffff;
+    border: 1px solid #dbe3f0;
+    border-radius: 14px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.native-dialog-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e7edf7;
+    background: linear-gradient(180deg, #f8fbff 0%, #f3f8ff 100%);
+}
+
+.native-dialog-header h3 {
+    margin: 0;
+    color: #2f3b4a;
+    font-size: 20px;
+}
+
+.native-dialog-body {
+    padding: 16px 20px;
+}
+
+.native-dialog-body p {
+    margin: 0 0 10px;
+    color: #4e5d72;
+    line-height: 1.5;
+}
+
+.native-dialog-capacity {
+    padding: 10px 12px;
+    border: 1px solid #ffe1b5;
+    border-left: 4px solid #ff9800;
+    background: #fff8ec;
+    border-radius: 8px;
+    color: #785200;
+    font-weight: 600;
+}
+
+.native-dialog-subtitle {
+    margin-top: 14px;
+    margin-bottom: 8px;
+    color: #304564;
+    font-weight: 700;
+}
+
+.native-dialog-list {
+    margin: 0;
+    padding-left: 20px;
+    color: #2f3b4a;
+    display: grid;
+    gap: 8px;
+}
+
+.native-dialog-technical {
+    margin-top: 14px;
+    border: 1px solid #e7edf7;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fbfdff;
+}
+
+.native-dialog-technical summary {
+    cursor: pointer;
+    color: #516073;
+    font-weight: 600;
+}
+
+.native-dialog-technical pre {
+    margin: 10px 0 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #3b4a5f;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.native-dialog-footer {
+    padding: 14px 20px 18px;
+    border-top: 1px solid #e7edf7;
+    display: flex;
+    justify-content: flex-end;
+}
+
 /* Mobile responsiveness for cropper modal */
 @media (max-width: 768px) {
     .cropper-modal {
@@ -2685,6 +2784,23 @@ body.cropper-open #cropperModal {
     .cropper-modal-footer .btn {
         width: 100%;
         min-height: 48px; /* Larger touch target on mobile */
+    }
+
+    .native-dialog-overlay {
+        padding: 12px;
+    }
+
+    .native-dialog-header h3 {
+        font-size: 18px;
+    }
+
+    .native-dialog-footer {
+        justify-content: stretch;
+    }
+
+    .native-dialog-footer .btn {
+        width: 100%;
+        min-height: 46px;
     }
 }
 

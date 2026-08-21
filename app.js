@@ -6374,6 +6374,169 @@ function generateQRCode() {
     }
 }
 
+function parseQrOverflowBits(errorMessage) {
+    if (!errorMessage) return null;
+    const match = String(errorMessage).match(/\((\d+)\s*>\s*(\d+)\)/);
+    if (!match) return null;
+
+    return {
+        neededBits: parseInt(match[1], 10),
+        availableBits: parseInt(match[2], 10)
+    };
+}
+
+function isQrCapacityError(error) {
+    const message = String((error && error.message) || error || '').toLowerCase();
+    return message.includes('code length overflow')
+        || message.includes('too long data')
+        || message.includes('data too big')
+        || message.includes('data overflow')
+        || message.includes('amount of data');
+}
+
+function buildQrCapacityErrorContent(text, error) {
+    const rawMessage = String((error && error.message) || error || 'Unknown QR generation error');
+    const isEventPayload = /^BEGIN:VEVENT/i.test((text || '').trim()) || /^BEGIN:VCALENDAR/i.test((text || '').trim());
+    const hasLongMapsUrl = /maps\.app\.goo\.gl|google\.com\/maps/i.test(text || '');
+    const overflow = parseQrOverflowBits(rawMessage);
+
+    const suggestions = [
+        'Shorten the content, especially long URLs and detailed descriptions.'
+    ];
+
+    if (hasLongMapsUrl) {
+        suggestions.push('Replace long Google Maps links with plain location text, or keep only one short URL.');
+    }
+
+    if (currentErrorCorrectionLevel === 'H' || currentErrorCorrectionLevel === 'Q') {
+        suggestions.push(`Lower Error Correction from ${currentErrorCorrectionLevel} to M or L for more capacity.`);
+    } else {
+        suggestions.push('Lower Error Correction one more level if needed for additional capacity.');
+    }
+
+    suggestions.push('If logo or artistic mode is enabled, switch to Standard mode or remove the logo first.');
+
+    if (isEventPayload) {
+        suggestions.push('For Event QR, keep SUMMARY short and use LOCATION text instead of a long map URL.');
+        suggestions.push('For best reliability, encode a short URL to a full event page or .ics file.');
+    }
+
+    return {
+        title: 'QR content is too large',
+        summary: 'This QR code cannot be generated with the current data and settings.',
+        capacityDetails: overflow
+            ? `Needs ${overflow.neededBits} bits but only ${overflow.availableBits} bits are available.`
+            : '',
+        technicalError: rawMessage,
+        suggestions
+    };
+}
+
+function ensureQrErrorModal() {
+    let modal = document.getElementById('qrErrorModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'qrErrorModal';
+    modal.className = 'native-dialog-overlay';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+        <div class="native-dialog-card" role="dialog" aria-modal="true" aria-labelledby="qrErrorModalTitle">
+            <div class="native-dialog-header">
+                <h3 id="qrErrorModalTitle">QR content is too large</h3>
+            </div>
+            <div class="native-dialog-body">
+                <p id="qrErrorModalSummary"></p>
+                <p id="qrErrorModalCapacity" class="native-dialog-capacity" style="display: none;"></p>
+                <p class="native-dialog-subtitle">Suggestions</p>
+                <ul id="qrErrorModalSuggestions" class="native-dialog-list"></ul>
+                <details class="native-dialog-technical">
+                    <summary>Technical details</summary>
+                    <pre id="qrErrorModalTechnical"></pre>
+                </details>
+            </div>
+            <div class="native-dialog-footer">
+                <button type="button" id="qrErrorModalClose" class="btn btn-primary">Got it</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => {
+        modal.style.display = 'none';
+        if (!document.body.classList.contains('cropper-open')) {
+            document.body.style.overflow = '';
+        }
+    };
+
+    const closeBtn = modal.querySelector('#qrErrorModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.style.display !== 'none') {
+            closeModal();
+        }
+    });
+
+    return modal;
+}
+
+function showQrCapacityModal(content) {
+    const modal = ensureQrErrorModal();
+    const titleEl = modal.querySelector('#qrErrorModalTitle');
+    const summaryEl = modal.querySelector('#qrErrorModalSummary');
+    const capacityEl = modal.querySelector('#qrErrorModalCapacity');
+    const suggestionsEl = modal.querySelector('#qrErrorModalSuggestions');
+    const technicalEl = modal.querySelector('#qrErrorModalTechnical');
+
+    if (titleEl) titleEl.textContent = content.title;
+    if (summaryEl) summaryEl.textContent = content.summary;
+
+    if (capacityEl) {
+        if (content.capacityDetails) {
+            capacityEl.textContent = content.capacityDetails;
+            capacityEl.style.display = 'block';
+        } else {
+            capacityEl.textContent = '';
+            capacityEl.style.display = 'none';
+        }
+    }
+
+    if (suggestionsEl) {
+        suggestionsEl.innerHTML = '';
+        (content.suggestions || []).forEach((suggestion) => {
+            const li = document.createElement('li');
+            li.textContent = suggestion;
+            suggestionsEl.appendChild(li);
+        });
+    }
+
+    if (technicalEl) {
+        technicalEl.textContent = content.technicalError || 'No technical details available.';
+    }
+
+    modal.style.display = 'flex';
+    if (!document.body.classList.contains('cropper-open')) {
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function showFriendlyQrError(text, error) {
+    if (isQrCapacityError(error)) {
+        showQrCapacityModal(buildQrCapacityErrorContent(text, error));
+        return true;
+    }
+
+    return false;
+}
+
 // Standard QR generation (original QRCode.js logic)
 function generateStandardMode(text) {
     try {
@@ -6412,7 +6575,10 @@ function generateStandardMode(text) {
             }
         }, 100);
     } catch (error) {
-        alert('Failed to generate QR code: ' + error.message);
+        const handled = showFriendlyQrError(text, error);
+        if (!handled) {
+            alert('Failed to generate QR code: ' + error.message);
+        }
         console.error(error);
     }
 }
@@ -6428,11 +6594,17 @@ function generateArtisticMode(text) {
             // Draw the artistic QR with logo and label
             drawQRWithLogoFromCanvas(artisticCanvas, qrSize);
         }).catch(error => {
-            alert('Failed to generate artistic QR code: ' + error.message);
+            const handled = showFriendlyQrError(text, error);
+            if (!handled) {
+                alert('Failed to generate artistic QR code: ' + error.message);
+            }
             console.error(error);
         });
     } catch (error) {
-        alert('Failed to generate artistic QR code: ' + error.message);
+        const handled = showFriendlyQrError(text, error);
+        if (!handled) {
+            alert('Failed to generate artistic QR code: ' + error.message);
+        }
         console.error(error);
     }
 }
